@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Block Clue – Drag Preview Demo</title>
+<style>
+  body{
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:#f6f3eb;
+    color:#222;
+    display:flex;
+    justify-content:center;
+    padding:24px;
+  }
+  #game-root{
+    max-width:520px;
+    width:100%;
+    background:#fffdf7;
+    border-radius:12px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.08);
+    padding:20px 24px 24px;
+    box-sizing:border-box;
+  }
+  #game-root h1{
+    margin:0 0 10px;
+    font-size:20px;
+    letter-spacing:0.03em;
+  }
+  #subtitle{
+    font-size:12px;
+    color:#777;
+    margin-bottom:16px;
+  }
+
+  #clue-panel{
+    border-radius:10px;
+    background:#f1e7d7;
+    padding:10px 12px;
+    margin-bottom:14px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  #clue-label{
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:#88613a;
+  }
+  #clue-text{
+    font-weight:600;
+    font-size:15px;
+  }
+  #clue-meta{
+    font-size:11px;
+    color:#555;
+  }
+
+  #grid-wrapper{
+    display:inline-block;
+    padding:10px;
+    border-radius:12px;
+    background:#f9f4ea;
+    border:1px solid #e0d4c0;
+  }
+
+  #grid-with-rows{
+    display:flex;
+    align-items:stretch;
+  }
+
+  #grid{
+    display:grid;
+    gap:4px;
+    grid-template-columns:repeat(7, 40px);
+  }
+
+  .cell{
+    width:40px;
+    height:40px;
+    border-radius:6px;
+    border:1px solid #333;
+    background:#fdfaf4;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:20px;
+    font-weight:600;
+    cursor:pointer;
+    user-select:none;
+    transition:
+      background 0.08s,
+      box-shadow 0.08s,
+      border-color 0.08s;
+    /* transform is controlled manually in JS for drag preview */
+  }
+  .cell.blank{
+    background:#fefdf9;
+    color:transparent;
+    border-style:dotted;
+    border-color:#d2c6b4;
+  }
+  .cell.locked{
+    background:#d4d1cb;
+    border-style:dashed;
+    cursor:not-allowed;
+    color:#8a8680;
+    font-size:14px;
+  }
+  .cell.selected{
+    box-shadow:0 0 0 2px #2b82ff;
+  }
+  .cell.target{
+    box-shadow:0 0 0 2px #f2b100 inset;
+  }
+  .cell.found{
+    animation:popout 0.24s ease-out forwards;
+  }
+  @keyframes popout{
+    0%{ transform:scale(1); background:#fff8e0; }
+    50%{ transform:scale(1.08); background:#ffe9a8; }
+    100%{ transform:scale(1); }
+  }
+
+  /* Block colours by block-color index (solid backgrounds) */
+  .cell[data-block-color="0"]{ background:#ffe4e1; }
+  .cell[data-block-color="1"]{ background:#e0f3ff; }
+  .cell[data-block-color="2"]{ background:#e4ffe4; }
+  .cell[data-block-color="3"]{ background:#fff3c2; }
+  .cell[data-block-color="4"]{ background:#f2e4ff; }
+  .cell[data-block-color="5"]{ background:#ffd9f2; }
+  .cell[data-block-color="6"]{ background:#e0f0ff; }
+  .cell[data-block-color="7"]{ background:#e9ffe0; }
+
+  #row-indicators{
+    display:flex;
+    flex-direction:column;
+    margin-left:6px;
+    gap:4px;
+  }
+  #column-indicators{
+    display:grid;
+    grid-template-columns:repeat(7, 40px);
+    gap:4px;
+    margin-top:6px;
+  }
+  .row-indicator,
+  .col-indicator{
+    width:28px;
+    height:28px;
+    line-height:28px;
+    font-size:12px;
+    text-align:center;
+    color:#777;
+    border-radius:999px;
+    border:1px solid transparent;
+  }
+  .row-indicator.active,
+  .col-indicator.active{
+    background:#fff3c2;
+    border-color:#f2b100;
+    font-weight:600;
+    color:#413100;
+  }
+
+  #controls{
+    margin-top:14px;
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  button{
+    border-radius:999px;
+    padding:6px 14px;
+    border:1px solid #222;
+    background:#f6e1e1;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    box-shadow:3px 3px 0 #222;
+    transition:transform 0.08s, box-shadow 0.08s, background 0.08s;
+  }
+  button:hover{
+    transform:translate(-1px,-1px);
+    box-shadow:4px 4px 0 #222;
+    background:#f7d5d5;
+  }
+  button:active{
+    transform:translate(0,0);
+    box-shadow:1px 1px 0 #222;
+  }
+
+  #status{
+    font-size:12px;
+    color:#555;
+    margin-top:6px;
+  }
+  #status strong{ color:#222; }
+
+  @media (max-width:520px){
+    #game-root{ padding:16px; }
+    #grid{ grid-template-columns:repeat(7, 34px); }
+    .cell{ width:34px; height:34px; font-size:18px; }
+    #column-indicators{ grid-template-columns:repeat(7, 34px); }
+  }
+</style>
+</head>
+<body>
+<div id="game-root">
+  <h1>Block Clue Demo</h1>
+  <div id="subtitle">
+    Drag coloured blocks; they slide as far as they can. Line up the clue word in the highlighted row/column.
+  </div>
+
+  <div id="clue-panel">
+    <div id="clue-label">Current clue</div>
+    <div id="clue-text"></div>
+    <div id="clue-meta"></div>
+  </div>
+
+  <div id="grid-wrapper">
+    <div id="grid-with-rows">
+      <div id="grid"></div>
+      <div id="row-indicators"></div>
+    </div>
+    <div id="column-indicators"></div>
+  </div>
+
+  <div id="controls">
+    <button id="reset-btn" type="button">Reset</button>
+    <button id="nudge-btn" type="button">Nudge / Check</button>
+  </div>
+  <div id="status"></div>
+</div>
+
+<script>
+(function(){
+  // ========================
+  // Level configuration (7×7 with more blanks and a free 'O')
+  // ========================
+  const level = {
+    size: 7,
+    // '.' = blank cell (more of these now than before)
+    letters: [
+      "YBB.SMJ",   // row 0 (target row for BOSS)
+      "HLGIJ..",
+      "RZREX..",   // extra blank added
+      "KDKGPQS",
+      ".RCOMZA",
+      "O.C.HEO",   // (5,0) is now a solitary 'O' block
+      ".QP.W.R"
+    ],
+    // Blocks, including L-shapes and squares; each cell is part of some block
+    blocks: [
+      { id: "b1",  cells: [ { r:0, c:0 }, { r:0, c:1 }, { r:1, c:0 } ] },                    // L
+      { id: "b2",  cells: [ { r:0, c:2 }, { r:1, c:2 } ] },                                  // vertical 2
+      { id: "b3",  cells: [ { r:0, c:4 }, { r:0, c:5 }, { r:0, c:6 } ] },                    // horizontal 3
+      { id: "b4",  cells: [ { r:2, c:0 }, { r:2, c:1 }, { r:3, c:0 }, { r:3, c:1 } ] },      // 2×2 square
+      { id: "b5",  cells: [ { r:2, c:2 }, { r:2, c:3 }, { r:3, c:2 }, { r:3, c:3 } ] },      // 2×2 square
+      { id: "b6",  cells: [ { r:2, c:4 }, { r:2, c:5 }, { r:3, c:4 }, { r:3, c:5 } ] },      // 2×2 square
+      { id: "b7",  cells: [ { r:4, c:1 }, { r:4, c:2 }, { r:5, c:2 } ] },                    // L
+      { id: "b8",  cells: [ { r:4, c:3 }, { r:4, c:4 }, { r:4, c:5 }, { r:4, c:6 } ] },      // line of 4
+      { id: "b9",  cells: [ { r:5, c:4 }, { r:6, c:4 } ] },                                  // vertical 2
+      { id: "b10", cells: [ { r:6, c:1 }, { r:6, c:2 } ] },                                  // horizontal 2
+      { id: "b11", cells: [ { r:1, c:3 }, { r:1, c:4 } ] },                                  // horizontal 2
+      { id: "b12", cells: [ { r:5, c:5 }, { r:5, c:6 }, { r:6, c:6 } ] },                    // L
+      { id: "b13", cells: [ { r:1, c:1 } ] },                                                // single
+      { id: "b14", cells: [ { r:3, c:6 } ] },                                                // single
+      { id: "b15", cells: [ { r:5, c:0 } ] }                                                 // single 'O'
+    ],
+    clues: [
+      {
+        text: "Employer",
+        answer: "BOSS",
+        orientation: "row",   // word must appear somewhere in this row
+        index: 0              // top row
+      },
+      {
+        text: "Employer (one who hires)",
+        answer: "HIRE",
+        orientation: "column", // word must appear in this column
+        index: 3               // 4th column
+      }
+    ]
+  };
+
+  const size = level.size;
+  const BLOCK_PALETTE = [0,1,2,3,4,5,6,7];
+
+  // ========================
+  // Grid + blocks creation
+  // ========================
+  function createGridAndBlocks(lettersRows, blocksConfig){
+    const grid = [];
+    for (let r = 0; r < size; r++){
+      const rowStr = lettersRows[r];
+      const row = [];
+      for (let c = 0; c < size; c++){
+        const ch = rowStr[c];
+        row.push({
+          letter: ch === "." ? "" : ch.toUpperCase(),
+          blockId: null,
+          locked: false
+        });
+      }
+      grid.push(row);
+    }
+
+    const blocks = {};
+    blocksConfig.forEach((b, idx) => {
+      const colorIndex = BLOCK_PALETTE[idx % BLOCK_PALETTE.length];
+      const cells = b.cells.map(pos => ({ r: pos.r, c: pos.c }));
+      blocks[b.id] = {
+        id: b.id,
+        cells,
+        colorIndex
+      };
+      cells.forEach(pos => {
+        grid[pos.r][pos.c].blockId = b.id;
+      });
+    });
+
+    return { grid, blocks };
+  }
+
+  function cloneGrid(src){
+    return src.map(row =>
+      row.map(cell => ({
+        letter: cell.letter,
+        blockId: cell.blockId,
+        locked: cell.locked
+      }))
+    );
+  }
+
+  function cloneBlocks(src){
+    const out = {};
+    for (const id in src){
+      out[id] = {
+        id,
+        colorIndex: src[id].colorIndex,
+        cells: src[id].cells.map(pos => ({ r: pos.r, c: pos.c }))
+      };
+    }
+    return out;
+  }
+
+  function letterAt(r,c){
+    if (!grid[r] || !grid[r][c]) return "";
+    return grid[r][c].letter;
+  }
+
+  const base = createGridAndBlocks(level.letters, level.blocks);
+  const baseGrid = base.grid;
+  const baseBlocks = base.blocks;
+
+  let grid = cloneGrid(baseGrid);
+  let blocks = cloneBlocks(baseBlocks);
+  let currentClueIndex = 0;
+  let selectedBlockId = null;
+
+  // pointer / drag state
+  const pointerState = {
+    active: false,
+    blockId: null,
+    startX: 0,
+    startY: 0,
+    previewDir: null,   // 'h' or 'v'
+    previewSteps: 0
+  };
+
+  // DOM references
+  const gridEl = document.getElementById("grid");
+  const rowIndicatorsEl = document.getElementById("row-indicators");
+  const colIndicatorsEl = document.getElementById("column-indicators");
+  const clueTextEl = document.getElementById("clue-text");
+  const clueMetaEl = document.getElementById("clue-meta");
+  const statusEl = document.getElementById("status");
+  const resetBtn = document.getElementById("reset-btn");
+  const nudgeBtn = document.getElementById("nudge-btn");
+
+  let rowIndicators = [];
+  let colIndicators = [];
+  let cellSizeCache = null;
+
+  function getCellSize(){
+    if (cellSizeCache != null) return cellSizeCache;
+    const cell = gridEl.querySelector(".cell");
+    if (!cell) return 40;
+    const rect = cell.getBoundingClientRect();
+    cellSizeCache = rect.width; // assume square
+    return cellSizeCache;
+  }
+
+  // ========================
+  // DOM construction
+  // ========================
+  function buildGridDOM(){
+    gridEl.innerHTML = "";
+    gridEl.style.gridTemplateColumns = "repeat(" + size + ", 40px)";
+    for (let r = 0; r < size; r++){
+      for (let c = 0; c < size; c++){
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.dataset.row = r;
+        cell.dataset.col = c;
+        cell.addEventListener("mousedown", onCellMouseDown);
+        gridEl.appendChild(cell);
+      }
+    }
+
+    rowIndicatorsEl.innerHTML = "";
+    rowIndicators = [];
+    for (let r = 0; r < size; r++){
+      const el = document.createElement("div");
+      el.className = "row-indicator";
+      rowIndicatorsEl.appendChild(el);
+      rowIndicators.push(el);
+    }
+
+    colIndicatorsEl.innerHTML = "";
+    colIndicatorsEl.style.gridTemplateColumns = "repeat(" + size + ", 40px)";
+    colIndicators = [];
+    for (let c = 0; c < size; c++){
+      const el = document.createElement("div");
+      el.className = "col-indicator";
+      colIndicatorsEl.appendChild(el);
+      colIndicators.push(el);
+    }
+
+    document.addEventListener("mouseup", onGlobalMouseUp);
+    document.addEventListener("mousemove", onGlobalMouseMove);
+  }
+
+  function renderGrid(){
+    const allCells = gridEl.querySelectorAll(".cell");
+    allCells.forEach(el => {
+      const r = parseInt(el.dataset.row, 10);
+      const c = parseInt(el.dataset.col, 10);
+      const data = grid[r][c];
+
+      el.textContent = data.letter || "";
+      el.classList.toggle("blank", !data.letter && !data.locked);
+      el.classList.toggle("locked", data.locked);
+
+      const isSelected = selectedBlockId && data.blockId === selectedBlockId;
+      el.classList.toggle("selected", !!isSelected);
+
+      if (data.blockId && data.letter && blocks[data.blockId]){
+        el.dataset.blockColor = blocks[data.blockId].colorIndex;
+      } else {
+        delete el.dataset.blockColor;
+      }
+    });
+  }
+
+  function clearTargetsAndIndicators(){
+    gridEl.querySelectorAll(".cell.target").forEach(el => {
+      el.classList.remove("target");
+    });
+    rowIndicators.forEach(el => {
+      el.textContent = "";
+      el.classList.remove("active");
+    });
+    colIndicators.forEach(el => {
+      el.textContent = "";
+      el.classList.remove("active");
+    });
+  }
+
+  function highlightTargetLine(clue){
+    clearTargetsAndIndicators();
+    if (!clue) return;
+
+    const len = clue.answer.length;
+    if (clue.orientation === "row"){
+      const r = clue.index;
+      for (let c = 0; c < size; c++){
+        const el = gridEl.querySelector('.cell[data-row="'+r+'"][data-col="'+c+'"]');
+        if (el) el.classList.add("target");
+      }
+      if (rowIndicators[r]){
+        rowIndicators[r].textContent = len;
+        rowIndicators[r].classList.add("active");
+      }
+    } else {
+      const c = clue.index;
+      for (let r = 0; r < size; r++){
+        const el = gridEl.querySelector('.cell[data-row="'+r+'"][data-col="'+c+'"]');
+        if (el) el.classList.add("target");
+      }
+      if (colIndicators[c]){
+        colIndicators[c].textContent = len;
+        colIndicators[c].classList.add("active");
+      }
+    }
+  }
+
+  // ========================
+  // Clue display
+  // ========================
+  function showClue(){
+    const clue = level.clues[currentClueIndex];
+    if (!clue){
+      clueTextEl.textContent = "";
+      clueMetaEl.textContent = "";
+      statusEl.innerHTML = "<strong>All clues solved!</strong>";
+      highlightTargetLine(null);
+      return;
+    }
+
+    const ansLen = clue.answer.length;
+    const orientLabel = clue.orientation === "row" ? "Row" : "Column";
+
+    clueTextEl.textContent = `${currentClueIndex + 1}. ${clue.text}`;
+    clueMetaEl.textContent = `${orientLabel} · length ${ansLen}`;
+    statusEl.textContent = "Drag a coloured block; it slides until it hits something.";
+    highlightTargetLine(clue);
+  }
+
+  // ========================
+  // Drag helpers
+  // ========================
+  function clearDragPreview(){
+    const allCells = gridEl.querySelectorAll(".cell");
+    allCells.forEach(el => {
+      el.style.transform = "";
+    });
+    pointerState.previewDir = null;
+    pointerState.previewSteps = 0;
+  }
+
+  function onCellMouseDown(e){
+    if (e.button !== 0) return; // only left-click
+    const el = e.currentTarget;
+    const r = parseInt(el.dataset.row, 10);
+    const c = parseInt(el.dataset.col, 10);
+    const cell = grid[r][c];
+
+    clearDragPreview();
+
+    pointerState.active = true;
+    pointerState.blockId = cell.blockId || null;
+    pointerState.startX = e.clientX;
+    pointerState.startY = e.clientY;
+
+    if (cell.blockId){
+      selectedBlockId = cell.blockId;
+      renderGrid();
+    }
+
+    e.preventDefault();
+  }
+
+  function onGlobalMouseMove(e){
+    if (!pointerState.active) return;
+    const blockId = pointerState.blockId;
+    if (!blockId) return; // dragging from blank does nothing
+
+    const block = blocks[blockId];
+    if (!block) return;
+
+    const dx = e.clientX - pointerState.startX;
+    const dy = e.clientY - pointerState.startY;
+    const dist = Math.hypot(dx, dy);
+    const DRAG_START_THRESHOLD = 5;
+
+    if (dist < DRAG_START_THRESHOLD){
+      clearDragPreview();
+      return;
+    }
+
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    const PIXELS_PER_STEP = getCellSize() * 0.9; // a bit forgiving
+
+    let dir;
+    let steps;
+
+    if (absX >= absY){
+      dir = "h";
+      const sign = dx > 0 ? 1 : -1;
+      steps = Math.round(absX / PIXELS_PER_STEP) * sign;
+    } else {
+      dir = "v";
+      const sign = dy > 0 ? 1 : -1;
+      steps = Math.round(absY / PIXELS_PER_STEP) * sign;
+    }
+
+    const MAX_STEPS = 6;
+    if (steps >  MAX_STEPS) steps =  MAX_STEPS;
+    if (steps < -MAX_STEPS) steps = -MAX_STEPS;
+
+    const effectiveSteps = maxStepsForBlock(block, dir, steps);
+
+    // If no actual movement possible, treat as no preview
+    if (effectiveSteps === 0){
+      clearDragPreview();
+      return;
+    }
+
+    pointerState.previewDir = dir;
+    pointerState.previewSteps = effectiveSteps;
+
+    const px = getCellSize() * effectiveSteps;
+    block.cells.forEach(pos => {
+      const cellEl = gridEl.querySelector('.cell[data-row="'+pos.r+'"][data-col="'+pos.c+'"]');
+      if (cellEl){
+        if (dir === "h"){
+          cellEl.style.transform = "translate(" + px + "px, 0)";
+        } else {
+          cellEl.style.transform = "translate(0, " + px + "px)";
+        }
+      }
+    });
+  }
+
+  function onGlobalMouseUp(e){
+    if (!pointerState.active) return;
+    const { blockId, startX, startY } = pointerState;
+    pointerState.active = false;
+
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    const dist = Math.hypot(dx, dy);
+    const CLICK_THRESHOLD = 10;
+
+    // No block – maybe clear selection on tap
+    if (!blockId){
+      if (dist < CLICK_THRESHOLD && selectedBlockId){
+        selectedBlockId = null;
+        renderGrid();
+        statusEl.textContent = "Selection cleared.";
+      }
+      clearDragPreview();
+      return;
+    }
+
+    const block = blocks[blockId];
+    if (!block){
+      clearDragPreview();
+      return;
+    }
+
+    // If no preview direction (no meaningful drag), treat as click
+    if (dist < CLICK_THRESHOLD || !pointerState.previewDir){
+      handleBlockClick(blockId);
+      clearDragPreview();
+      return;
+    }
+
+    const dir = pointerState.previewDir;
+    const steps = pointerState.previewSteps;
+
+    clearDragPreview();
+
+    if (!steps){
+      handleBlockClick(blockId);
+      return;
+    }
+
+    const dr = dir === "v" ? steps : 0;
+    const dc = dir === "h" ? steps : 0;
+
+    moveBlock(block, dr, dc);
+    selectedBlockId = blockId;
+    renderGrid();
+    checkCurrentClue();
+
+    const dirWord = dir === "h"
+      ? (steps > 0 ? "right" : "left")
+      : (steps > 0 ? "down" : "up");
+
+    statusEl.textContent =
+      `Block moved ${Math.abs(steps)} step${Math.abs(steps) > 1 ? "s" : ""} ${dirWord}.`;
+  }
+
+  function handleBlockClick(blockId){
+    if (!blockId) return;
+    if (!selectedBlockId || selectedBlockId !== blockId){
+      selectedBlockId = blockId;
+      statusEl.textContent = "Block selected. Drag it to slide.";
+    } else {
+      selectedBlockId = null;
+      statusEl.textContent = "Selection cleared.";
+    }
+    renderGrid();
+  }
+
+  // Simulation for max steps in a direction without modifying grid
+  function maxStepsForBlock(block, dir, wishSteps){
+    if (!wishSteps) return 0;
+
+    const sign = wishSteps > 0 ? 1 : -1;
+    const drUnit = dir === "v" ? sign : 0;
+    const dcUnit = dir === "h" ? sign : 0;
+
+    let moved = 0;
+    let tempCells = block.cells.map(p => ({ r: p.r, c: p.c }));
+
+    function cellsCanMoveOnce(cells){
+      for (const pos of cells){
+        const nr = pos.r + drUnit;
+        const nc = pos.c + dcUnit;
+        if (nr < 0 || nr >= size || nc < 0 || nc >= size) return false;
+        const target = grid[nr][nc];
+        if (target.locked) return false;
+        if (target.blockId && target.blockId !== block.id) return false;
+      }
+      return true;
+    }
+
+    for (let i = 0; i < Math.abs(wishSteps); i++){
+      if (!cellsCanMoveOnce(tempCells)) break;
+      moved += sign;
+      tempCells = tempCells.map(p => ({ r: p.r + drUnit, c: p.c + dcUnit }));
+    }
+
+    return moved;
+  }
+
+  function moveBlock(block, dr, dc){
+    const oldLetters = block.cells.map(pos => grid[pos.r][pos.c].letter);
+
+    block.cells.forEach(pos => {
+      grid[pos.r][pos.c].letter = "";
+      grid[pos.r][pos.c].blockId = null;
+    });
+
+    const newCells = block.cells.map(pos => ({
+      r: pos.r + dr,
+      c: pos.c + dc
+    }));
+
+    newCells.forEach((pos, i) => {
+      grid[pos.r][pos.c].letter = oldLetters[i];
+      grid[pos.r][pos.c].blockId = block.id;
+    });
+
+    block.cells = newCells;
+  }
+
+  // ========================
+  // Clue checking & letter removal
+  // ========================
+  function checkCurrentClue(){
+    const clue = level.clues[currentClueIndex];
+    if (!clue) return;
+
+    const answer = clue.answer.toUpperCase();
+    const len = answer.length;
+    let line = "";
+
+    if (clue.orientation === "row"){
+      for (let c = 0; c < size; c++){
+        line += letterAt(clue.index, c) || ".";
+      }
+    } else {
+      for (let r = 0; r < size; r++){
+        line += letterAt(r, clue.index) || ".";
+      }
+    }
+
+    for (let start = 0; start <= line.length - len; start++){
+      const segment = line.slice(start, start + len);
+      if (segment === answer){
+        const coords = [];
+        if (clue.orientation === "row"){
+          for (let i = 0; i < len; i++){
+            coords.push({ r: clue.index, c: start + i });
+          }
+        } else {
+          for (let i = 0; i < len; i++){
+            coords.push({ r: start + i, c: clue.index });
+          }
+        }
+
+        const removedKeys = new Set();
+
+        coords.forEach(({ r, c }) => {
+          const key = r + ":" + c;
+          removedKeys.add(key);
+
+          const cell = grid[r][c];
+          const bid = cell.blockId;
+
+          const cellEl = gridEl.querySelector('.cell[data-row="'+r+'"][data-col="'+c+'"]');
+          if (cellEl){
+            cellEl.classList.add("found");
+            setTimeout(() => cellEl.classList.remove("found"), 220);
+          }
+
+          cell.letter = "";
+          cell.blockId = null;
+
+          if (bid && blocks[bid]){
+            const b = blocks[bid];
+            b.cells = b.cells.filter(pos => (pos.r + ":" + pos.c) !== key);
+            if (b.cells.length === 0){
+              delete blocks[bid];
+            }
+          }
+        });
+
+        renderGrid();
+        statusEl.innerHTML = `Nice! You found <strong>${answer}</strong>.`;
+
+        currentClueIndex++;
+        showClue();
+        return;
+      }
+    }
+
+    statusEl.textContent = "No complete word there yet – keep sliding!";
+  }
+
+  // ========================
+  // Controls
+  // ========================
+  resetBtn.addEventListener("click", () => {
+    grid = cloneGrid(baseGrid);
+    blocks = cloneBlocks(baseBlocks);
+    currentClueIndex = 0;
+    selectedBlockId = null;
+    clearDragPreview();
+    renderGrid();
+    showClue();
+  });
+
+  nudgeBtn.addEventListener("click", () => {
+    checkCurrentClue();
+  });
+
+  // ========================
+  // Init
+  // ========================
+  buildGridDOM();
+  renderGrid();
+  showClue();
+})();
+</script>
+</body>
+</html>
