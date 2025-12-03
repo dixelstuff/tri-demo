@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover" />
   <title>Trigram Demo</title>
+
+  <!-- Sansita for the grid (as per spec) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sansita:ital,wght@0,700;0,900;1,700;1,900&display=swap" rel="stylesheet">
 
   <style>
     :root{
@@ -22,63 +27,117 @@
       /* estimated keyboard height for padding, JS will set to actual */
       --kb-h: 260px;
     }
+
     *{ box-sizing:border-box; }
+
+    /* ===== NO SCROLL EVER ===== */
+    html, body{
+      height:100%;
+      overflow:hidden;
+      overscroll-behavior:none;
+      -webkit-overflow-scrolling: auto;
+      touch-action: manipulation;
+    }
     body{
       margin:0;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
       background:var(--bg);
       color:var(--ink);
       text-align:center;
+      /* extra guard for iOS bounce */
+      position:fixed;
+      inset:0;
     }
 
+    /* Harden default button styling on iOS / embedded contexts */
+    button{
+      font:inherit;
+      color:inherit;
+      -webkit-appearance:none;
+      appearance:none;
+      background:none;
+      border:none;
+      padding:0;
+      margin:0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    a{
+      -webkit-tap-highlight-color: transparent;
+    }
+    a:visited{ color:inherit; }
+
     .wrap{
+      height:100%;
+      max-height:100%;
+      width:100%;
       max-width:980px;
       margin:0 auto;
-      padding:16px 14px 46px;
+      padding:12px 14px 14px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      overflow:hidden;
     }
 
     /* when custom keyboard is visible, add bottom padding so buttons stay tappable */
     html.has-kb .wrap{
-      padding-bottom: calc(46px + var(--kb-h) + env(safe-area-inset-bottom));
+      padding-bottom: calc(14px + var(--kb-h) + env(safe-area-inset-bottom));
     }
 
     .wrap.solved .gridWrap{
       pointer-events:none;
       box-shadow:0 0 0 10px rgba(200,247,210,.55), 0 10px 22px rgba(0,0,0,.12);
-      transform:translateY(18px);
+      transform:translateY(12px);
     }
     .wrap.solved .cell{ background:#fff !important; }
     .wrap.solved .hintTrack{ opacity:0; pointer-events:none; }
 
-    .toprow{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px; }
+    /* ===== TOP NAV (smaller + less vertical whitespace) ===== */
+    .toprow{
+      width:100%;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:10px;
+      margin:2px 0 10px;
+      flex:0 0 auto;
+    }
     .nav{
-      display:flex; align-items:center; gap:10px;
-      font-weight:900; user-select:none;
-      margin-left:auto; margin-right:auto;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-weight:900;
+      user-select:none;
     }
     .nav a{
-      color:var(--ink); text-decoration:none; font-weight:900;
-      padding:7px 12px; border-radius:999px;
-      background:rgba(255,255,255,.35);
+      color:var(--ink);
+      text-decoration:none;
+      font-weight:900;
+      padding:5px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.30);
       border:2px solid rgba(0,0,0,.18);
       cursor:pointer;
+      line-height:1;
     }
     .nav a:active{ transform:translateY(1px); }
-    .count{ font-weight:900; opacity:.7; min-width:56px; text-align:center; }
+    .count{ font-weight:900; opacity:.7; min-width:54px; text-align:center; font-size:14px; }
 
+    /* ===== CLUE (bigger on mobile, less gap overall) ===== */
     .clue{
       display:block;
       width:fit-content;
       max-width:min(940px,94vw);
-      margin:58px auto 62px;
-      padding:14px 21px 16px 22px; /* bottom +1px, right -1px */
+      margin:12px auto 18px; /* reduced substantially */
+      padding:12px 18px 14px;
       background:var(--bubble);
       border-radius:18px;
       box-shadow:var(--shadow);
-      font-size:clamp(24px,2.6vw,38px);
+      font-size:clamp(26px,3.2vw,40px);
       line-height:1.12;
       letter-spacing:.12px;
       font-weight:400;
+      flex:0 0 auto;
     }
     .clue .len{ opacity:.55; font-weight:inherit; font-style:inherit; }
 
@@ -94,13 +153,14 @@
     .gridWrap{
       display:block;
       width:fit-content;
-      margin:0 auto 8px;
+      margin:0 auto 6px;
       border:4px solid var(--ink);
       border-radius:14px;
       overflow:hidden;
       background:#fff;
       box-shadow:0 10px 22px rgba(0,0,0,.12);
       transition:transform .45s ease;
+      flex:0 0 auto;
     }
     .gridWrap.shake{ animation:shake .16s linear 0s 2; }
     @keyframes shake{
@@ -126,10 +186,10 @@
     }
     .cell:not(:nth-child(7n+1)){ border-left:3px solid var(--ink); }
 
-    /* active cursor cell (important on mobile when inputs aren't focusable) */
+    /* Active cursor cell — subtle ring, NOT an ugly black box */
     .cell.active{
-      outline:4px solid rgba(0,0,0,.78);
-      outline-offset:-4px;
+      outline:none;
+      box-shadow: inset 0 0 0 3px rgba(0,0,0,.20);
     }
 
     .cell input{
@@ -141,6 +201,7 @@
       font-size:clamp(22px,3.8vw,34px);
       font-weight:900;
       font-style:italic;
+      font-family:"Sansita", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       padding:0; margin:0;
       color:var(--ink);
       text-transform:lowercase;
@@ -157,22 +218,22 @@
     .cell.grabbable input{ pointer-events:none; cursor:grab; }
 
     /* When custom KB enabled: don't let inputs be interactive (prevents iOS keyboard) */
-    html.has-kb .cell input{
-      pointer-events:none;
-    }
+    html.has-kb .cell input{ pointer-events:none; }
 
     /* fixed message slot so buttons never shift */
     .msgSlot{
       position:relative;
-      height:64px;
+      height:60px;
       max-width:760px;
-      margin:18px auto 0;
+      width:100%;
+      margin:14px auto 0;
       user-select:none;
+      flex:0 0 auto;
     }
     .msg{
       position:absolute;
       left:0; right:0;
-      top:10px;
+      top:8px;
       margin:0;
       font-weight:900;
       opacity:0;
@@ -184,7 +245,7 @@
     }
     .msg.show{ opacity:.92; transform:translateY(0); }
     .msg.warn{ opacity:.92; font-size:20px; font-style:italic; }
-    .msg.result{ top:20px; }
+    .msg.result{ top:18px; }
 
     /* floating tip that points at a trigram */
     .tipFloat{
@@ -233,21 +294,22 @@
     }
 
     .hintTrack{
-      margin:22px auto 0;
+      margin:14px auto 0;
       width:fit-content;
       max-width:min(920px,96vw);
-      min-height:78px;
+      min-height:66px;
       display:flex;
       align-items:center;
       justify-content:center;
       transition:opacity .35s ease;
       user-select:none;
+      flex:0 0 auto;
     }
     .trackRow{
       display:flex;
       align-items:flex-start;
       justify-content:center;
-      gap:18px;
+      gap:16px;
       flex-wrap:nowrap;
     }
     .trackBlock{
@@ -312,14 +374,21 @@
       flex-wrap:nowrap;
     }
 
+    /* ===== BUTTONS anchored to bottom of viewport (via flex) ===== */
     .btnRow{
-      margin-top:14px;
+      margin-top:auto; /* pushes buttons to bottom without scrolling */
       display:flex;
       justify-content:center;
       gap:12px;
       flex-wrap:wrap;
+      padding-top:12px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
+      width:100%;
+      flex:0 0 auto;
     }
     .btn{
+      -webkit-appearance:none;
+      appearance:none;
       border:4px solid var(--ink);
       border-radius:999px;
       padding:10px 18px;
@@ -332,6 +401,11 @@
       cursor:pointer;
       user-select:none;
       text-transform:lowercase;
+
+      /* iOS/embedded hardening: stop "blue link" look */
+      color:var(--ink) !important;
+      -webkit-text-fill-color: var(--ink) !important;
+      text-decoration:none !important;
     }
     .btn:active{ transform:translateY(1px); box-shadow:0 6px 0 rgba(0,0,0,.16); }
     .btn.hints{ background:#fff3bd; }
@@ -353,6 +427,7 @@
       opacity:0;
       pointer-events:none;
       box-shadow:0 14px 28px rgba(0,0,0,.25);
+      z-index:9997;
     }
     .winToast.show{ animation:pop 1.15s ease both; }
     @keyframes pop{
@@ -415,6 +490,7 @@
       user-select:none;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
+      color:var(--ink);
     }
     .kbKey:active{ transform:translateY(1px); box-shadow:0 5px 0 rgba(0,0,0,.12); }
     .kbKey.wide{
@@ -427,13 +503,22 @@
     .kbKey.delete{ background:rgba(255,255,255,.88); }
 
     @media (max-width:520px){
+      .grid{ width:min(304px,92vw); }
+
+      /* clue bigger on mobile specifically */
+      .clue{
+        font-size:clamp(30px, 7.2vw, 44px);
+        margin:10px auto 16px;
+        padding:12px 16px 14px;
+      }
+      .nav a{ padding:4px 9px; }
+      .count{ font-size:13px; min-width:50px; }
+
       .letter{ width:28px; height:28px; font-size:18px; }
-      .grid{ width:min(292px,92vw); }
       .btn{ font-size:20px; padding:10px 16px; min-width:108px; }
-      .msgSlot{ height:60px; margin-top:18px; }
-      .msg{ font-size:20px; top:10px; }
-      .msg.result{ top:20px; }
-      .clue{ font-size:clamp(22px,5.2vw,34px); margin-bottom:58px; }
+      .msgSlot{ height:56px; margin-top:12px; }
+      .msg{ font-size:20px; top:8px; }
+      .msg.result{ top:18px; }
       .tipFloat{ font-size:14px; }
       .kbKey{ height:46px; }
     }
@@ -446,7 +531,6 @@
 
   <div class="wrap" id="wrap">
     <div class="toprow">
-      <div></div>
       <div class="nav">
         <a href="#" id="prevBtn" aria-label="Previous puzzle">‹</a>
         <span class="count" id="count"></span>
@@ -605,7 +689,6 @@ function makeKey(label, aria, cls, onPress){
   b.textContent = label;
   b.setAttribute('aria-label', aria || label);
 
-  // Use pointerdown to avoid focus weirdness and to feel snappy on iOS
   b.addEventListener('pointerdown', (e)=>{
     e.preventDefault();
     e.stopPropagation();
@@ -615,6 +698,8 @@ function makeKey(label, aria, cls, onPress){
 
   return b;
 }
+
+/* Wordle-style: 3 letter rows, then bottom row = ENTER (left), letters, DELETE (right) */
 function buildKeyboard(){
   el.kbHost.innerHTML = "";
   if(!state.useCustomKB) return;
@@ -622,37 +707,21 @@ function buildKeyboard(){
   const kb = document.createElement('div');
   kb.className = "kb";
 
-  const rows = ["qwertyuiop","asdfghjkl","zxcvbnm"];
-  rows.forEach((row, ri)=>{
-    const r = document.createElement('div');
-    r.className = "kbRow";
+  const r1 = document.createElement('div'); r1.className = "kbRow";
+  for(const ch of "qwertyuiop") r1.appendChild(makeKey(ch, `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
+  kb.appendChild(r1);
 
-    for(const ch of row){
-      r.appendChild(makeKey(ch, `Letter ${ch}`, "", ()=>{
-        typeLetterIntoGrid(ch);
-      }));
-    }
+  const r2 = document.createElement('div'); r2.className = "kbRow";
+  for(const ch of "asdfghjkl") r2.appendChild(makeKey(ch, `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
+  kb.appendChild(r2);
 
-    // Add delete on the end of row 3
-    if(ri === 2){
-      r.appendChild(makeKey("⌫", "Delete", "wide delete", ()=>{
-        kbBackspace();
-      }));
-    }
-
-    kb.appendChild(r);
-  });
-
-  // Bottom row: enter
-  const r4 = document.createElement('div');
-  r4.className = "kbRow";
-  r4.appendChild(makeKey("enter", "Enter", "wide enter", ()=>{
-    onCheck();
-  }));
-  kb.appendChild(r4);
+  const r3 = document.createElement('div'); r3.className = "kbRow";
+  r3.appendChild(makeKey("enter", "Enter", "wide enter", ()=> onCheck()));
+  for(const ch of "zxcvbnm") r3.appendChild(makeKey(ch, `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
+  r3.appendChild(makeKey("⌫", "Delete", "wide delete", ()=> kbBackspace()));
+  kb.appendChild(r3);
 
   el.kbHost.appendChild(kb);
-
   requestAnimationFrame(()=> updateKeyboardPadding());
 }
 
@@ -885,7 +954,7 @@ function deleteAtIndex(idx){
 function focusCell(idx){
   const i = clamp(idx, 0, N-1);
   state.focusIdx = i;
-  if(state.useCustomKB) return; // don't focus inputs (prevents iOS keyboard)
+  if(state.useCustomKB) return;
   const inp = el.grid.querySelector(`input[data-idx="${i}"]`);
   if(inp) inp.focus();
 }
@@ -1612,7 +1681,7 @@ function onCheck(){
 
   let msg = "";
   if(w1Hits.length === 0 && w2Hits.length === 0){
-    msg = "No trigrams";
+    msg = "You didn’t use any trigrams";
   }else if(w1Hits.length === 0){
     msg = "No trigram from word 1";
   }else if(w2Hits.length === 0){
@@ -1680,11 +1749,26 @@ function moveGhost(e){
   state.drag.ghost.style.left = e.clientX + "px";
   state.drag.ghost.style.top = e.clientY + "px";
 }
+
+/* Robust cleanup so ghost never gets stuck */
+function cleanupDrag(){
+  if(!state.drag) return;
+  try{ state.drag.ghost && state.drag.ghost.remove(); }catch(_){}
+  try{
+    if(state.drag.pid != null && el.gridWrap.releasePointerCapture){
+      el.gridWrap.releasePointerCapture(state.drag.pid);
+    }
+  }catch(_){}
+  state.drag = null;
+}
+
 function beginDragWithThreshold(e, startFn){
+  const pid = e.pointerId;
   const startX = e.clientX, startY = e.clientY;
   let started = false;
 
   const onMove = (ev)=>{
+    if(ev.pointerId !== pid) return;
     const dx = ev.clientX - startX;
     const dy = ev.clientY - startY;
     if(!started && (dx*dx + dy*dy) > 144){
@@ -1697,23 +1781,34 @@ function beginDragWithThreshold(e, startFn){
       onDragMove(ev);
     }
   };
-  const onUp = (ev)=>{
+
+  const finish = (ev)=>{
     window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onCancel);
     if(started) onDragEnd(ev);
   };
+  const onUp = (ev)=>{ if(ev.pointerId !== pid) return; finish(ev); };
+  const onCancel = (ev)=>{ if(ev.pointerId !== pid) return; cleanupDrag(); render(false); finish(ev); };
 
   window.addEventListener('pointermove', onMove, {passive:false});
-  window.addEventListener('pointerup', onUp, {once:true});
+  window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onCancel);
 }
+
 function startDragTrigram(ev, group, tri, idx0, start0){
   const ghost = makeGhostBox(tri, (group === 'w1') ? "var(--w1)" : "var(--w2)");
   ghost.style.width = "112px";
   ghost.style.height = "40px";
   ghost.style.letterSpacing = ".18em";
 
-  state.drag = { kind:'trigram', group, tri, grabOffset: idx0 - start0, ghost, lastIdx:null };
+  // capture pointer so we always get an end/cancel
+  try{ el.gridWrap.setPointerCapture && el.gridWrap.setPointerCapture(ev.pointerId); }catch(_){}
+
+  state.drag = { kind:'trigram', group, tri, grabOffset: idx0 - start0, ghost, lastIdx:null, pid: ev.pointerId };
   moveGhost(ev);
 }
+
 function pairForDragPinnedThenPush(group, desiredStart, idxNow){
   const mine = state.placed[group];
   const otherGroup = group==='w1' ? 'w2' : 'w1';
@@ -1835,8 +1930,7 @@ function rectDistance(x,y,rect){
 function onDragEnd(e){
   if(!state.drag) return;
   const d = state.drag;
-  d.ghost.remove();
-  state.drag = null;
+  cleanupDrag();
   state.lastDragEndedAt = performance.now();
 
   const rect = el.gridWrap.getBoundingClientRect();
@@ -1849,6 +1943,10 @@ function onDragEnd(e){
   }
   render();
 }
+
+/* global cleanup hooks for “ghost stuck” */
+window.addEventListener('blur', ()=>{ if(state.drag){ cleanupDrag(); render(false); } });
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden && state.drag){ cleanupDrag(); } });
 
 /* ===== clue / error underline ===== */
 function triForClue(group){
@@ -2018,7 +2116,6 @@ function renderGrid(stealFocus=true){
     cell.addEventListener('pointerdown', (e)=>{
       if(state.finished) return;
 
-      // On mobile custom KB: no focusing inputs (prevents iOS keyboard). Just move cursor.
       if(state.useCustomKB){
         state.focusIdx = i;
         render(false);
@@ -2039,9 +2136,7 @@ function renderGrid(stealFocus=true){
     el.grid.appendChild(cell);
   }
 
-  if(state.tip.active){
-    positionTip();
-  }
+  if(state.tip.active) positionTip();
 
   if(stealFocus && !state.finished && !state.useCustomKB){
     requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
@@ -2149,7 +2244,6 @@ document.addEventListener('keydown', (e)=>{
   const target = e.target;
   const inGrid = target && target.closest && target.closest('#gridWrap');
 
-  // Always-active typing: if user types a letter while focus isn't in the grid, put it in the grid.
   if(!inGrid && e.key && e.key.length === 1 && isAlpha(e.key)){
     const isOtherTyping = target && target.tagName === "INPUT" && !isGridInput(target);
     if(!isOtherTyping){
@@ -2167,13 +2261,10 @@ document.addEventListener('keydown', (e)=>{
   }
 
   if(e.key === "Backspace" || e.key === "Delete"){
-    // If focus isn't in a real grid input (common on mobile/custom KB mode), delete from end.
     if(!inGrid || state.useCustomKB){
       e.preventDefault();
       clearTransientOnAnyChange();
-      if(deleteFromEnd()){
-        render();
-      }
+      if(deleteFromEnd()) render();
       return;
     }
   }
