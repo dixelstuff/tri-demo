@@ -407,6 +407,31 @@
       font-style:italic;
     }
     .letter.extra:active{ transform:translateY(1px); }
+/* Hint mini-grids: no outer capsule; individual square tiles with thin borders */
+.letters{
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+
+.letter{
+  border-left: 0 !important;                 /* remove the internal divider rule */
+  border: 1px solid rgba(0,0,0,.22) !important; /* each tile has its own border */
+  border-radius: 0 !important;               /* square corners */
+  background: rgba(255,255,255,.35);
+}
+
+/* keep a single-thickness border between tiles (avoid double borders) */
+.letter + .letter{
+  margin-left: -1px; /* overlaps borders so the seam stays thin */
+}
+
+/* extras (hint 3 letters) should match the same square-tile look */
+.letter.extra{
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
 
     .tinyLbl{
       font-size:12px;
