@@ -514,18 +514,24 @@
 
 .kbKey.wide{
   width: calc(var(--keyW) * 1.55);
-  font-size: 12px;         /* smaller CHECK so it always fits */
-  font-weight:900;
-  letter-spacing:.08em;
-  background:rgba(255,255,255,.82);
-  padding:0;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  padding: 0;
 }
 
+/* CHECK (enter) — slightly smaller and less letter-spacing */
+.kbKey.enter{
+  font-size: 11px;         /* slightly smaller than 12 */
+  letter-spacing: .04em;   /* tighter */
+}
 
-    /* DEL: slightly greyer background to distinguish */
-    .kbKey.delete{
-      background: rgba(0,0,0,.06);
-    }
+/* DEL — a touch bigger + slightly grey background */
+.kbKey.delete{
+  font-size: 19px;
+  letter-spacing: 0;
+  background: rgba(0,0,0,.07);
+}
 
     /* CHECK disabled state (greyed out unless grid filled) */
     .kbKey.is-disabled{
@@ -2111,7 +2117,29 @@ function render(stealFocus=true){
 /* =======================
    Hint + nav
    ======================= */
-el.hintBtn.addEventListener('click', ()=>{
+function bindFastTap(btn, fn){
+  let last = 0;
+  const run = (e)=>{
+    const now = Date.now();
+    if(e){
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    // prevent double-fire (pointerdown + click)
+    if(now - last < 250) return;
+    last = now;
+    fn();
+  };
+
+  btn.addEventListener('pointerdown', run, {passive:false});
+  btn.addEventListener('click', (e)=>{
+    // desktop fallback; ignore if pointerdown just fired
+    if(Date.now() - last < 400){ e.preventDefault(); return; }
+    run(e);
+  });
+}
+
+function onHintButton(){
   if(state.finished) return;
   clearTransientOnAnyChange();
 
@@ -2132,9 +2160,11 @@ el.hintBtn.addEventListener('click', ()=>{
   state.hint = Math.min(3, state.hint + 1);
   if(state.hint >= 3 && state.bank.length === 0) rebuildBank();
   renderSmart();
-});
+}
 
-el.checkBtn.addEventListener('click', onCheck);
+bindFastTap(el.hintBtn, onHintButton);
+bindFastTap(el.checkBtn, onCheck);
+
 
 el.prevBtn.addEventListener('click', (e)=>{
   e.preventDefault();
@@ -2163,11 +2193,21 @@ el.clue.addEventListener('click', (e)=>{
   if(state.placed[group]){
     cyclePlacedTrigram(group);
   }else{
-    const tri = firstTrigramOfWord(group);
+    let tri = null;
+
+    // If hint is exposed, prefer the hint trigram
+    if(group === 'w1' && state.hint >= 1) tri = norm(current().tri1);
+    if(group === 'w2' && state.hint >= 2) tri = norm(current().tri2);
+
+    // Otherwise fall back to the default “first trigram”
+    if(!tri) tri = firstTrigramOfWord(group);
+
     if(tri) placeTrigram(group, tri);
   }
+
   renderSmart();
 });
+
 
 /* Always-active typing outside grid */
 document.addEventListener('keydown', (e)=>{
