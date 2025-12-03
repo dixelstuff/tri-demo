@@ -129,7 +129,7 @@
       overflow:hidden;
       background:#fff;
       box-shadow:0 10px 18px rgba(0,0,0,.12);
-      transition: box-shadow .45s ease; /* IMPORTANT: no transform transition (prevents jerk) */
+      transition: box-shadow .45s ease; /* IMPORTANT: no transform transition */
       will-change: transform, box-shadow;
       flex:0 0 auto;
     }
@@ -200,17 +200,17 @@
     }
     .cell:not(:nth-child(7n+1)){ border-left:3px solid var(--ink); }
 
-    /* Pseudo caret ONLY in keyboard mode (mobile) */
+    /* Pseudo caret ONLY in keyboard mode (mobile): bottom horizontal line (blink) */
     html.has-kb .cell.active::after{
       content:"";
       position:absolute;
-      width:2px; /* thinner */
-      height:62%;
+      height:3px;
+      width:62%;
       left:50%;
-      top:50%;
-      transform:translate(-50%,-50%);
+      bottom:12%;
+      transform:translateX(-50%);
       background:var(--caret);
-      border-radius:2px;
+      border-radius:999px;
       animation: caretBlink 1.1s steps(2,end) infinite;
       pointer-events:none;
     }
@@ -267,7 +267,7 @@
       height:74px;
       width:100%;
       max-width:760px;
-      margin: clamp(18px, 3.4vh, 26px) auto 0; /* pushed down */
+      margin: clamp(18px, 3.4vh, 26px) auto 0;
       user-select:none;
       flex:0 0 auto;
     }
@@ -275,7 +275,7 @@
       position:absolute;
       left:50%;
       transform:translateX(-50%);
-      top:18px; /* more space above message */
+      top:18px;
       margin:0;
       font-weight:900;
       opacity:0;
@@ -404,18 +404,29 @@
       -webkit-appearance:none;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
+
+      /* reinstated shadow */
+      box-shadow: 0 7px 0 rgba(0,0,0,.16);
     }
-    .btn:active{ transform:translateY(1px); }
+    .btn:active{
+      transform:translateY(1px);
+      box-shadow: 0 6px 0 rgba(0,0,0,.16);
+    }
     .btn.hints{ background:#fff3bd; }
     .btn.check{ background:rgba(255,255,255,.25); opacity:.55; }
     .btn.check.ready{ opacity:1; background:var(--submit); }
-    .btn:disabled{ opacity:.35 !important; cursor:default; transform:none !important; }
+    .btn:disabled{
+      opacity:.35 !important;
+      cursor:default;
+      transform:none !important;
+      box-shadow: 0 7px 0 rgba(0,0,0,.10);
+    }
 
     /* On mobile keyboard mode: buttons float ABOVE keyboard */
     html.has-kb .btnRow{
       position:fixed;
       left:0; right:0;
-      bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 36px); /* slightly closer to keyboard */
+      bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 36px);
       margin:0;
       z-index:9997;
     }
@@ -460,18 +471,18 @@
       display:flex;
       flex-direction:column;
       gap:8px;
-      --keyW: clamp(28px, 8.6vw, 48px); /* slightly wider keys */
+      --keyW: clamp(28px, 8.6vw, 48px);
     }
     .kbRow{
       display:flex;
       justify-content:center;
-      gap:4px; /* tighter gaps -> keys feel wider */
+      gap:4px;
     }
     .kbKey{
       width: var(--keyW);
       height: 48px;
       border:2px solid rgba(0,0,0,.16);
-      border-radius:11px; /* reduced radius */
+      border-radius:11px;
       background:rgba(255,255,255,.82);
       font-weight:700;
       font-style:normal;
@@ -488,25 +499,36 @@
 
     .kbKey.wide{
       width: calc(var(--keyW) * 1.55);
-      font-size: 18px;
-      font-weight:800;
+      font-size: 16px;         /* small CHECK */
+      font-weight:900;
       letter-spacing:.02em;
       background:rgba(255,255,255,.82);
       padding:0;
     }
-    .kbKey.enter{
-      background:rgba(255,255,255,.0);
+
+    /* DEL: slightly greyer background to distinguish */
+    .kbKey.delete{
+      background: rgba(0,0,0,.06);
+    }
+
+    /* CHECK disabled state (greyed out unless grid filled) */
+    .kbKey.is-disabled{
+      opacity:.38;
+      background: rgba(0,0,0,.04);
+      border-color: rgba(0,0,0,.10);
+      transform:none !important;
+      cursor:default;
     }
 
     @media (max-width:520px){
       .nav a{ padding:4px 9px; }
       .clue{
-        font-size:clamp(27px,6.25vw,36px); /* slightly bigger on mobile only */
+        font-size:clamp(27px,6.25vw,36px);
         margin-top: clamp(16px, 3.4vh, 28px);
       }
 
       .grid{ width:min(302px,92vw); }
-      .cell input{ font-size:clamp(24px,6.05vw,36px); } /* very slightly bigger */
+      .cell input{ font-size:clamp(24px,6.05vw,36px); }
 
       .letter{ width:28px; height:28px; font-size:19px; }
       .tinyLbl{ font-size:13px; }
@@ -597,7 +619,6 @@ const el = {
 
 const TWOTRI_TEXT  = "Two trigrams from same word";
 const OVERLAP_TEXT = "1-letter overlap allowed ✓";
-const EXCL_TEXT    = "Your hint excluded this trigram";
 
 const state = {
   i: 0,
@@ -643,7 +664,7 @@ function norm(s){ return String(s||"").toLowerCase().replace(/[^a-z]/g,""); }
 function isAlpha(ch){ return /^[a-z]$/i.test(ch); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function renderSmart(){ render(!state.useCustomKB); } // desktop always refocus after render
+function renderSmart(){ render(!state.useCustomKB); }
 
 function shakeGrid(){
   el.gridWrap.classList.remove('shake');
@@ -674,13 +695,6 @@ function updateKeyboardHeightVar(){
   }
 }
 
-const ICON_ENTER = `
-<svg class="icoSvg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-  <path d="M4 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M10 8l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M14 5h5v14h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
-
 function pressKeyAction(kind, val){
   if(state.finished) return;
   if(kind === 'letter'){
@@ -688,6 +702,7 @@ function pressKeyAction(kind, val){
   }else if(kind === 'delete'){
     kbBackspace();
   }else if(kind === 'enter'){
+    if(!canEnableCheckNow()) return;
     onCheck();
   }
 }
@@ -701,15 +716,15 @@ function makeKey(label, aria, cls, kind, val){
   if(kind === 'letter'){
     b.textContent = label;
   } else if(kind === 'enter') {
-    b.innerHTML = ICON_ENTER;
+    b.textContent = "CHECK";
   } else {
-    /* changed: no icon, show DEL */
     b.textContent = "DEL";
   }
 
   b.addEventListener('pointerdown', (e)=>{
     e.preventDefault();
     e.stopPropagation();
+    if(b.classList.contains('is-disabled')) return;
     pressKeyAction(kind, val);
   }, {passive:false});
 
@@ -735,7 +750,7 @@ function buildKeyboard(){
 
   const r3 = document.createElement('div');
   r3.className = "kbRow";
-  r3.appendChild(makeKey("ENTER", "Enter", "wide enter", "enter", null));
+  r3.appendChild(makeKey("CHECK", "Check", "wide enter", "enter", null));
   for(const ch of "ZXCVBNM"){
     r3.appendChild(makeKey(ch, `Letter ${ch}`, "", "letter", ch.toLowerCase()));
   }
@@ -770,7 +785,21 @@ function buildKeyboard(){
     }
   };
 
-  requestAnimationFrame(()=> updateKeyboardHeightVar());
+  requestAnimationFrame(()=> {
+    updateKeyboardHeightVar();
+    updateKeyboardState();
+  });
+}
+
+function updateKeyboardState(){
+  if(!state.useCustomKB) return;
+
+  const enter = el.kbHost.querySelector('.kbKey.enter');
+  if(enter){
+    const ok = canEnableCheckNow() && !state.finished;
+    enter.classList.toggle('is-disabled', !ok);
+    enter.setAttribute('aria-disabled', ok ? 'false' : 'true');
+  }
 }
 
 /* =======================
@@ -810,6 +839,11 @@ function clearTransientOnAnyChange(){
     el.msg.textContent = "";
     clearMsgTimer();
   }
+}
+
+function excludedMsgText(){
+  const n = (state.exclTris?.w1?.size || 0) + (state.exclTris?.w2?.size || 0);
+  return (n >= 2) ? "Your hints excluded these trigrams" : "Your hint excluded this trigram";
 }
 
 /* =======================
@@ -990,7 +1024,7 @@ function typeLetterIntoGrid(letter){
 }
 
 /* =======================
-   KB delete (changed): DEL removes what's selected (single OR trigram)
+   KB delete
    ======================= */
 function kbBackspace(){
   if(state.finished) return;
@@ -1038,7 +1072,6 @@ function deleteFromEnd(){
 
 /* =======================
    Typed trigram detection / promotion + rest of logic
-   (unchanged from your last working version)
    ======================= */
 function allowedSet(group){
   const p = current();
@@ -1309,7 +1342,7 @@ function rebuildBank(){
   state.bank = computeHint3Letters().map(ch => ({id: uid(), ch}));
 }
 
-/* placing / cycling (unchanged logic from your last) */
+/* placing / cycling */
 function placeTrigram(group, tri){
   if(state.finished) return;
   clearTransientOnAnyChange();
@@ -1373,7 +1406,6 @@ function placeTrigram(group, tri){
   setMiniHighlightToTri(group, t);
 }
 
-/* clue tap -> cycle or place first trigram */
 function cyclePlacedTrigram(group){
   if(state.finished) return;
   const pl = state.placed[group];
@@ -1420,7 +1452,7 @@ function updateStatusMessages(){
 
   if(hasMax3){ setMsg("Max 3 contiguous letters allowed", 'warn'); state.overlapMsgOn=false; return; }
   if(hasTwo){  setMsg(TWOTRI_TEXT, 'warn'); state.overlapMsgOn=false; return; }
-  if(hasExcluded){ setMsg(EXCL_TEXT, 'warn'); state.overlapMsgOn=false; return; }
+  if(hasExcluded){ setMsg(excludedMsgText(), 'warn'); state.overlapMsgOn=false; return; }
 
   if(el.msg.classList.contains('warn') && !state.msgTransient) setMsg("");
   if(state.msgTransient) return;
@@ -1491,7 +1523,7 @@ function onCheck(){
     return;
   }
   if(state.exclSet.size){
-    setMsg(EXCL_TEXT, "warn");
+    setMsg(excludedMsgText(), "warn");
     renderSmart();
     return;
   }
@@ -1520,7 +1552,7 @@ function onCheck(){
   renderSmart();
 }
 
-/* Hint track UI (same as before) */
+/* Hint track UI */
 function makeTrigramBlock(tri, cls, labelText, onClick){
   const block = document.createElement('div');
   block.className = "trackBlock";
@@ -1622,7 +1654,7 @@ function renderHintTrack(){
   }
 }
 
-/* ===== Drag ghost & red-ghost fix (same as previous) ===== */
+/* ===== Drag ghost & other logic unchanged (keeping your working behaviour) ===== */
 function trigramIsRedAtStart(start){
   computeMax3Invalid();
   computeTwoTrigramsInvalid();
@@ -1908,7 +1940,7 @@ function renderGrid(stealFocus=true){
     input.maxLength = 1;
     input.dataset.idx = String(i);
     input.value = cellChar(i);
-    input.name = "x-"+i;          // helps iOS avoid autofill heuristics
+    input.name = "x-"+i;
     input.enterKeyHint = "done";
 
     const ro = !!tri || state.finished || state.useCustomKB;
@@ -1993,7 +2025,6 @@ function renderGrid(stealFocus=true){
 
       const t = trigramAtIndex(i);
       if(t){
-        /* changed: don't preventDefault on tap; only the drag move prevents default */
         clearTransientOnAnyChange();
         beginDragWithThreshold(e, (ev)=>startDragTrigram(ev, t.group, t.tri, i, t.start));
       }
@@ -2058,6 +2089,7 @@ function render(stealFocus=true){
   el.checkBtn.disabled = state.finished;
 
   updateStatusMessages();
+  updateKeyboardState();
 }
 
 /* =======================
@@ -2173,6 +2205,7 @@ window.addEventListener('resize', ()=>{
   const next = shouldUseCustomKB();
   if(next !== state.useCustomKB) setCustomKBEnabled(next);
   updateKeyboardHeightVar();
+  updateKeyboardState();
 });
 
 setCustomKBEnabled(shouldUseCustomKB());
