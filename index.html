@@ -18,6 +18,9 @@
       --submit:#F4D2FD;
 
       --shadow:0 10px 24px rgba(0,0,0,.18);
+
+      /* estimated keyboard height for padding, JS will set to actual */
+      --kb-h: 260px;
     }
     *{ box-sizing:border-box; }
     body{
@@ -32,6 +35,11 @@
       max-width:980px;
       margin:0 auto;
       padding:16px 14px 46px;
+    }
+
+    /* when custom keyboard is visible, add bottom padding so buttons stay tappable */
+    html.has-kb .wrap{
+      padding-bottom: calc(46px + var(--kb-h) + env(safe-area-inset-bottom));
     }
 
     .wrap.solved .gridWrap{
@@ -117,6 +125,13 @@
       position:relative;
     }
     .cell:not(:nth-child(7n+1)){ border-left:3px solid var(--ink); }
+
+    /* active cursor cell (important on mobile when inputs aren't focusable) */
+    .cell.active{
+      outline:4px solid rgba(0,0,0,.78);
+      outline-offset:-4px;
+    }
+
     .cell input{
       width:100%;
       height:100%;
@@ -140,6 +155,11 @@
     .cell.grabbable{ cursor:grab; }
     .cell.grabbable:active{ cursor:grabbing; }
     .cell.grabbable input{ pointer-events:none; cursor:grab; }
+
+    /* When custom KB enabled: don't let inputs be interactive (prevents iOS keyboard) */
+    html.has-kb .cell input{
+      pointer-events:none;
+    }
 
     /* fixed message slot so buttons never shift */
     .msgSlot{
@@ -351,6 +371,61 @@
       opacity:.95;
     }
 
+    /* ========= Custom On-screen Keyboard ========= */
+    .kbHost{
+      position:fixed;
+      left:0; right:0;
+      bottom:0;
+      z-index:9996;
+      display:none;
+      padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+      background:rgba(255,255,255,.86);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-top:4px solid rgba(0,0,0,.20);
+      box-shadow: 0 -16px 30px rgba(0,0,0,.14);
+      touch-action: manipulation;
+    }
+    html.has-kb .kbHost{ display:block; }
+
+    .kb{
+      max-width:560px;
+      margin:0 auto;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .kbRow{
+      display:flex;
+      justify-content:center;
+      gap:6px;
+    }
+    .kbKey{
+      width: clamp(28px, 8.4vw, 46px);
+      height: 48px;
+      border:3px solid rgba(0,0,0,.18);
+      border-radius:14px;
+      background:rgba(255,255,255,.75);
+      font-weight:900;
+      font-style:italic;
+      text-transform:lowercase;
+      font-size: 20px;
+      box-shadow:0 6px 0 rgba(0,0,0,.12);
+      cursor:pointer;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .kbKey:active{ transform:translateY(1px); box-shadow:0 5px 0 rgba(0,0,0,.12); }
+    .kbKey.wide{
+      width: calc(clamp(28px, 8.4vw, 46px) * 2.2);
+      font-style:normal;
+      text-transform:none;
+      font-size:18px;
+    }
+    .kbKey.enter{ background:var(--submit); }
+    .kbKey.delete{ background:rgba(255,255,255,.88); }
+
     @media (max-width:520px){
       .letter{ width:28px; height:28px; font-size:18px; }
       .grid{ width:min(292px,92vw); }
@@ -360,6 +435,7 @@
       .msg.result{ top:20px; }
       .clue{ font-size:clamp(22px,5.2vw,34px); margin-bottom:58px; }
       .tipFloat{ font-size:14px; }
+      .kbKey{ height:46px; }
     }
   </style>
 </head>
@@ -402,6 +478,9 @@
     </div>
   </div>
 
+  <!-- Custom keyboard host -->
+  <div class="kbHost" id="kbHost" aria-label="On-screen keyboard"></div>
+
 <script>
 const PUZZLES = [
   { clue:"Raccoon scuffle!",  word1:"raccoon", word2:"scuffle", answer:"buffoon", tri1:"oon", tri2:"uff", tri1_pos:4, tri2_pos:1 },
@@ -435,6 +514,8 @@ const el = {
   prevBtn: document.getElementById('prevBtn'),
   nextBtn: document.getElementById('nextBtn'),
   count: document.getElementById('count'),
+
+  kbHost: document.getElementById('kbHost'),
 };
 
 const TWOTRI_TEXT  = "Two trigrams from same word";
@@ -480,6 +561,8 @@ const state = {
 
   lastTap: null,
   lastDragEndedAt: 0,
+
+  useCustomKB: false,
 };
 
 function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
@@ -494,6 +577,83 @@ function shakeGrid(){
   void el.gridWrap.offsetWidth;
   el.gridWrap.classList.add('shake');
   setTimeout(()=> el.gridWrap.classList.remove('shake'), 420);
+}
+
+/* ===== custom keyboard detection + build ===== */
+function shouldUseCustomKB(){
+  const coarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+  const small = window.matchMedia && window.matchMedia('(max-width: 920px)').matches;
+  return !!(coarse && small);
+}
+function setCustomKBEnabled(on){
+  state.useCustomKB = !!on;
+  document.documentElement.classList.toggle('has-kb', state.useCustomKB);
+  buildKeyboard();
+  requestAnimationFrame(()=> updateKeyboardPadding());
+}
+function updateKeyboardPadding(){
+  if(!state.useCustomKB) return;
+  const rect = el.kbHost.getBoundingClientRect();
+  if(rect && rect.height){
+    document.documentElement.style.setProperty('--kb-h', `${Math.ceil(rect.height)}px`);
+  }
+}
+function makeKey(label, aria, cls, onPress){
+  const b = document.createElement('button');
+  b.type = "button";
+  b.className = `kbKey ${cls||""}`.trim();
+  b.textContent = label;
+  b.setAttribute('aria-label', aria || label);
+
+  // Use pointerdown to avoid focus weirdness and to feel snappy on iOS
+  b.addEventListener('pointerdown', (e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+    if(state.finished) return;
+    onPress();
+  }, {passive:false});
+
+  return b;
+}
+function buildKeyboard(){
+  el.kbHost.innerHTML = "";
+  if(!state.useCustomKB) return;
+
+  const kb = document.createElement('div');
+  kb.className = "kb";
+
+  const rows = ["qwertyuiop","asdfghjkl","zxcvbnm"];
+  rows.forEach((row, ri)=>{
+    const r = document.createElement('div');
+    r.className = "kbRow";
+
+    for(const ch of row){
+      r.appendChild(makeKey(ch, `Letter ${ch}`, "", ()=>{
+        typeLetterIntoGrid(ch);
+      }));
+    }
+
+    // Add delete on the end of row 3
+    if(ri === 2){
+      r.appendChild(makeKey("⌫", "Delete", "wide delete", ()=>{
+        kbBackspace();
+      }));
+    }
+
+    kb.appendChild(r);
+  });
+
+  // Bottom row: enter
+  const r4 = document.createElement('div');
+  r4.className = "kbRow";
+  r4.appendChild(makeKey("enter", "Enter", "wide enter", ()=>{
+    onCheck();
+  }));
+  kb.appendChild(r4);
+
+  el.kbHost.appendChild(kb);
+
+  requestAnimationFrame(()=> updateKeyboardPadding());
 }
 
 /* ===== tip ===== */
@@ -532,7 +692,7 @@ function scheduleTipHide(){
 function bumpTipLinger(){
   if(!state.tip.active) return;
   const now = performance.now();
-  const ACTION_LINGER_MS = 1200; /* shorter */
+  const ACTION_LINGER_MS = 1200;
   const target = Math.max(state.tip.hideAt, state.tip.minUntil, now + ACTION_LINGER_MS);
   state.tip.hideAt = Math.min(state.tip.hardUntil, target);
   scheduleTipHide();
@@ -725,11 +885,12 @@ function deleteAtIndex(idx){
 function focusCell(idx){
   const i = clamp(idx, 0, N-1);
   state.focusIdx = i;
+  if(state.useCustomKB) return; // don't focus inputs (prevents iOS keyboard)
   const inp = el.grid.querySelector(`input[data-idx="${i}"]`);
   if(inp) inp.focus();
 }
 
-/* ===== "always active" typing helpers ===== */
+/* ===== always active typing ===== */
 function isGridInput(node){
   return !!(node && node.tagName === "INPUT" && node.dataset && node.dataset.idx != null && node.closest && node.closest('#gridWrap'));
 }
@@ -763,8 +924,17 @@ function typeLetterIntoGrid(letter){
   state.focusIdx = (next == null) ? clamp(idx + 1, 0, N-1) : next;
 
   render();
-  requestAnimationFrame(()=> focusCell(state.focusIdx));
   return true;
+}
+
+/* Backspace for custom keyboard */
+function kbBackspace(){
+  if(state.finished) return;
+  clearTransientOnAnyChange();
+  const idx = clamp(state.focusIdx ?? 0, 0, N-1);
+  const fake = { key:'Backspace', preventDefault(){}, stopPropagation(){} };
+  handleGridKeydown(fake, idx);
+  render();
 }
 
 /* ===== key handling ===== */
@@ -783,7 +953,7 @@ function handleGridKeydown(e, idx){
   if(e.key !== "Backspace" && e.key !== "Delete") return;
 
   e.preventDefault();
-  e.stopPropagation(); /* prevents double-delete/skips */
+  e.stopPropagation();
   clearTransientOnAnyChange();
 
   if(e.key === "Backspace"){
@@ -810,7 +980,7 @@ function handleGridKeydown(e, idx){
   }
 }
 
-/* Delete-from-end fallback (works even after clicking "check") */
+/* Delete-from-end fallback */
 function deleteFromEnd(){
   if(state.finished) return false;
   for(let i=N-1;i>=0;i--){
@@ -1210,7 +1380,7 @@ function placeFromHintClick(group, tri){
   }else{
     if(other){
       const ol = overlapCount(start, other.start);
-        const ok = (ol <= 1) && (ol !== 1 || overlapIsValid(start, t, other.start, other.tri));
+      const ok = (ol <= 1) && (ol !== 1 || overlapIsValid(start, t, other.start, other.tri));
       if(!ok){
         start = null;
         for(const s of tryStartsInOrder()){
@@ -1424,19 +1594,16 @@ function onCheck(){
   if(state.badSet.size){
     setMsg("Max 3 contiguous letters allowed", "warn");
     render(false);
-    focusCell(N-1);
     return;
   }
   if(state.twoSet.size){
     setMsg(TWOTRI_TEXT, "warn");
     render(false);
-    focusCell(N-1);
     return;
   }
   if(state.exclSet.size){
     setMsg(EXCL_TEXT, "warn");
     render(false);
-    focusCell(N-1);
     return;
   }
 
@@ -1462,7 +1629,6 @@ function onCheck(){
   }
 
   render(false);
-  focusCell(N-1);
 }
 
 /* ===== hint track UI ===== */
@@ -1803,6 +1969,10 @@ function renderGrid(stealFocus=true){
     cell.className = "cell";
     cell.dataset.idx = String(i);
 
+    if(!state.finished && i === clamp(state.focusIdx ?? 0, 0, N-1)){
+      cell.classList.add('active');
+    }
+
     const tri = trigramAtIndex(i);
 
     if(tri){
@@ -1822,7 +1992,9 @@ function renderGrid(stealFocus=true){
     input.dataset.idx = String(i);
     input.value = cellChar(i);
 
-    input.readOnly = !!tri || state.finished;
+    const ro = !!tri || state.finished || state.useCustomKB;
+    input.readOnly = ro;
+    input.tabIndex = state.useCustomKB ? -1 : 0;
 
     input.addEventListener('focus', ()=>{ state.focusIdx = i; });
     input.addEventListener('keydown', (e)=> handleGridKeydown(e, i));
@@ -1845,7 +2017,14 @@ function renderGrid(stealFocus=true){
 
     cell.addEventListener('pointerdown', (e)=>{
       if(state.finished) return;
-      requestAnimationFrame(()=>input.focus());
+
+      // On mobile custom KB: no focusing inputs (prevents iOS keyboard). Just move cursor.
+      if(state.useCustomKB){
+        state.focusIdx = i;
+        render(false);
+      }else{
+        requestAnimationFrame(()=>input.focus());
+      }
 
       const t = trigramAtIndex(i);
       if(t){
@@ -1864,7 +2043,7 @@ function renderGrid(stealFocus=true){
     positionTip();
   }
 
-  if(stealFocus && !state.finished){
+  if(stealFocus && !state.finished && !state.useCustomKB){
     requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
   }
 }
@@ -1955,15 +2134,15 @@ el.checkBtn.addEventListener('click', onCheck);
 el.prevBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearTransientOnAnyChange(); state.i=(state.i-1+PUZZLES.length)%PUZZLES.length; resetAllForPuzzle(); render(); });
 el.nextBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearTransientOnAnyChange(); state.i=(state.i+1)%PUZZLES.length; resetAllForPuzzle(); render(); });
 
-/* ===== always-active focus: click/tap background snaps focus back ===== */
+/* ===== always-active focus ===== */
 document.addEventListener('pointerdown', (e)=>{
   if(state.finished) return;
   if(e.target && e.target.closest && e.target.closest('#gridWrap')) return;
-  if(e.target && e.target.closest && e.target.closest('button,a,.letters')) return;
+  if(e.target && e.target.closest && e.target.closest('button,a,.letters,.kbHost')) return;
   requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
 });
 
-/* ===== keyboard handler (includes "always-active typing") ===== */
+/* ===== keyboard handler ===== */
 document.addEventListener('keydown', (e)=>{
   if(state.finished) return;
 
@@ -1972,7 +2151,6 @@ document.addEventListener('keydown', (e)=>{
 
   // Always-active typing: if user types a letter while focus isn't in the grid, put it in the grid.
   if(!inGrid && e.key && e.key.length === 1 && isAlpha(e.key)){
-    // don't steal from other text inputs (none in this UI, but safe)
     const isOtherTyping = target && target.tagName === "INPUT" && !isGridInput(target);
     if(!isOtherTyping){
       e.preventDefault();
@@ -1981,31 +2159,32 @@ document.addEventListener('keydown', (e)=>{
     }
   }
 
-  if(e.key === "Enter" && inGrid && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey){
+  if(e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey){
     e.preventDefault();
     clearTransientOnAnyChange();
     onCheck();
     return;
   }
 
-  // Delete-from-end fallback still works after clicking check / losing focus
-  if((e.key === "Backspace" || e.key === "Delete") && !inGrid){
-    const isTypingElsewhere = target && target.tagName === "INPUT" && !isGridInput(target);
-    if(isTypingElsewhere) return;
-
-    e.preventDefault();
-    clearTransientOnAnyChange();
-    if(deleteFromEnd()){
-      render();
-      focusCell(state.focusIdx ?? 0);
-    }else{
-      focusCell(state.focusIdx ?? 0);
+  if(e.key === "Backspace" || e.key === "Delete"){
+    // If focus isn't in a real grid input (common on mobile/custom KB mode), delete from end.
+    if(!inGrid || state.useCustomKB){
+      e.preventDefault();
+      clearTransientOnAnyChange();
+      if(deleteFromEnd()){
+        render();
+      }
+      return;
     }
-    return;
   }
 });
 
-window.addEventListener('resize', ()=>{ if(state.tip.active) positionTip(); });
+window.addEventListener('resize', ()=>{
+  const next = shouldUseCustomKB();
+  if(next !== state.useCustomKB) setCustomKBEnabled(next);
+  updateKeyboardPadding();
+  if(state.tip.active) positionTip();
+});
 window.addEventListener('scroll', ()=>{ if(state.tip.active) positionTip(); }, {passive:true});
 
 /* ===== resets ===== */
@@ -2029,6 +2208,8 @@ function resetAllForPuzzle(){
   resetMainGridOnly();
 }
 
+/* ===== init ===== */
+setCustomKBEnabled(shouldUseCustomKB());
 render();
 </script>
 </body>
