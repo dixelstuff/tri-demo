@@ -20,8 +20,8 @@
       /* keyboard */
       --kb-h: 260px; /* JS sets real height */
 
-      /* caret (slightly lighter) */
-      --caret: rgba(0,0,0,.26);
+      /* caret */
+      --caret: rgba(0,0,0,.30);
     }
 
     *{ box-sizing:border-box; }
@@ -200,18 +200,15 @@
     }
     .cell:not(:nth-child(7n+1)){ border-left:3px solid var(--ink); }
 
-    /* Pseudo caret ONLY in keyboard mode (mobile):
-       - underscore style (less annoying)
-       - only on editable cells
-       - hidden during drag */
-    html.has-kb:not(.is-dragging) .cell.active.editable::after{
+    /* Pseudo caret ONLY in keyboard mode (mobile) */
+    html.has-kb .cell.active::after{
       content:"";
       position:absolute;
-      width:16px;
-      height:2px;
+      width:2px; /* thinner */
+      height:62%;
       left:50%;
-      bottom:10px;
-      transform:translateX(-50%);
+      top:50%;
+      transform:translate(-50%,-50%);
       background:var(--caret);
       border-radius:2px;
       animation: caretBlink 1.1s steps(2,end) infinite;
@@ -414,13 +411,17 @@
     .btn.check.ready{ opacity:1; background:var(--submit); }
     .btn:disabled{ opacity:.35 !important; cursor:default; transform:none !important; }
 
-    /* On mobile keyboard mode: buttons float ABOVE keyboard (more gap now) */
+    /* On mobile keyboard mode: buttons float ABOVE keyboard */
     html.has-kb .btnRow{
       position:fixed;
       left:0; right:0;
-      bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 44px); /* moved further away from keyboard */
+      bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 36px); /* slightly closer to keyboard */
       margin:0;
       z-index:9997;
+    }
+    /* Slightly thinner border on hint/check buttons in KB mode only */
+    html.has-kb .btn{
+      border-width:3px;
     }
 
     /* ===== Ghost (drag overlay) ===== */
@@ -459,18 +460,18 @@
       display:flex;
       flex-direction:column;
       gap:8px;
-      --keyW: clamp(28px, 8.2vw, 46px);
+      --keyW: clamp(28px, 8.6vw, 48px); /* slightly wider keys */
     }
     .kbRow{
       display:flex;
       justify-content:center;
-      gap:6px;
+      gap:4px; /* tighter gaps -> keys feel wider */
     }
     .kbKey{
       width: var(--keyW);
       height: 48px;
       border:2px solid rgba(0,0,0,.16);
-      border-radius:14px;
+      border-radius:11px; /* reduced radius */
       background:rgba(255,255,255,.82);
       font-weight:700;
       font-style:normal;
@@ -484,38 +485,17 @@
       -webkit-tap-highlight-color: transparent;
     }
     .kbKey:active{ transform:translateY(1px); }
-    .kbKey:disabled{
-      cursor:default;
-      transform:none !important;
-    }
 
     .kbKey.wide{
       width: calc(var(--keyW) * 1.55);
+      font-size: 18px;
+      font-weight:800;
+      letter-spacing:.02em;
+      background:rgba(255,255,255,.82);
       padding:0;
     }
-
-    /* CHECK key (replaces enter icon) */
-    .kbKey.checkKey{
-      font-size: 11px;
-      letter-spacing: .8px;
-      text-transform: uppercase;
-      font-weight:800;
-      color: rgba(0,0,0,.42);
-      background: rgba(0,0,0,.04);
-    }
-    .kbKey.checkKey:not(:disabled){
-      color: rgba(0,0,0,.60);
-      background: rgba(0,0,0,.06);
-    }
-    .kbKey.checkKey:disabled{
-      opacity:.60;
-    }
-
-    .kbKey .icoSvg{
-      width:26px;
-      height:26px;
-      display:inline-block;
-      vertical-align:middle;
+    .kbKey.enter{
+      background:rgba(255,255,255,.0);
     }
 
     @media (max-width:520px){
@@ -526,7 +506,7 @@
       }
 
       .grid{ width:min(302px,92vw); }
-      .cell input{ font-size:clamp(24px,6.1vw,36px); } /* tiny bump */
+      .cell input{ font-size:clamp(24px,6.05vw,36px); } /* very slightly bigger */
 
       .letter{ width:28px; height:28px; font-size:19px; }
       .tinyLbl{ font-size:13px; }
@@ -654,7 +634,6 @@ const state = {
   overlapMsgOn: false,
 
   useCustomKB: false,
-  kbCheckBtn: null,
 };
 
 function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
@@ -695,13 +674,11 @@ function updateKeyboardHeightVar(){
   }
 }
 
-/* redesigned delete icon (thinner + cleaner) */
-const ICON_DEL = `
+const ICON_ENTER = `
 <svg class="icoSvg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-  <path d="M7.5 7.5h9l4.5 4.5-4.5 4.5h-9L3 12l4.5-4.5z"
-        stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-  <path d="M11 10.5l5 5M16 10.5l-5 5"
-        stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M4 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M10 8l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 5h5v14h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 
 function pressKeyAction(kind, val){
@@ -710,7 +687,7 @@ function pressKeyAction(kind, val){
     typeLetterIntoGrid(val);
   }else if(kind === 'delete'){
     kbBackspace();
-  }else if(kind === 'check'){
+  }else if(kind === 'enter'){
     onCheck();
   }
 }
@@ -721,31 +698,26 @@ function makeKey(label, aria, cls, kind, val){
   b.className = `kbKey ${cls||""}`.trim();
   b.setAttribute('aria-label', aria || label);
 
-  if(kind === 'letter' || kind === 'check'){
+  if(kind === 'letter'){
     b.textContent = label;
+  } else if(kind === 'enter') {
+    b.innerHTML = ICON_ENTER;
   } else {
-    b.innerHTML = ICON_DEL;
+    /* changed: no icon, show DEL */
+    b.textContent = "DEL";
   }
 
   b.addEventListener('pointerdown', (e)=>{
     e.preventDefault();
     e.stopPropagation();
-    if(b.disabled) return;
     pressKeyAction(kind, val);
   }, {passive:false});
 
   return b;
 }
 
-function updateKBCheckEnabled(){
-  if(!state.useCustomKB) return;
-  if(!state.kbCheckBtn) return;
-  state.kbCheckBtn.disabled = !canEnableCheckNow() || state.finished;
-}
-
 function buildKeyboard(){
   el.kbHost.innerHTML = "";
-  state.kbCheckBtn = null;
   if(!state.useCustomKB) return;
 
   const kb = document.createElement('div');
@@ -763,16 +735,11 @@ function buildKeyboard(){
 
   const r3 = document.createElement('div');
   r3.className = "kbRow";
-
-  const checkKey = makeKey("CHECK", "Check", "wide checkKey", "check", null);
-  checkKey.disabled = !canEnableCheckNow();
-  state.kbCheckBtn = checkKey;
-
-  r3.appendChild(checkKey);
+  r3.appendChild(makeKey("ENTER", "Enter", "wide enter", "enter", null));
   for(const ch of "ZXCVBNM"){
     r3.appendChild(makeKey(ch, `Letter ${ch}`, "", "letter", ch.toLowerCase()));
   }
-  r3.appendChild(makeKey("DELETE", "Delete", "wide delete", "delete", null));
+  r3.appendChild(makeKey("DEL", "Delete", "wide delete", "delete", null));
   kb.appendChild(r3);
 
   el.kbHost.appendChild(kb);
@@ -798,7 +765,6 @@ function buildKeyboard(){
 
     const THRESH = 34;
     if(best && best.d2 <= THRESH*THRESH){
-      if(best.k.disabled) return;
       e.preventDefault();
       best.k.dispatchEvent(new PointerEvent('pointerdown', {bubbles:true, cancelable:true, clientX:e.clientX, clientY:e.clientY}));
     }
@@ -1023,21 +989,29 @@ function typeLetterIntoGrid(letter){
   return true;
 }
 
+/* =======================
+   KB delete (changed): DEL removes what's selected (single OR trigram)
+   ======================= */
 function kbBackspace(){
   if(state.finished) return;
   clearTransientOnAnyChange();
+
   const idx = clamp(state.focusIdx ?? 0, 0, N-1);
 
   const tHere = trigramAtIndex(idx);
-  if(!tHere && singleAt(idx)){
+  if(tHere){
+    deleteTrigramGroup(tHere.group);
+    renderSmart();
+    return;
+  }
+  if(singleAt(idx)){
     deleteAtIndex(idx);
     renderSmart();
     return;
   }
-  if(idx === 0){
-    if(tHere) { deleteTrigramGroup(tHere.group); renderSmart(); }
-    return;
-  }
+
+  if(idx === 0) return;
+
   if(deleteAtIndex(idx - 1)){ renderSmart(); return; }
   state.focusIdx = clamp(idx - 1, 0, N-1);
   renderSmart();
@@ -1678,7 +1652,6 @@ function abortDrag(){
   if(!state.drag) return;
   try{ state.drag.ghost?.remove(); }catch{}
   state.drag = null;
-  document.documentElement.classList.remove('is-dragging');
 }
 window.addEventListener('blur', abortDrag);
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden) abortDrag(); });
@@ -1698,7 +1671,6 @@ function beginDragWithThreshold(e, startFn){
     if(!started && (dx*dx + dy*dy) > 144){
       started = true;
       clearTransientOnAnyChange();
-      document.documentElement.classList.add('is-dragging');
       startFn(ev);
     }
     if(started){
@@ -1862,7 +1834,6 @@ function onDragEnd(e){
   const d = state.drag;
   try{ d.ghost.remove(); }catch{}
   state.drag = null;
-  document.documentElement.classList.remove('is-dragging');
 
   const rect = el.gridWrap.getBoundingClientRect();
   const dist = rectDistance(e.clientX, e.clientY, rect);
@@ -1901,17 +1872,6 @@ function renderGrid(stealFocus=true){
     if(!autoPromoteTypedTrigrams()) break;
   }
 
-  // in KB mode, never allow focusIdx to point to a trigram cell (caret should not imply "typing into" trigrams)
-  if(state.useCustomKB && !state.drag){
-    const idx = clamp(state.focusIdx ?? 0, 0, N-1);
-    if(trigramAtIndex(idx)){
-      const left = nextEditableFrom(idx, -1);
-      const right = nextEditableFrom(idx, +1);
-      if(left != null) state.focusIdx = left;
-      else if(right != null) state.focusIdx = right;
-    }
-  }
-
   computeMax3Invalid();
   computeTwoTrigramsInvalid();
   computeHintExcludedTrigrams();
@@ -1924,16 +1884,11 @@ function renderGrid(stealFocus=true){
     cell.className = "cell";
     cell.dataset.idx = String(i);
 
-    const tri = trigramAtIndex(i);
-    const editable = !tri;
-    if(editable) cell.classList.add('editable');
-
     if(!state.finished && i === clamp(state.focusIdx ?? 0, 0, N-1)){
-      // in KB mode, only show caret on editable cells
-      if(!state.useCustomKB || editable){
-        cell.classList.add('active');
-      }
+      cell.classList.add('active');
     }
+
+    const tri = trigramAtIndex(i);
 
     if(tri){
       if(overlapSet.has(i)) cell.classList.add('bg-ol');
@@ -1988,30 +1943,24 @@ function renderGrid(stealFocus=true){
         e.stopPropagation();
         clearTransientOnAnyChange();
 
-        if(e.key === "Backspace"){
-          const tHere = trigramAtIndex(i);
-          if(!tHere && singleAt(i)){
-            deleteAtIndex(i);
-            renderSmart();
-            return;
-          }
-          if(i === 0){
-            if(tHere) { deleteTrigramGroup(tHere.group); renderSmart(); }
-            return;
-          }
-          if(deleteAtIndex(i - 1)){ renderSmart(); return; }
-          focusCell(i - 1);
+        const tHere = trigramAtIndex(i);
+        if(tHere){
+          deleteTrigramGroup(tHere.group);
+          renderSmart();
+          return;
+        }
+        if(singleAt(i)){
+          deleteAtIndex(i);
           renderSmart();
           return;
         }
 
-        if(deleteAtIndex(i)){ renderSmart(); return; }
-        if(i < N-1){
-          if(deleteAtIndex(i+1)){ renderSmart(); return; }
-          focusCell(i+1);
-          renderSmart();
-          return;
-        }
+        if(i === 0) return;
+
+        if(deleteAtIndex(i - 1)){ renderSmart(); return; }
+        focusCell(i - 1);
+        renderSmart();
+        return;
       }
 
       if(e.key === "Enter"){
@@ -2036,24 +1985,21 @@ function renderGrid(stealFocus=true){
     cell.addEventListener('pointerdown', (e)=>{
       if(state.finished) return;
 
-      const t = trigramAtIndex(i);
+      state.focusIdx = i;
 
-      // In KB mode, don't move the "typing caret" onto trigram cells (dragging shouldn’t yank the caret)
-      if(state.useCustomKB){
-        if(!t) state.focusIdx = i;
-      }else{
-        state.focusIdx = i;
+      if(!state.useCustomKB){
         requestAnimationFrame(()=> focusCell(i));
       }
 
+      const t = trigramAtIndex(i);
       if(t){
-        e.preventDefault();
+        /* changed: don't preventDefault on tap; only the drag move prevents default */
         clearTransientOnAnyChange();
         beginDragWithThreshold(e, (ev)=>startDragTrigram(ev, t.group, t.tri, i, t.start));
       }
 
       renderSmart();
-    }, {passive:false});
+    });
 
     cell.appendChild(input);
     el.grid.appendChild(cell);
@@ -2112,7 +2058,6 @@ function render(stealFocus=true){
   el.checkBtn.disabled = state.finished;
 
   updateStatusMessages();
-  updateKBCheckEnabled();
 }
 
 /* =======================
@@ -2158,13 +2103,10 @@ el.nextBtn.addEventListener('click', (e)=>{
   renderSmart();
 });
 
-/* Clue tapping: use pointerdown so it always engages on first tap (esp. iOS) */
-el.clue.addEventListener('pointerdown', (e)=>{
+el.clue.addEventListener('click', (e)=>{
   if(state.finished) return;
   const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
   if(!w) return;
-  e.preventDefault();
-
   clearTransientOnAnyChange();
 
   const group = w.dataset.group;
@@ -2177,7 +2119,7 @@ el.clue.addEventListener('pointerdown', (e)=>{
     if(tri) placeTrigram(group, tri);
   }
   renderSmart();
-}, {passive:false});
+});
 
 /* Always-active typing outside grid */
 document.addEventListener('keydown', (e)=>{
