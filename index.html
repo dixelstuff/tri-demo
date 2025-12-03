@@ -108,7 +108,7 @@
       padding:14px 13px 15px 20px; /* top right bottom left */
       background:var(--bubble);
       border-radius:18px;
-      box-shadow:0 6px 14px rgba(0,0,0,.12);
+      box-shadow:0 2px 6px rgba(0,0,0,.08);
       font-size:clamp(30px,5.4vw,38px);
       line-height:1.12;
       letter-spacing:.12px;
@@ -159,7 +159,7 @@
       border-radius:14px;
       overflow:hidden;
       background:#fff;
-      box-shadow:0 10px 18px rgba(0,0,0,.12);
+      box-shadow:0 3px 8px rgba(0,0,0,.08);
       transition: box-shadow .45s ease; /* IMPORTANT: no transform transition */
       will-change: transform, box-shadow;
       flex:0 0 auto;
@@ -191,6 +191,9 @@
     .wrap.solved .cell{ background:#fff !important; }
     .wrap.solved .hintTrack{ opacity:0.35; }
     .wrap.solved .btnRow{ opacity:0.55; pointer-events:none; }
+    .wrap.solved .msgSlot{
+  margin-top: clamp(18px, 3.4vh, 28px);
+}
 
     @keyframes solvedPop{
       0%{ transform: translate3d(0,8px,0) scale(.985); }
@@ -415,6 +418,7 @@
       text-transform:lowercase;
       font-style:normal;
       opacity:.95;
+      display:none;
     }
 
     .extrasRow{
