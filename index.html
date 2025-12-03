@@ -1,9 +1,8 @@
-
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Trigram Demo</title>
 
   <style>
@@ -18,79 +17,50 @@
       --bad:#ffc9d2;  /* red/pink warning */
       --submit:#F4D2FD;
 
+      --shadow:0 8px 18px rgba(0,0,0,.14);
       --kb-h: 260px;
     }
 
     *{ box-sizing:border-box; }
-
     html, body{
       height:100%;
-      overflow:hidden;
-      overscroll-behavior:none;
-      -webkit-overflow-scrolling: auto;
-      touch-action: manipulation;
-    }
-    body{
       margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      overflow:hidden;              /* never scroll */
+      overscroll-behavior:none;
       background:var(--bg);
       color:var(--ink);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
       text-align:center;
-      position:fixed;
-      inset:0;
     }
-
-    button{
-      font:inherit;
-      color:inherit;
-      -webkit-appearance:none;
-      appearance:none;
-      background:none;
-      border:none;
-      padding:0;
-      margin:0;
-      -webkit-tap-highlight-color: transparent;
-    }
+    body{ touch-action:manipulation; }
 
     .wrap{
-      height:100%;
-      max-height:100%;
-      width:100%;
+      height: 100dvh;
+      max-height: 100dvh;
       max-width:980px;
       margin:0 auto;
-      padding:12px 14px 14px;
+      padding:14px 14px 12px;
+      overflow:hidden;
       display:flex;
       flex-direction:column;
       align-items:center;
-      overflow:hidden;
     }
 
-    html.has-kb .wrap{
-      padding-bottom: calc(14px + var(--kb-h) + env(safe-area-inset-bottom) + 60px);
-    }
-
-    .wrap.solved .gridWrap{
-      pointer-events:none;
-      box-shadow:0 0 0 10px rgba(200,247,210,.55), 0 10px 22px rgba(0,0,0,.12);
-      transform:translateY(12px);
-    }
-    .wrap.solved .cell{ background:#fff !important; }
+    .wrap.solved .gridWrap{ pointer-events:none; }
     .wrap.solved .hintTrack{ opacity:0; pointer-events:none; }
 
-    /* ===== TOP NAV ===== */
     .toprow{
       width:100%;
       display:flex;
       justify-content:center;
       align-items:center;
-      gap:10px;
-      margin:2px 0 10px;
+      margin-bottom:6px;
       flex:0 0 auto;
     }
     .nav{
       display:flex;
       align-items:center;
-      gap:8px;
+      gap:10px;
       font-weight:900;
       user-select:none;
     }
@@ -101,42 +71,38 @@
       padding:5px 10px;
       border-radius:999px;
       background:rgba(255,255,255,.30);
-      border:2px solid rgba(0,0,0,.18);
+      border:2px solid rgba(0,0,0,.16);
       cursor:pointer;
-      line-height:1;
+      -webkit-tap-highlight-color: transparent;
     }
     .nav a:active{ transform:translateY(1px); }
-    .count{ font-weight:900; opacity:.7; min-width:54px; text-align:center; font-size:14px; }
+    .count{ font-weight:900; opacity:.7; min-width:56px; text-align:center; }
 
-    /* ===== CLUE ===== */
     .clue{
       display:block;
       width:fit-content;
       max-width:min(940px,94vw);
-      margin:12px auto 24px;
-      padding:12px 18px 14px;
+      margin:40px auto 26px;       /* nav→clue slightly more; clue→grid slightly more */
+      padding:14px 20px 15px;
       background:var(--bubble);
       border-radius:18px;
-      box-shadow:0 6px 16px rgba(0,0,0,.12);
-      font-size:clamp(26px,3.2vw,40px);
+      box-shadow:var(--shadow);    /* reduced */
+      font-size:clamp(26px,3.0vw,40px);
       line-height:1.12;
       letter-spacing:.12px;
       font-weight:400;
       flex:0 0 auto;
       user-select:none;
     }
-    .clue .len{ opacity:.55; }
+    .clue .len{ opacity:.55; font-weight:inherit; font-style:inherit; }
 
-    /* TEST: clickable clue words */
     .clueWord{
       display:inline-block;
       cursor:pointer;
-      padding:2px 4px;
-      border-radius:10px;
+      -webkit-tap-highlight-color: transparent;
+      text-decoration:none;
     }
-    .clueWord:active{
-      transform:translateY(1px);
-    }
+    .clueWord:active{ transform:translateY(1px); }
 
     .u-w1, .u-w2, .u-red{
       text-decoration: underline;
@@ -155,8 +121,7 @@
       border-radius:14px;
       overflow:hidden;
       background:#fff;
-      box-shadow:0 10px 22px rgba(0,0,0,.12);
-      transition:transform .45s ease;
+      box-shadow:0 10px 22px rgba(0,0,0,.10);
       flex:0 0 auto;
     }
     .gridWrap.shake{ animation:shake .16s linear 0s 2; }
@@ -171,7 +136,7 @@
     .grid{
       display:grid;
       grid-template-columns:repeat(7,1fr);
-      width:min(308px,86vw);
+      width:min(320px,86vw);
     }
     .cell{
       aspect-ratio:1/1;
@@ -183,35 +148,25 @@
     }
     .cell:not(:nth-child(7n+1)){ border-left:3px solid var(--ink); }
 
-    .cell.active{ box-shadow:none; }
-
-    @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
-    html.has-kb .cell.active::after{
-      content:"";
-      position:absolute;
-      width:2px;
-      height:58%;
-      background:rgba(0,0,0,.45);
-      border-radius:2px;
-      animation: blink 1s step-end infinite;
-    }
-
     .cell input{
       width:100%;
       height:100%;
-      border:0; outline:none;
+      border:0;
+      outline:none;
       background:transparent;
       text-align:center;
-      font-size:clamp(22px,3.8vw,34px);
-      font-weight:900;
-      font-style:italic;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      font-size:clamp(24px,4.4vw,36px);
+      font-weight:800;          /* back to “default-ish”, less stylised */
+      font-style:normal;
       padding:0; margin:0;
       color:var(--ink);
       text-transform:lowercase;
       caret-color:var(--ink);
       cursor:text;
+      -webkit-appearance:none;
+      appearance:none;
     }
+
     .cell.bg-w1{ background:var(--w1); }
     .cell.bg-w2{ background:var(--w2); }
     .cell.bg-ol{ background:var(--ol); }
@@ -221,13 +176,13 @@
     .cell.grabbable:active{ cursor:grabbing; }
     .cell.grabbable input{ pointer-events:none; cursor:grab; }
 
+    /* when custom KB enabled: prevent iOS keyboard */
     html.has-kb .cell input{ pointer-events:none; }
 
     .msgSlot{
       position:relative;
-      height:60px;
+      height:58px;
       max-width:760px;
-      width:100%;
       margin:14px auto 0;
       user-select:none;
       flex:0 0 auto;
@@ -235,29 +190,29 @@
     .msg{
       position:absolute;
       left:0; right:0;
-      top:8px;
+      top:10px;
       margin:0;
       font-weight:900;
       opacity:0;
       transform:translateY(-6px);
       transition:opacity .18s ease, transform .18s ease;
       font-style:italic;
-      font-size:22px;
+      font-size:20px;
       pointer-events:none;
     }
     .msg.show{ opacity:.92; transform:translateY(0); }
-    .msg.warn{ opacity:.92; font-size:20px; }
+    .msg.warn{ opacity:.92; font-size:19px; font-style:italic; }
     .msg.result{ top:18px; }
 
     .hintTrack{
       margin:14px auto 0;
       width:fit-content;
       max-width:min(920px,96vw);
-      min-height:66px;
+      min-height:70px;
       display:flex;
       align-items:center;
       justify-content:center;
-      transition:opacity .35s ease;
+      transition:opacity .25s ease;
       user-select:none;
       flex:0 0 auto;
     }
@@ -297,7 +252,7 @@
       text-transform:lowercase;
       border-left:2px solid rgba(0,0,0,.10);
       background:rgba(255,255,255,.35);
-      transition:opacity .15s ease, background .15s ease, transform .08s ease;
+      transition:transform .08s ease;
     }
     .letter:first-child{ border-left:0; }
     .letter.sel-w1{ background:var(--w1); }
@@ -308,18 +263,14 @@
       font-style:italic;
     }
     .letter.extra:active{ transform:translateY(1px); }
-
     .tinyLbl{
       font-size:11px;
       font-weight:900;
       color:#000;
       line-height:1;
       margin-top:2px;
-      pointer-events:none;
       text-transform:lowercase;
-      font-style:normal;
     }
-
     .extrasRow{
       display:flex;
       gap:10px;
@@ -328,59 +279,56 @@
       flex-wrap:nowrap;
     }
 
-    /* ===== BUTTONS ===== */
+    /* Buttons: smaller; position differs with/without keyboard */
     .btnRow{
-      margin-top:12px;
+      margin-top:22px;            /* desktop: slightly lower */
       display:flex;
       justify-content:center;
-      gap:12px;
+      gap:10px;
       flex-wrap:wrap;
-      padding-top:6px;
-      padding-bottom: max(10px, env(safe-area-inset-bottom));
       width:100%;
       flex:0 0 auto;
     }
-    html.has-kb .btnRow{
-      position:fixed;
-      left:0; right:0;
-      bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 8px);
-      margin:0;
-      padding:10px 0;
-      z-index:9995;
-    }
-
     .btn{
-      -webkit-appearance:none;
-      appearance:none;
-      border:4px solid var(--ink);
+      border:3px solid var(--ink);
       border-radius:999px;
-      padding:10px 18px;
-      min-width:112px;
-      font-size:22px;
+      padding:9px 16px;
+      min-width:104px;
+      font-size:20px;
       font-weight:900;
       font-style:italic;
       background:rgba(255,255,255,.35);
-      box-shadow:0 7px 0 rgba(0,0,0,.16);
       cursor:pointer;
       user-select:none;
       text-transform:lowercase;
-
-      color:var(--ink) !important;
-      -webkit-text-fill-color: var(--ink) !important;
-      text-decoration:none !important;
+      color:var(--ink);                 /* fixes iOS “blue link” vibe */
+      -webkit-text-fill-color:var(--ink);
+      -webkit-appearance:none;
+      appearance:none;
+      text-decoration:none;
+      -webkit-tap-highlight-color: transparent;
     }
-    .btn:active{ transform:translateY(1px); box-shadow:0 6px 0 rgba(0,0,0,.16); }
+    .btn:active{ transform:translateY(1px); }
     .btn.hints{ background:#fff3bd; }
     .btn.check{ background:rgba(255,255,255,.25); opacity:.55; }
     .btn.check.ready{ opacity:1; background:var(--submit); }
-    .btn:disabled{ opacity:.35 !important; cursor:default; transform:none !important; box-shadow:none !important; }
+    .btn:disabled{ opacity:.35 !important; cursor:default; transform:none !important; }
+
+    html.has-kb .btnRow{
+      position:fixed;
+      left:0; right:0;
+      bottom: calc(var(--kb-h) + 18px + env(safe-area-inset-bottom)); /* mobile: up a touch from keyboard */
+      margin:0;
+      z-index:9997;
+      pointer-events:auto;
+    }
 
     .ghost{
       position:fixed;
       z-index:9999;
       pointer-events:none;
-      transform: translate(-50%, -50%);
-      filter: drop-shadow(0 16px 18px rgba(0,0,0,.35));
+      transform:translate(-50%, -50%);
+      filter: drop-shadow(0 14px 16px rgba(0,0,0,.28));
       opacity:.95;
     }
 
@@ -392,12 +340,12 @@
       z-index:9996;
       display:none;
       padding:10px 10px calc(10px + env(safe-area-inset-bottom));
-      background:rgba(255,255,255,.90);
+      background:rgba(255,255,255,.86);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
-      border-top:4px solid rgba(0,0,0,.20);
-      box-shadow:none;
-      touch-action: manipulation;
+      border-top:3px solid rgba(0,0,0,.18);
+      box-shadow:none; /* remove top shadow cast over page */
+      touch-action:manipulation;
     }
     html.has-kb .kbHost{ display:block; }
 
@@ -413,54 +361,47 @@
       justify-content:center;
       gap:6px;
     }
-.kbKey{
-  width: clamp(28px, 8.8vw, 48px);
-  height: 50px;
-  border:3px solid rgba(0,0,0,.18);
-  border-radius:14px;
-  background:rgba(255,255,255,.80);
-  font-weight:700;          /* less bold */
-  font-style:normal;        /* non-italic */
-  text-transform:uppercase;
-  font-size: 18px;
-  box-shadow:none;
-  cursor:pointer;
-  user-select:none;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  color:var(--ink);
-}
+    .kbKey{
+      width: clamp(30px, 8.8vw, 48px);
+      height: 50px;
+      border:2px solid rgba(0,0,0,.16);
+      border-radius:14px;
+      background:rgba(255,255,255,.80);
+      font-weight:700;          /* lighter */
+      font-style:normal;        /* non-italic */
+      text-transform:uppercase;
+      font-size:18px;
+      box-shadow:none;
+      cursor:pointer;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      color:var(--ink);
+      -webkit-appearance:none;
+      appearance:none;
+    }
     .kbKey:active{ transform:translateY(1px); }
     .kbKey.wide{
-      width: calc(clamp(28px, 8.8vw, 48px) * 2.2);
+      width: calc(clamp(30px, 8.8vw, 48px) * 2.15);
       font-style:normal;
       text-transform:none;
       font-size:18px;
+      letter-spacing:.5px;
     }
-    .kbKey.delete{ background:rgba(255,255,255,.92); }
+    .kbKey.enter{ background:var(--submit); }
+    .kbKey.delete{ background:rgba(255,255,255,.88); }
 
     @media (max-width:520px){
-      .grid{ width:min(304px,92vw); }
-
       .clue{
-        font-size:clamp(33px, 7.8vw, 48px);
-        margin:10px auto 26px;
-        padding:12px 16px 14px;
+        font-size:clamp(30px,6.2vw,40px); /* mobile clue a touch bigger */
+        margin:42px auto 28px;
       }
-
-      /* Bigger main grid letters on mobile */
-      .cell input{
-        font-size: clamp(25px, 6.1vw, 38px);
-      }
-
-      .nav a{ padding:4px 9px; }
-      .count{ font-size:13px; min-width:50px; }
-
+      .grid{ width:min(310px,92vw); }
+      .cell input{ font-size:clamp(28px,8.2vw,40px); } /* mobile grid a touch bigger */
       .letter{ width:28px; height:28px; font-size:18px; }
-      .btn{ font-size:20px; padding:10px 16px; min-width:108px; }
-      .msgSlot{ height:56px; margin-top:12px; }
-      .msg{ font-size:20px; top:8px; }
-      .msg.result{ top:18px; }
+      .btn{ font-size:19px; padding:9px 15px; min-width:100px; }
+      .msgSlot{ height:56px; margin-top:14px; }
+      .msg{ font-size:19px; }
       .kbKey{ height:48px; }
     }
   </style>
@@ -494,7 +435,7 @@
       </div>
     </div>
 
-    <div class="btnRow">
+    <div class="btnRow" id="btnRow">
       <button class="btn hints" id="hintBtn" type="button">hint 1</button>
       <button class="btn check" id="checkBtn" type="button">check</button>
     </div>
@@ -529,6 +470,7 @@ const el = {
 
   hintBtn: document.getElementById('hintBtn'),
   checkBtn: document.getElementById('checkBtn'),
+  btnRow: document.getElementById('btnRow'),
 
   prevBtn: document.getElementById('prevBtn'),
   nextBtn: document.getElementById('nextBtn'),
@@ -557,7 +499,6 @@ const state = {
   focusIdx: 0,
 
   drag: null,
-
   msgTimer: null,
   msgTransient: false,
   lockMsg: false,
@@ -574,9 +515,7 @@ const state = {
 
   overlapMsgOn: false,
 
-  lastTap: null,
   lastDragEndedAt: 0,
-
   useCustomKB: false,
 };
 
@@ -614,27 +553,48 @@ function updateKeyboardPadding(){
   }
 }
 
-function pressKey(k){
-  if(state.finished) return;
-  if(k === 'DEL') kbBackspace();
-  else typeLetterIntoGrid(k);
-}
-
-function makeKey(label, key, cls){
+function makeKey(label, aria, cls, onPress){
   const b = document.createElement('button');
   b.type = "button";
   b.className = `kbKey ${cls||""}`.trim();
   b.textContent = label;
-  b.dataset.k = key;
-  b.setAttribute('aria-label', key === 'DEL' ? 'Delete' : `Letter ${label}`);
+  b.setAttribute('aria-label', aria || label);
+  b._press = onPress;
 
   b.addEventListener('pointerdown', (e)=>{
     e.preventDefault();
     e.stopPropagation();
-    pressKey(key);
+    if(state.finished) return;
+    onPress();
   }, {passive:false});
 
   return b;
+}
+
+/* Make taps between keys pick the nearest key (more forgiving) */
+function installRowForgivingTap(rowEl){
+  rowEl.addEventListener('pointerdown', (e)=>{
+    if(state.finished) return;
+    if(e.target && e.target.closest && e.target.closest('.kbKey')) return;
+
+    const keys = Array.from(rowEl.querySelectorAll('.kbKey'));
+    if(!keys.length) return;
+
+    e.preventDefault();
+
+    let best = null;
+    let bestD = Infinity;
+    for(const k of keys){
+      const r = k.getBoundingClientRect();
+      const cx = (r.left + r.right) / 2;
+      const cy = (r.top + r.bottom) / 2;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const d = dx*dx + dy*dy;
+      if(d < bestD){ bestD = d; best = k; }
+    }
+    if(best && best._press) best._press();
+  }, {passive:false});
 }
 
 function buildKeyboard(){
@@ -644,63 +604,29 @@ function buildKeyboard(){
   const kb = document.createElement('div');
   kb.className = "kb";
 
-  const r1 = document.createElement('div'); r1.className = "kbRow";
-  for(const ch of "QWERTYUIOP") r1.appendChild(makeKey(ch, ch, ""));
-  kb.appendChild(r1);
+  const row1 = document.createElement('div');
+  row1.className = "kbRow";
+  for(const ch of "qwertyuiop") row1.appendChild(makeKey(ch.toUpperCase(), `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
+  installRowForgivingTap(row1);
+  kb.appendChild(row1);
 
-  const r2 = document.createElement('div'); r2.className = "kbRow";
-  for(const ch of "ASDFGHJKL") r2.appendChild(makeKey(ch, ch, ""));
-  kb.appendChild(r2);
+  const row2 = document.createElement('div');
+  row2.className = "kbRow";
+  for(const ch of "asdfghjkl") row2.appendChild(makeKey(ch.toUpperCase(), `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
+  installRowForgivingTap(row2);
+  kb.appendChild(row2);
 
-  // No ENTER key now; CHECK button does that.
-  const r3 = document.createElement('div'); r3.className = "kbRow";
-  for(const ch of "ZXCVBNM") r3.appendChild(makeKey(ch, ch, ""));
-  r3.appendChild(makeKey("DEL", "DEL", "wide delete"));
-  kb.appendChild(r3);
+  // Wordle-like bottom row: [enter] zxcvbnm [delete]
+  const row3 = document.createElement('div');
+  row3.className = "kbRow";
+  row3.appendChild(makeKey("⏎", "Enter", "wide enter", ()=> onCheck()));
+  for(const ch of "zxcvbnm") row3.appendChild(makeKey(ch.toUpperCase(), `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
+  row3.appendChild(makeKey("⌫", "Delete", "wide delete", ()=> kbBackspace()));
+  installRowForgivingTap(row3);
+  kb.appendChild(row3);
 
   el.kbHost.appendChild(kb);
-
-  // More forgiving: tapping between keys snaps to nearest key (within generous radius)
-  installKeyboardMagnet();
   requestAnimationFrame(()=> updateKeyboardPadding());
-}
-
-function installKeyboardMagnet(){
-  if(el.kbHost._magnetInstalled) return;
-  el.kbHost._magnetInstalled = true;
-
-  el.kbHost.addEventListener('pointerdown', (e)=>{
-    if(!state.useCustomKB || state.finished) return;
-
-    const keyEl = e.target.closest && e.target.closest('.kbKey');
-    if(keyEl) return; // normal key handlers will fire
-
-    const keys = Array.from(el.kbHost.querySelectorAll('.kbKey'));
-    if(!keys.length) return;
-
-    const x = e.clientX, y = e.clientY;
-    let best = null;
-
-    for(const k of keys){
-      const r = k.getBoundingClientRect();
-      const cx = (r.left + r.right) / 2;
-      const cy = (r.top + r.bottom) / 2;
-      const dx = x - cx, dy = y - cy;
-      const d2 = dx*dx + dy*dy;
-      if(!best || d2 < best.d2) best = { el:k, r, d2 };
-    }
-
-    if(!best) return;
-
-    const rr = best.r;
-    const thresh = Math.max(34, Math.min(rr.width, rr.height) * 0.85); // generous
-    if(Math.sqrt(best.d2) <= thresh){
-      e.preventDefault();
-      e.stopPropagation();
-      const k = best.el.dataset.k;
-      if(k) pressKey(k);
-    }
-  }, {passive:false});
 }
 
 /* ===== messages ===== */
@@ -884,6 +810,27 @@ function nextEditableFrom(startIdx, dir){
   }
   return null;
 }
+function typeLetterAtIndex(idx, letter){
+  if(state.finished) return false;
+  const ch = String(letter||"").slice(0,1);
+  if(!isAlpha(ch)) return false;
+
+  clearTransientOnAnyChange();
+
+  idx = clamp(idx, 0, N-1);
+  if(trigramAtIndex(idx)){
+    return typeLetterIntoGrid(ch);
+  }
+
+  const lower = ch.toLowerCase();
+  state.singles = state.singles.filter(x => x.idx !== idx);
+  state.singles.push({id: uid(), ch: lower, idx});
+
+  const next = nextEditableFrom(idx + 1, +1);
+  state.focusIdx = (next == null) ? clamp(idx + 1, 0, N-1) : next;
+  render();
+  return true;
+}
 function typeLetterIntoGrid(letter){
   if(state.finished) return false;
   const ch = String(letter || "").slice(0,1);
@@ -908,6 +855,8 @@ function typeLetterIntoGrid(letter){
   render();
   return true;
 }
+
+/* Backspace for custom keyboard */
 function kbBackspace(){
   if(state.finished) return;
   clearTransientOnAnyChange();
@@ -920,6 +869,13 @@ function kbBackspace(){
 /* ===== key handling ===== */
 function handleGridKeydown(e, idx){
   if(state.finished) return;
+
+  // Replace letter if user types on a filled cell (desktop/non-kb mode too)
+  if(e.key && e.key.length === 1 && isAlpha(e.key)){
+    e.preventDefault(); e.stopPropagation();
+    typeLetterAtIndex(idx, e.key);
+    return;
+  }
 
   if(e.key === " " || e.code === "Space" || e.key === "Spacebar"){
     e.preventDefault(); e.stopPropagation();
@@ -959,12 +915,17 @@ function handleGridKeydown(e, idx){
     return;
   }
 }
+
+/* Delete-from-end fallback */
 function deleteFromEnd(){
   if(state.finished) return false;
   for(let i=N-1;i>=0;i--){
     if(!cellChar(i)) continue;
     const t = trigramAtIndex(i);
-    if(t){ deleteTrigramGroup(t.group); return true; }
+    if(t){
+      deleteTrigramGroup(t.group);
+      return true;
+    }
     const s = singleAt(i);
     if(s){
       state.singles = state.singles.filter(x => x.idx !== i);
@@ -1203,14 +1164,8 @@ function autoPromoteTypedTrigrams(){
     setMiniHighlightToTri('w2', w2Cand.tri);
     changed = true;
   } else {
-    if(w1Cand && !state.placed.w1){
-      const did = promoteTypedCandidate('w1', w1Cand);
-      if(did) changed = true;
-    }
-    if(w2Cand && !state.placed.w2){
-      const did = promoteTypedCandidate('w2', w2Cand);
-      if(did) changed = true;
-    }
+    if(w1Cand && !state.placed.w1) changed = promoteTypedCandidate('w1', w1Cand) || changed;
+    if(w2Cand && !state.placed.w2) changed = promoteTypedCandidate('w2', w2Cand) || changed;
   }
 
   return changed;
@@ -1245,101 +1200,6 @@ function computeOverlapIdxSet(){
   return set;
 }
 
-/* ===== cycling ===== */
-function cyclePlacedTrigram(group){
-  if(state.finished) return;
-  if(lockedTri(group)) return;
-
-  const pl = state.placed[group];
-  if(!pl) return;
-
-  const p = current();
-  const w = norm(group === 'w1' ? p.word1 : p.word2);
-  const maxStart = Math.max(0, w.length - TR);
-  if(maxStart === 0) return;
-
-  const curTri = norm(pl.tri);
-  const curPos = w.indexOf(curTri);
-  if(curPos >= 0){
-    if(group === 'w1') state.sel1 = clamp(curPos, 0, maxStart);
-    else state.sel2 = clamp(curPos, 0, maxStart);
-  }else{
-    if(group === 'w1') state.sel1 = 0;
-    else state.sel2 = 0;
-  }
-
-  let s = (group === 'w1' ? state.sel1 : state.sel2);
-  if(s == null) s = 0;
-  s = (s + 1) % (maxStart + 1);
-  if(group === 'w1') state.sel1 = s; else state.sel2 = s;
-
-  const tri = w.slice(s, s+TR);
-  placeFromHintClick(group, tri);
-}
-
-function maybeHandleDoubleTapOnTrigramCell(cellIdx){
-  if(overlapActiveNow()) return;
-  if(isOverlapCell(cellIdx)) return;
-
-  const t = trigramAtIndex(cellIdx);
-  if(!t) return;
-
-  cyclePlacedTrigram(t.group);
-  render();
-}
-
-function installTapDetectorForTrigram(pointerDownEvent, cellIdx){
-  const pid = pointerDownEvent.pointerId;
-  const startX = pointerDownEvent.clientX;
-  const startY = pointerDownEvent.clientY;
-  let started = false;
-
-  const onMove = (ev)=>{
-    if(ev.pointerId !== pid) return;
-    const dx = ev.clientX - startX;
-    const dy = ev.clientY - startY;
-    if((dx*dx + dy*dy) > 144) started = true;
-  };
-
-  const onUp = (ev)=>{
-    if(ev.pointerId !== pid) return;
-    window.removeEventListener('pointermove', onMove);
-    window.removeEventListener('pointerup', onUp);
-    window.removeEventListener('pointercancel', onCancel);
-
-    if(state.drag) return;
-    if(performance.now() - state.lastDragEndedAt < 60) return;
-
-    if(started) return;
-
-    const t = trigramAtIndex(cellIdx);
-    if(!t) return;
-
-    const key = `${t.group}:${t.start}:${t.tri}`;
-    const now = performance.now();
-    const last = state.lastTap;
-    const DOUBLE_MS = 320;
-
-    if(last && last.key === key && (now - last.t) <= DOUBLE_MS){
-      state.lastTap = null;
-      maybeHandleDoubleTapOnTrigramCell(cellIdx);
-      return;
-    }
-    state.lastTap = { t: now, key };
-  };
-
-  const onCancel = (ev)=>{
-    if(ev.pointerId !== pid) return;
-    window.removeEventListener('pointermove', onMove);
-    window.removeEventListener('pointerup', onUp);
-    window.removeEventListener('pointercancel', onCancel);
-  };
-
-  window.addEventListener('pointermove', onMove, {passive:false});
-  window.addEventListener('pointerup', onUp);
-  window.addEventListener('pointercancel', onCancel);
-}
-
 /* ===== hint 3 bank ===== */
 function computeHint3Letters(){
   const p = current();
@@ -1356,7 +1216,7 @@ function rebuildBank(){
   state.bank = computeHint3Letters().map(ch => ({id: uid(), ch}));
 }
 
-/* ===== hint placement by clicking hint blocks ===== */
+/* ===== hint placement ===== */
 function applyHintLock(group){
   const p = current();
   const lock = norm(group==='w1' ? p.tri1 : p.tri2);
@@ -1431,144 +1291,56 @@ function placeFromHintClick(group, tri){
   setMiniHighlightToTri(group, t);
 }
 
-/* ===== status messages ===== */
-function updateStatusMessages(){
+/* Cycle via clue tap */
+function cyclePlacedTrigram(group){
   if(state.finished) return;
-  if(state.lockMsg) return;
+  if(lockedTri(group)) return;
 
-  const hasMax3 = state.badSet && state.badSet.size > 0;
-  const hasTwo  = state.twoSet && state.twoSet.size > 0;
-  const hasExcluded = state.exclSet && state.exclSet.size > 0;
-  const hasOverlap = overlapActiveNow();
+  const pl = state.placed[group];
+  if(!pl) return;
 
-  if(hasMax3){ setMsg("Max 3 contiguous letters allowed", 'warn'); state.overlapMsgOn=false; return; }
-  if(hasTwo){  setMsg(TWOTRI_TEXT, 'warn'); state.overlapMsgOn=false; return; }
-  if(hasExcluded){ setMsg(EXCL_TEXT, 'warn'); state.overlapMsgOn=false; return; }
+  const p = current();
+  const w = norm(group === 'w1' ? p.word1 : p.word2);
+  const maxStart = Math.max(0, w.length - TR);
+  if(maxStart === 0) return;
 
-  if(el.msg.classList.contains('warn') && !state.msgTransient) setMsg("");
-  if(state.msgTransient) return;
-
-  if(hasOverlap){
-    if(el.msg.textContent !== OVERLAP_TEXT || el.msg.classList.contains('warn')) setMsg(OVERLAP_TEXT);
-    state.overlapMsgOn = true;
+  const curTri = norm(pl.tri);
+  const curPos = w.indexOf(curTri);
+  if(curPos >= 0){
+    if(group === 'w1') state.sel1 = clamp(curPos, 0, maxStart);
+    else state.sel2 = clamp(curPos, 0, maxStart);
   }else{
-    if(state.overlapMsgOn && el.msg.textContent === OVERLAP_TEXT) setMsg("");
-    state.overlapMsgOn = false;
+    if(group === 'w1') state.sel1 = 0;
+    else state.sel2 = 0;
   }
+
+  let s = (group === 'w1' ? state.sel1 : state.sel2);
+  if(s == null) s = 0;
+  s = (s + 1) % (maxStart + 1);
+  if(group === 'w1') state.sel1 = s; else state.sel2 = s;
+
+  const tri = w.slice(s, s+TR);
+  placeFromHintClick(group, tri);
 }
 
-/* ===== check ===== */
-function canEnableCheckNow(){
-  for(let i=0;i<N;i++) if(!cellChar(i)) return false;
-  return true;
+function firstTriForGroup(group){
+  const lock = lockedTri(group);
+  if(lock) return lock;
+  const p = current();
+  const w = norm(group==='w1' ? p.word1 : p.word2);
+  return (w.length >= TR) ? w.slice(0, TR) : null;
 }
-function countTrigramsInWord(attempt, word){
-  const w = norm(word);
-  const found = [];
-  if(!w) return found;
-  for(let s=0; s<=N-TR; s++){
-    const tri = attempt.slice(s, s+TR);
-    if(w.includes(tri)) found.push(tri);
-  }
-  return found;
-}
-function hintPhraseText(h){
-  if(h === 0) return "with no hints";
-  if(h === 1) return "with 1 hint";
-  return `with ${h} hints`;
-}
-function onCheck(){
+function onClueTap(group){
   if(state.finished) return;
   clearTransientOnAnyChange();
 
-  if(!canEnableCheckNow()){
-    setTransientMsg("Fill all 7");
-    return;
-  }
-
-  computeMax3Invalid();
-  computeTwoTrigramsInvalid();
-  computeHintExcludedTrigrams();
-
-  const attempt = Array.from({length:N}, (_,i)=>cellChar(i)).join("").toLowerCase();
-  const p = current();
-  const ans = norm(p.answer);
-
-  if(attempt === ans){
-    setMsg(`Correct — ${hintPhraseText(state.hint)}!`, 'result');
-    state.finished = true;
-    state.revealedAnswer = false;
-    render();
-    return;
-  }
-
-  shakeGrid();
-
-  if(state.badSet.size){
-    setMsg("Max 3 contiguous letters allowed", "warn");
-    render(false);
-    return;
-  }
-  if(state.twoSet.size){
-    setMsg(TWOTRI_TEXT, "warn");
-    render(false);
-    return;
-  }
-  if(state.exclSet.size){
-    setMsg(EXCL_TEXT, "warn");
-    render(false);
-    return;
-  }
-
-  const w1Hits = countTrigramsInWord(attempt, p.word1);
-  const w2Hits = countTrigramsInWord(attempt, p.word2);
-
-  let msg = "";
-  if(w1Hits.length === 0 && w2Hits.length === 0){
-    msg = "You didn’t use any trigrams";
-  }else if(w1Hits.length === 0){
-    msg = "No trigram from word 1";
-  }else if(w2Hits.length === 0){
-    msg = "No trigram from word 2";
-  }else if(w1Hits.length > 1 || w2Hits.length > 1){
-    msg = TWOTRI_TEXT;
-  }
-
-  if(msg){
-    state.lockMsg = true;
-    setMsg(msg, "warn");
+  if(state.placed[group]){
+    cyclePlacedTrigram(group);
   }else{
-    setMsg("");
+    const tri = firstTriForGroup(group);
+    if(tri) placeFromHintClick(group, tri);
   }
-
-  render(false);
-}
-
-/* ===== hint track UI ===== */
-function makeTrigramBlock(tri, cls, labelText, onClick){
-  const block = document.createElement('div');
-  block.className = "trackBlock";
-
-  const lblTop = document.createElement('div');
-  lblTop.className = "tinyLbl";
-  lblTop.textContent = labelText;
-  block.appendChild(lblTop);
-
-  const box = document.createElement('div');
-  box.className = "letters clickable";
-  box.setAttribute("role","button");
-  box.setAttribute("aria-label", labelText);
-  box.addEventListener('click', onClick);
-
-  for(let i=0;i<tri.length;i++){
-    const d = document.createElement('div');
-    d.className = "letter " + cls;
-    d.textContent = tri[i];
-    box.appendChild(d);
-  }
-  block.appendChild(box);
-
-  return block;
+  render();
 }
 
 /* ===== drag (trigrams only) ===== */
@@ -1593,23 +1365,11 @@ function moveGhost(e){
   state.drag.ghost.style.left = e.clientX + "px";
   state.drag.ghost.style.top = e.clientY + "px";
 }
-function cleanupDrag(){
-  if(!state.drag) return;
-  try{ state.drag.ghost && state.drag.ghost.remove(); }catch(_){}
-  try{
-    if(state.drag.pid != null && el.gridWrap.releasePointerCapture){
-      el.gridWrap.releasePointerCapture(state.drag.pid);
-    }
-  }catch(_){}
-  state.drag = null;
-}
 function beginDragWithThreshold(e, startFn){
-  const pid = e.pointerId;
   const startX = e.clientX, startY = e.clientY;
   let started = false;
 
   const onMove = (ev)=>{
-    if(ev.pointerId !== pid) return;
     const dx = ev.clientX - startX;
     const dy = ev.clientY - startY;
     if(!started && (dx*dx + dy*dy) > 144){
@@ -1622,33 +1382,27 @@ function beginDragWithThreshold(e, startFn){
       onDragMove(ev);
     }
   };
-
   const finish = (ev)=>{
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
     window.removeEventListener('pointercancel', onCancel);
     if(started) onDragEnd(ev);
   };
-  const onUp = (ev)=>{ if(ev.pointerId !== pid) return; finish(ev); };
-  const onCancel = (ev)=>{ if(ev.pointerId !== pid) return; cleanupDrag(); render(false); finish(ev); };
+  const onUp = (ev)=> finish(ev);
+  const onCancel = (ev)=> finish(ev || e);
 
   window.addEventListener('pointermove', onMove, {passive:false});
   window.addEventListener('pointerup', onUp);
   window.addEventListener('pointercancel', onCancel);
 }
-
 function startDragTrigram(ev, group, tri, idx0, start0){
   const ghost = makeGhostBox(tri, (group === 'w1') ? "var(--w1)" : "var(--w2)");
   ghost.style.width = "112px";
   ghost.style.height = "40px";
   ghost.style.letterSpacing = ".18em";
-
-  try{ el.gridWrap.setPointerCapture && el.gridWrap.setPointerCapture(ev.pointerId); }catch(_){}
-
-  state.drag = { kind:'trigram', group, tri, grabOffset: idx0 - start0, ghost, lastIdx:null, pid: ev.pointerId };
+  state.drag = { kind:'trigram', group, tri, grabOffset: idx0 - start0, ghost, lastIdx:null };
   moveGhost(ev);
 }
-
 function pairForDragPinnedThenPush(group, desiredStart, idxNow){
   const mine = state.placed[group];
   const otherGroup = group==='w1' ? 'w2' : 'w1';
@@ -1769,7 +1523,8 @@ function rectDistance(x,y,rect){
 function onDragEnd(e){
   if(!state.drag) return;
   const d = state.drag;
-  cleanupDrag();
+  if(d.ghost && d.ghost.remove) d.ghost.remove();
+  state.drag = null;
   state.lastDragEndedAt = performance.now();
 
   const rect = el.gridWrap.getBoundingClientRect();
@@ -1781,31 +1536,134 @@ function onDragEnd(e){
   }
   render();
 }
-window.addEventListener('blur', ()=>{ if(state.drag){ cleanupDrag(); render(false); } });
-document.addEventListener('visibilitychange', ()=>{ if(document.hidden && state.drag){ cleanupDrag(); } });
 
-/* ===== clue / error underline ===== */
-function triForClue(group){
-  const lock = lockedTri(group);
-  if(lock) return lock;
-  const pl = state.placed[group];
-  if(pl) return pl.tri;
-  return null;
-}
-function errorItemsForGroup(group){
-  if(state.badRuns[group] && state.badRuns[group].length){
-    return state.badRuns[group].map(s => ({sub:s, cls:"u-red"}));
+/* ===== status messages ===== */
+function updateStatusMessages(){
+  if(state.finished) return;
+  if(state.lockMsg) return;
+
+  const hasMax3 = state.badSet && state.badSet.size > 0;
+  const hasTwo  = state.twoSet && state.twoSet.size > 0;
+  const hasExcluded = state.exclSet && state.exclSet.size > 0;
+  const hasOverlap = overlapActiveNow();
+
+  if(hasMax3){ setMsg("Max 3 contiguous letters allowed", 'warn'); state.overlapMsgOn=false; return; }
+  if(hasTwo){  setMsg(TWOTRI_TEXT, 'warn'); state.overlapMsgOn=false; return; }
+  if(hasExcluded){ setMsg(EXCL_TEXT, 'warn'); state.overlapMsgOn=false; return; }
+
+  if(el.msg.classList.contains('warn') && !state.msgTransient) setMsg("");
+  if(state.msgTransient) return;
+
+  if(hasOverlap){
+    if(el.msg.textContent !== OVERLAP_TEXT || el.msg.classList.contains('warn')) setMsg(OVERLAP_TEXT);
+    state.overlapMsgOn = true;
+  }else{
+    if(state.overlapMsgOn && el.msg.textContent === OVERLAP_TEXT) setMsg("");
+    state.overlapMsgOn = false;
   }
-  if(state.twoTris[group] && state.twoTris[group].size){
-    return Array.from(state.twoTris[group]).map(t => ({sub:t, cls:"u-red"}));
-  }
-  if(state.exclTris[group] && state.exclTris[group].size){
-    return Array.from(state.exclTris[group]).map(t => ({sub:t, cls:"u-red"}));
-  }
-  return [];
 }
 
-/* ===== hint track ===== */
+/* ===== intelligent check feedback ===== */
+function canEnableCheckNow(){
+  for(let i=0;i<N;i++) if(!cellChar(i)) return false;
+  return true;
+}
+function countTrigramsInWord(attempt, word){
+  const w = norm(word);
+  const found = [];
+  if(!w) return found;
+  for(let s=0; s<=N-TR; s++){
+    const tri = attempt.slice(s, s+TR);
+    if(w.includes(tri)) found.push(tri);
+  }
+  return found;
+}
+function hintPhraseText(h){
+  if(h === 0) return "with no hints";
+  if(h === 1) return "with 1 hint";
+  return `with ${h} hints`;
+}
+function onCheck(){
+  if(state.finished) return;
+  clearTransientOnAnyChange();
+
+  if(!canEnableCheckNow()){
+    setTransientMsg("Fill all 7");
+    return;
+  }
+
+  computeMax3Invalid();
+  computeTwoTrigramsInvalid();
+  computeHintExcludedTrigrams();
+
+  const attempt = Array.from({length:N}, (_,i)=>cellChar(i)).join("").toLowerCase();
+  const p = current();
+  const ans = norm(p.answer);
+
+  if(attempt === ans){
+    setMsg(`Correct — ${hintPhraseText(state.hint)}!`, 'result');
+    state.finished = true;
+    state.revealedAnswer = false;
+    render();
+    return;
+  }
+
+  shakeGrid();
+
+  if(state.badSet.size){ setMsg("Max 3 contiguous letters allowed", "warn"); render(false); return; }
+  if(state.twoSet.size){ setMsg(TWOTRI_TEXT, "warn"); render(false); return; }
+  if(state.exclSet.size){ setMsg(EXCL_TEXT, "warn"); render(false); return; }
+
+  const w1Hits = countTrigramsInWord(attempt, p.word1);
+  const w2Hits = countTrigramsInWord(attempt, p.word2);
+
+  let msg = "";
+  if(w1Hits.length === 0 && w2Hits.length === 0){
+    msg = "You didn’t use any trigrams";
+  }else if(w1Hits.length === 0){
+    msg = "No trigram from word 1";
+  }else if(w2Hits.length === 0){
+    msg = "No trigram from word 2";
+  }else if(w1Hits.length > 1 || w2Hits.length > 1){
+    msg = TWOTRI_TEXT;
+  }
+
+  if(msg){
+    state.lockMsg = true;
+    setMsg(msg, "warn");
+  }else{
+    setMsg("");
+  }
+
+  render(false);
+}
+
+/* ===== hint track UI ===== */
+function makeTrigramBlock(tri, cls, labelText, onClick){
+  const block = document.createElement('div');
+  block.className = "trackBlock";
+
+  const lblTop = document.createElement('div');
+  lblTop.className = "tinyLbl";
+  lblTop.textContent = labelText;
+  block.appendChild(lblTop);
+
+  const box = document.createElement('div');
+  box.className = "letters clickable";
+  box.setAttribute("role","button");
+  box.setAttribute("aria-label", labelText);
+  box.addEventListener('click', onClick);
+
+  for(let i=0;i<tri.length;i++){
+    const d = document.createElement('div');
+    d.className = "letter " + cls;
+    d.textContent = tri[i];
+    box.appendChild(d);
+  }
+  block.appendChild(box);
+
+  return block;
+}
 function renderHintTrack(){
   const p = current();
   el.trackW1.innerHTML = "";
@@ -1881,6 +1739,27 @@ function renderHintTrack(){
   }
 }
 
+/* ===== clue / error underline ===== */
+function triForClue(group){
+  const lock = lockedTri(group);
+  if(lock) return lock;
+  const pl = state.placed[group];
+  if(pl) return pl.tri;
+  return null;
+}
+function errorItemsForGroup(group){
+  if(state.badRuns[group] && state.badRuns[group].length){
+    return state.badRuns[group].map(s => ({sub:s, cls:"u-red"}));
+  }
+  if(state.twoTris[group] && state.twoTris[group].size){
+    return Array.from(state.twoTris[group]).map(t => ({sub:t, cls:"u-red"}));
+  }
+  if(state.exclTris[group] && state.exclTris[group].size){
+    return Array.from(state.exclTris[group]).map(t => ({sub:t, cls:"u-red"}));
+  }
+  return [];
+}
+
 /* ===== render grid ===== */
 function renderGrid(stealFocus=true){
   for(let k=0;k<2;k++){
@@ -1898,10 +1777,6 @@ function renderGrid(stealFocus=true){
     const cell = document.createElement('div');
     cell.className = "cell";
     cell.dataset.idx = String(i);
-
-    if(!state.finished && i === clamp(state.focusIdx ?? 0, 0, N-1)){
-      cell.classList.add('active');
-    }
 
     const tri = trigramAtIndex(i);
 
@@ -1959,7 +1834,6 @@ function renderGrid(stealFocus=true){
       if(t){
         e.preventDefault();
         clearTransientOnAnyChange();
-        installTapDetectorForTrigram(e, i);
         beginDragWithThreshold(e, (ev)=>startDragTrigram(ev, t.group, t.tri, i, t.start));
       }
     });
@@ -1976,7 +1850,6 @@ function renderGrid(stealFocus=true){
 function render(stealFocus=true){
   const p = current();
   el.count.textContent = `${state.i+1}/${PUZZLES.length}`;
-
   el.wrap.classList.toggle('solved', state.finished);
 
   el.hintBtn.textContent =
@@ -1988,7 +1861,6 @@ function render(stealFocus=true){
   renderGrid(stealFocus);
 
   const [t1, t2] = splitClueTwoWords(p.clue);
-
   const err1 = errorItemsForGroup('w1');
   const err2 = errorItemsForGroup('w2');
 
@@ -2009,10 +1881,9 @@ function render(stealFocus=true){
     if(tri2) b = underlineBySubstrings(t2, [{sub:tri2, cls:"u-w2"}]);
   }
 
-  // clickable clue words (TEST) to cycle trigram
   el.clue.innerHTML =
-    `<span class="clueWord" data-clue="w1">${a}</span> ` +
-    `<span class="clueWord" data-clue="w2">${b}</span> ` +
+    `<span class="clueWord" data-group="w1" role="button" tabindex="0">${a}</span> ` +
+    `<span class="clueWord" data-group="w2" role="button" tabindex="0">${b}</span> ` +
     `<span class="len">(7)</span>`;
 
   renderHintTrack();
@@ -2023,18 +1894,6 @@ function render(stealFocus=true){
 
   updateStatusMessages();
 }
-
-/* ===== clue click -> cycle trigram (TEST) ===== */
-el.clue.addEventListener('click', (e)=>{
-  if(state.finished) return;
-  const t = e.target && e.target.closest && e.target.closest('.clueWord');
-  if(!t) return;
-  const group = t.dataset.clue;
-  if(group !== 'w1' && group !== 'w2') return;
-  if(overlapActiveNow()) return;  // don't break a current overlap
-  cyclePlacedTrigram(group);
-  render();
-});
 
 /* ===== hint / nav ===== */
 el.hintBtn.addEventListener('click', ()=>{
@@ -2069,6 +1928,25 @@ el.checkBtn.addEventListener('click', onCheck);
 
 el.prevBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearTransientOnAnyChange(); state.i=(state.i-1+PUZZLES.length)%PUZZLES.length; resetAllForPuzzle(); render(); });
 el.nextBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearTransientOnAnyChange(); state.i=(state.i+1)%PUZZLES.length; resetAllForPuzzle(); render(); });
+
+/* Tap/click clue word to cycle or place */
+el.clue.addEventListener('pointerdown', (e)=>{
+  const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
+  if(!w) return;
+  e.preventDefault();
+  const g = w.dataset.group;
+  if(g === 'w1' || g === 'w2') onClueTap(g);
+}, {passive:false});
+
+el.clue.addEventListener('keydown', (e)=>{
+  const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
+  if(!w) return;
+  if(e.key === "Enter" || e.key === " "){
+    e.preventDefault();
+    const g = w.dataset.group;
+    if(g === 'w1' || g === 'w2') onClueTap(g);
+  }
+});
 
 /* ===== always-active focus ===== */
 document.addEventListener('pointerdown', (e)=>{
