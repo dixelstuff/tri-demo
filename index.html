@@ -1,844 +1,2035 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Block Clue – Drag Preview Demo</title>
-<style>
-  body{
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background:#f6f3eb;
-    color:#222;
-    display:flex;
-    justify-content:center;
-    padding:24px;
-  }
-  #game-root{
-    max-width:520px;
-    width:100%;
-    background:#fffdf7;
-    border-radius:12px;
-    box-shadow:0 8px 20px rgba(0,0,0,0.08);
-    padding:20px 24px 24px;
-    box-sizing:border-box;
-  }
-  #game-root h1{
-    margin:0 0 10px;
-    font-size:20px;
-    letter-spacing:0.03em;
-  }
-  #subtitle{
-    font-size:12px;
-    color:#777;
-    margin-bottom:16px;
-  }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Trigram Demo</title>
 
-  #clue-panel{
-    border-radius:10px;
-    background:#f1e7d7;
-    padding:10px 12px;
-    margin-bottom:14px;
-    display:flex;
-    flex-direction:column;
-    gap:4px;
-  }
-  #clue-label{
-    font-size:11px;
-    letter-spacing:0.08em;
-    text-transform:uppercase;
-    color:#88613a;
-  }
-  #clue-text{
-    font-weight:600;
-    font-size:15px;
-  }
-  #clue-meta{
-    font-size:11px;
-    color:#555;
-  }
+  <style>
+    :root{
+      --bg:#a9cdf3;
+      --bubble:#fff;
+      --ink:#0b0b0b;
 
-  #grid-wrapper{
-    display:inline-block;
-    padding:10px;
-    border-radius:12px;
-    background:#f9f4ea;
-    border:1px solid #e0d4c0;
-  }
+      --w1:#fff3b3;   /* yellow */
+      --w2:#cfe8ff;   /* blue */
+      --ol:#c9f3d6;   /* green */
+      --bad:#ffc9d2;  /* red/pink warning */
+      --submit:#F4D2FD;
 
-  #grid-with-rows{
-    display:flex;
-    align-items:stretch;
-  }
+      --shadow:0 10px 24px rgba(0,0,0,.18);
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background:var(--bg);
+      color:var(--ink);
+      text-align:center;
+    }
 
-  #grid{
-    display:grid;
-    gap:4px;
-    grid-template-columns:repeat(7, 40px);
-  }
+    .wrap{
+      max-width:980px;
+      margin:0 auto;
+      padding:16px 14px 46px;
+    }
 
-  .cell{
-    width:40px;
-    height:40px;
-    border-radius:6px;
-    border:1px solid #333;
-    background:#fdfaf4;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:20px;
-    font-weight:600;
-    cursor:pointer;
-    user-select:none;
-    transition:
-      background 0.08s,
-      box-shadow 0.08s,
-      border-color 0.08s;
-    /* transform is controlled manually in JS for drag preview */
-  }
-  .cell.blank{
-    background:#fefdf9;
-    color:transparent;
-    border-style:dotted;
-    border-color:#d2c6b4;
-  }
-  .cell.locked{
-    background:#d4d1cb;
-    border-style:dashed;
-    cursor:not-allowed;
-    color:#8a8680;
-    font-size:14px;
-  }
-  .cell.selected{
-    box-shadow:0 0 0 2px #2b82ff;
-  }
-  .cell.target{
-    box-shadow:0 0 0 2px #f2b100 inset;
-  }
-  .cell.found{
-    animation:popout 0.24s ease-out forwards;
-  }
-  @keyframes popout{
-    0%{ transform:scale(1); background:#fff8e0; }
-    50%{ transform:scale(1.08); background:#ffe9a8; }
-    100%{ transform:scale(1); }
-  }
+    .wrap.solved .gridWrap{
+      pointer-events:none;
+      box-shadow:0 0 0 10px rgba(200,247,210,.55), 0 10px 22px rgba(0,0,0,.12);
+      transform:translateY(18px);
+    }
+    .wrap.solved .cell{ background:#fff !important; }
+    .wrap.solved .hintTrack{ opacity:0; pointer-events:none; }
 
-  /* Block colours by block-color index (solid backgrounds) */
-  .cell[data-block-color="0"]{ background:#ffe4e1; }
-  .cell[data-block-color="1"]{ background:#e0f3ff; }
-  .cell[data-block-color="2"]{ background:#e4ffe4; }
-  .cell[data-block-color="3"]{ background:#fff3c2; }
-  .cell[data-block-color="4"]{ background:#f2e4ff; }
-  .cell[data-block-color="5"]{ background:#ffd9f2; }
-  .cell[data-block-color="6"]{ background:#e0f0ff; }
-  .cell[data-block-color="7"]{ background:#e9ffe0; }
+    .toprow{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px; }
+    .nav{
+      display:flex; align-items:center; gap:10px;
+      font-weight:900; user-select:none;
+      margin-left:auto; margin-right:auto;
+    }
+    .nav a{
+      color:var(--ink); text-decoration:none; font-weight:900;
+      padding:7px 12px; border-radius:999px;
+      background:rgba(255,255,255,.35);
+      border:2px solid rgba(0,0,0,.18);
+      cursor:pointer;
+    }
+    .nav a:active{ transform:translateY(1px); }
+    .count{ font-weight:900; opacity:.7; min-width:56px; text-align:center; }
 
-  #row-indicators{
-    display:flex;
-    flex-direction:column;
-    margin-left:6px;
-    gap:4px;
-  }
-  #column-indicators{
-    display:grid;
-    grid-template-columns:repeat(7, 40px);
-    gap:4px;
-    margin-top:6px;
-  }
-  .row-indicator,
-  .col-indicator{
-    width:28px;
-    height:28px;
-    line-height:28px;
-    font-size:12px;
-    text-align:center;
-    color:#777;
-    border-radius:999px;
-    border:1px solid transparent;
-  }
-  .row-indicator.active,
-  .col-indicator.active{
-    background:#fff3c2;
-    border-color:#f2b100;
-    font-weight:600;
-    color:#413100;
-  }
+    .clue{
+      display:block;
+      width:fit-content;
+      max-width:min(940px,94vw);
+      margin:58px auto 62px;
+      padding:14px 21px 16px 22px; /* bottom +1px, right -1px */
+      background:var(--bubble);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      font-size:clamp(24px,2.6vw,38px);
+      line-height:1.12;
+      letter-spacing:.12px;
+      font-weight:400;
+    }
+    .clue .len{ opacity:.55; font-weight:inherit; font-style:inherit; }
 
-  #controls{
-    margin-top:14px;
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    align-items:center;
-  }
-  button{
-    border-radius:999px;
-    padding:6px 14px;
-    border:1px solid #222;
-    background:#f6e1e1;
-    font-size:12px;
-    font-weight:600;
-    cursor:pointer;
-    box-shadow:3px 3px 0 #222;
-    transition:transform 0.08s, box-shadow 0.08s, background 0.08s;
-  }
-  button:hover{
-    transform:translate(-1px,-1px);
-    box-shadow:4px 4px 0 #222;
-    background:#f7d5d5;
-  }
-  button:active{
-    transform:translate(0,0);
-    box-shadow:1px 1px 0 #222;
-  }
+    .u-w1, .u-w2, .u-red{
+      text-decoration: underline;
+      text-decoration-thickness: 6px;
+      text-underline-offset: 9px;
+    }
+    .u-w1{ text-decoration-color: rgba(255,220,0,.9); }
+    .u-w2{ text-decoration-color: rgba(70,160,255,.92); }
+    .u-red{ text-decoration-color: rgba(235,80,92,.92); }
 
-  #status{
-    font-size:12px;
-    color:#555;
-    margin-top:6px;
-  }
-  #status strong{ color:#222; }
+    .gridWrap{
+      display:block;
+      width:fit-content;
+      margin:0 auto 8px;
+      border:4px solid var(--ink);
+      border-radius:14px;
+      overflow:hidden;
+      background:#fff;
+      box-shadow:0 10px 22px rgba(0,0,0,.12);
+      transition:transform .45s ease;
+    }
+    .gridWrap.shake{ animation:shake .16s linear 0s 2; }
+    @keyframes shake{
+      0%{ transform:translateX(0); }
+      25%{ transform:translateX(-6px); }
+      50%{ transform:translateX(6px); }
+      75%{ transform:translateX(-4px); }
+      100%{ transform:translateX(0); }
+    }
 
-  @media (max-width:520px){
-    #game-root{ padding:16px; }
-    #grid{ grid-template-columns:repeat(7, 34px); }
-    .cell{ width:34px; height:34px; font-size:18px; }
-    #column-indicators{ grid-template-columns:repeat(7, 34px); }
-  }
-</style>
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      width:min(308px,86vw);
+    }
+    .cell{
+      aspect-ratio:1/1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#fff;
+      position:relative;
+    }
+    .cell:not(:nth-child(7n+1)){ border-left:3px solid var(--ink); }
+    .cell input{
+      width:100%;
+      height:100%;
+      border:0; outline:none;
+      background:transparent;
+      text-align:center;
+      font-size:clamp(22px,3.8vw,34px);
+      font-weight:900;
+      font-style:italic;
+      padding:0; margin:0;
+      color:var(--ink);
+      text-transform:lowercase;
+      caret-color:var(--ink);
+      cursor:text;
+    }
+    .cell.bg-w1{ background:var(--w1); }
+    .cell.bg-w2{ background:var(--w2); }
+    .cell.bg-ol{ background:var(--ol); }
+    .cell.bg-bad{ background:var(--bad) !important; }
+
+    .cell.grabbable{ cursor:grab; }
+    .cell.grabbable:active{ cursor:grabbing; }
+    .cell.grabbable input{ pointer-events:none; cursor:grab; }
+
+    /* fixed message slot so buttons never shift */
+    .msgSlot{
+      position:relative;
+      height:64px;
+      max-width:760px;
+      margin:18px auto 0;
+      user-select:none;
+    }
+    .msg{
+      position:absolute;
+      left:0; right:0;
+      top:10px;
+      margin:0;
+      font-weight:900;
+      opacity:0;
+      transform:translateY(-6px);
+      transition:opacity .18s ease, transform .18s ease;
+      font-style:italic;
+      font-size:22px;
+      pointer-events:none;
+    }
+    .msg.show{ opacity:.92; transform:translateY(0); }
+    .msg.warn{ opacity:.92; font-size:20px; font-style:italic; }
+    .msg.result{ top:20px; }
+
+    /* floating tip that points at a trigram */
+    .tipFloat{
+      position:fixed;
+      left:50%;
+      top:0;
+      transform:translate(-50%, -100%);
+      padding:8px 12px;
+      border-radius:999px;
+      border:3px solid rgba(0,0,0,.20);
+      background:rgba(255,255,255,.88);
+      font-weight:900;
+      font-style:italic;
+      font-size:15px;
+      user-select:none;
+      pointer-events:none;
+      opacity:0;
+      transition:opacity .12s ease-out, transform .12s ease-out;
+      z-index:9998;
+      white-space:nowrap;
+      box-shadow:0 10px 22px rgba(0,0,0,.14);
+    }
+    .tipFloat.show{ opacity:.98; }
+    .tipFloat.fading{ transition:opacity .42s ease-in; }
+    .tipFloat::after{
+      content:"";
+      position:absolute;
+      left:50%;
+      transform:translateX(-50%);
+      width:0; height:0;
+      border-left:10px solid transparent;
+      border-right:10px solid transparent;
+    }
+    .tipFloat.above::after{
+      bottom:-10px;
+      border-top:10px solid rgba(255,255,255,.88);
+      filter: drop-shadow(0 2px 0 rgba(0,0,0,.18));
+    }
+    .tipFloat.below{
+      transform:translate(-50%, 0);
+    }
+    .tipFloat.below::after{
+      top:-10px;
+      border-bottom:10px solid rgba(255,255,255,.88);
+      filter: drop-shadow(0 -2px 0 rgba(0,0,0,.18));
+    }
+
+    .hintTrack{
+      margin:22px auto 0;
+      width:fit-content;
+      max-width:min(920px,96vw);
+      min-height:78px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition:opacity .35s ease;
+      user-select:none;
+    }
+    .trackRow{
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      gap:18px;
+      flex-wrap:nowrap;
+    }
+    .trackBlock{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
+      min-width:0;
+    }
+    .letters{
+      display:inline-flex;
+      border:3px solid rgba(0,0,0,.22);
+      border-radius:8px;
+      background:rgba(255,255,255,.35);
+      overflow:hidden;
+      position:relative;
+      flex:0 0 auto;
+    }
+    .letters.clickable{ cursor:pointer; }
+    .letter{
+      width:30px;
+      height:30px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:900;
+      font-style:italic;
+      font-size:19px;
+      text-transform:lowercase;
+      border-left:2px solid rgba(0,0,0,.10);
+      position:relative;
+      background:rgba(255,255,255,.35);
+      transition:opacity .15s ease, background .15s ease, transform .08s ease;
+    }
+    .letter:first-child{ border-left:0; }
+    .letter.sel-w1{ background:var(--w1); }
+    .letter.sel-w2{ background:var(--w2); }
+    .letter.extra{
+      background:rgba(255,255,255,.95);
+      cursor:pointer;
+      box-shadow:none;
+      font-style:italic;
+    }
+    .letter.extra:active{ transform:translateY(1px); }
+
+    .tinyLbl{
+      font-size:11px;
+      font-weight:900;
+      color:#000;
+      line-height:1;
+      margin-top:2px;
+      pointer-events:none;
+      text-transform:lowercase;
+      font-style:normal;
+    }
+
+    .extrasRow{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      flex-wrap:nowrap;
+    }
+
+    .btnRow{
+      margin-top:14px;
+      display:flex;
+      justify-content:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .btn{
+      border:4px solid var(--ink);
+      border-radius:999px;
+      padding:10px 18px;
+      min-width:112px;
+      font-size:22px;
+      font-weight:900;
+      font-style:italic;
+      background:rgba(255,255,255,.35);
+      box-shadow:0 7px 0 rgba(0,0,0,.16);
+      cursor:pointer;
+      user-select:none;
+      text-transform:lowercase;
+    }
+    .btn:active{ transform:translateY(1px); box-shadow:0 6px 0 rgba(0,0,0,.16); }
+    .btn.hints{ background:#fff3bd; }
+    .btn.check{ background:rgba(255,255,255,.25); opacity:.55; }
+    .btn.check.ready{ opacity:1; background:var(--submit); }
+    .btn:disabled{ opacity:.35 !important; cursor:default; transform:none !important; box-shadow:none !important; }
+
+    .winToast{
+      position:fixed;
+      top:14px;
+      left:50%;
+      transform:translateX(-50%);
+      background:#fff;
+      border:5px solid var(--ink);
+      border-radius:999px;
+      padding:10px 18px;
+      font-weight:900;
+      font-style:italic;
+      opacity:0;
+      pointer-events:none;
+      box-shadow:0 14px 28px rgba(0,0,0,.25);
+    }
+    .winToast.show{ animation:pop 1.15s ease both; }
+    @keyframes pop{
+      0%   { opacity:0; transform: translateX(-50%) translateY(-10px) scale(.92); }
+      18%  { opacity:1; transform: translateX(-50%) translateY(0) scale(1.06); }
+      45%  { opacity:1; transform: translateX(-50%) translateY(0) scale(1.0); }
+      100% { opacity:0; transform: translateX(-50%) translateY(-8px) scale(.98); }
+    }
+
+    .ghost{
+      position:fixed;
+      z-index:9999;
+      pointer-events:none;
+      transform: translate(-50%, -50%);
+      filter: drop-shadow(0 16px 18px rgba(0,0,0,.35));
+      opacity:.95;
+    }
+
+    @media (max-width:520px){
+      .letter{ width:28px; height:28px; font-size:18px; }
+      .grid{ width:min(292px,92vw); }
+      .btn{ font-size:20px; padding:10px 16px; min-width:108px; }
+      .msgSlot{ height:60px; margin-top:18px; }
+      .msg{ font-size:20px; top:10px; }
+      .msg.result{ top:20px; }
+      .clue{ font-size:clamp(22px,5.2vw,34px); margin-bottom:58px; }
+      .tipFloat{ font-size:14px; }
+    }
+  </style>
 </head>
+
 <body>
-<div id="game-root">
-  <h1>Block Clue Demo</h1>
-  <div id="subtitle">
-    Drag coloured blocks; they slide as far as they can. Line up the clue word in the highlighted row/column.
-  </div>
+  <div class="winToast" id="winToast" aria-live="polite">Correct!</div>
+  <div class="tipFloat above" id="tipFloat" aria-live="polite">Double tap to cycle</div>
 
-  <div id="clue-panel">
-    <div id="clue-label">Current clue</div>
-    <div id="clue-text"></div>
-    <div id="clue-meta"></div>
-  </div>
-
-  <div id="grid-wrapper">
-    <div id="grid-with-rows">
-      <div id="grid"></div>
-      <div id="row-indicators"></div>
+  <div class="wrap" id="wrap">
+    <div class="toprow">
+      <div></div>
+      <div class="nav">
+        <a href="#" id="prevBtn" aria-label="Previous puzzle">‹</a>
+        <span class="count" id="count"></span>
+        <a href="#" id="nextBtn" aria-label="Next puzzle">›</a>
+      </div>
     </div>
-    <div id="column-indicators"></div>
-  </div>
 
-  <div id="controls">
-    <button id="reset-btn" type="button">Reset</button>
-    <button id="nudge-btn" type="button">Nudge / Check</button>
+    <div class="clue" id="clue"></div>
+
+    <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="msgSlot" id="msgSlot" aria-live="polite">
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="hintTrack" id="hintTrack" aria-label="Hint tracker">
+      <div class="trackRow" id="trackRow">
+        <div class="trackBlock" id="trackW1"></div>
+        <div class="trackBlock" id="trackW2"></div>
+        <div class="trackBlock" id="trackExtras"></div>
+      </div>
+    </div>
+
+    <div class="btnRow">
+      <button class="btn hints" id="hintBtn" type="button">hint 1</button>
+      <button class="btn check" id="checkBtn" type="button">check</button>
+    </div>
   </div>
-  <div id="status"></div>
-</div>
 
 <script>
-(function(){
-  // ========================
-  // Level configuration (7×7 with more blanks and a free 'O')
-  // ========================
-  const level = {
-    size: 7,
-    // '.' = blank cell (more of these now than before)
-    letters: [
-      "YBB.SMJ",   // row 0 (target row for BOSS)
-      "HLGIJ..",
-      "RZREX..",   // extra blank added
-      "KDKGPQS",
-      ".RCOMZA",
-      "O.C.HEO",   // (5,0) is now a solitary 'O' block
-      ".QP.W.R"
-    ],
-    // Blocks, including L-shapes and squares; each cell is part of some block
-    blocks: [
-      { id: "b1",  cells: [ { r:0, c:0 }, { r:0, c:1 }, { r:1, c:0 } ] },                    // L
-      { id: "b2",  cells: [ { r:0, c:2 }, { r:1, c:2 } ] },                                  // vertical 2
-      { id: "b3",  cells: [ { r:0, c:4 }, { r:0, c:5 }, { r:0, c:6 } ] },                    // horizontal 3
-      { id: "b4",  cells: [ { r:2, c:0 }, { r:2, c:1 }, { r:3, c:0 }, { r:3, c:1 } ] },      // 2×2 square
-      { id: "b5",  cells: [ { r:2, c:2 }, { r:2, c:3 }, { r:3, c:2 }, { r:3, c:3 } ] },      // 2×2 square
-      { id: "b6",  cells: [ { r:2, c:4 }, { r:2, c:5 }, { r:3, c:4 }, { r:3, c:5 } ] },      // 2×2 square
-      { id: "b7",  cells: [ { r:4, c:1 }, { r:4, c:2 }, { r:5, c:2 } ] },                    // L
-      { id: "b8",  cells: [ { r:4, c:3 }, { r:4, c:4 }, { r:4, c:5 }, { r:4, c:6 } ] },      // line of 4
-      { id: "b9",  cells: [ { r:5, c:4 }, { r:6, c:4 } ] },                                  // vertical 2
-      { id: "b10", cells: [ { r:6, c:1 }, { r:6, c:2 } ] },                                  // horizontal 2
-      { id: "b11", cells: [ { r:1, c:3 }, { r:1, c:4 } ] },                                  // horizontal 2
-      { id: "b12", cells: [ { r:5, c:5 }, { r:5, c:6 }, { r:6, c:6 } ] },                    // L
-      { id: "b13", cells: [ { r:1, c:1 } ] },                                                // single
-      { id: "b14", cells: [ { r:3, c:6 } ] },                                                // single
-      { id: "b15", cells: [ { r:5, c:0 } ] }                                                 // single 'O'
-    ],
-    clues: [
-      {
-        text: "Employer",
-        answer: "BOSS",
-        orientation: "row",   // word must appear somewhere in this row
-        index: 0              // top row
-      },
-      {
-        text: "Employer (one who hires)",
-        answer: "HIRE",
-        orientation: "column", // word must appear in this column
-        index: 3               // 4th column
-      }
-    ]
-  };
+const PUZZLES = [
+  { clue:"Raccoon scuffle!",  word1:"raccoon", word2:"scuffle", answer:"buffoon", tri1:"oon", tri2:"uff", tri1_pos:4, tri2_pos:1 },
+  { clue:"Tidal tiptoes",     word1:"tidal",   word2:"tiptoes", answer:"riptide", tri1:"tid", tri2:"ipt", tri1_pos:3, tri2_pos:1 },
+  { clue:"Trusty boombox",    word1:"trusty",  word2:"boombox", answer:"combust", tri1:"ust", tri2:"omb", tri1_pos:4, tri2_pos:1 },
+  { clue:"Wholly muscle?",    word1:"wholly",  word2:"muscle",  answer:"mollusc", tri1:"oll", tri2:"usc", tri1_pos:1, tri2_pos:4 },
+  { clue:"Juicy muscles",     word1:"juicy",   word2:"muscles", answer:"bicycle", tri1:"icy", tri2:"cle", tri1_pos:1, tri2_pos:4 },
+];
 
-  const size = level.size;
-  const BLOCK_PALETTE = [0,1,2,3,4,5,6,7];
+const N = 7;
+const TR = 3;
+const START_MAX = N - TR;
 
-  // ========================
-  // Grid + blocks creation
-  // ========================
-  function createGridAndBlocks(lettersRows, blocksConfig){
-    const grid = [];
-    for (let r = 0; r < size; r++){
-      const rowStr = lettersRows[r];
-      const row = [];
-      for (let c = 0; c < size; c++){
-        const ch = rowStr[c];
-        row.push({
-          letter: ch === "." ? "" : ch.toUpperCase(),
-          blockId: null,
-          locked: false
-        });
-      }
-      grid.push(row);
-    }
+const el = {
+  wrap: document.getElementById('wrap'),
+  clue: document.getElementById('clue'),
+  gridWrap: document.getElementById('gridWrap'),
+  grid: document.getElementById('grid'),
+  msg: document.getElementById('msg'),
+  winToast: document.getElementById('winToast'),
+  tipFloat: document.getElementById('tipFloat'),
 
-    const blocks = {};
-    blocksConfig.forEach((b, idx) => {
-      const colorIndex = BLOCK_PALETTE[idx % BLOCK_PALETTE.length];
-      const cells = b.cells.map(pos => ({ r: pos.r, c: pos.c }));
-      blocks[b.id] = {
-        id: b.id,
-        cells,
-        colorIndex
-      };
-      cells.forEach(pos => {
-        grid[pos.r][pos.c].blockId = b.id;
-      });
-    });
+  hintTrack: document.getElementById('hintTrack'),
+  trackW1: document.getElementById('trackW1'),
+  trackW2: document.getElementById('trackW2'),
+  trackExtras: document.getElementById('trackExtras'),
 
-    return { grid, blocks };
+  hintBtn: document.getElementById('hintBtn'),
+  checkBtn: document.getElementById('checkBtn'),
+
+  prevBtn: document.getElementById('prevBtn'),
+  nextBtn: document.getElementById('nextBtn'),
+  count: document.getElementById('count'),
+};
+
+const TWOTRI_TEXT  = "Two trigrams from same word";
+const OVERLAP_TEXT = "1-letter overlap allowed ✓";
+const EXCL_TEXT    = "Your hint excluded this trigram";
+
+const state = {
+  i: 0,
+  hint: 0,
+  finished: false,
+  revealedAnswer: false,
+
+  sel1: null,
+  sel2: null,
+
+  placed: { w1: null, w2: null },
+  singles: [],
+
+  bank: [],
+  focusIdx: 0,
+
+  drag: null,
+
+  msgTimer: null,
+  msgTransient: false,
+  lockMsg: false,
+
+  typedTipShown: false,
+
+  tip: { active:false, group:null, hideAt:0, minUntil:0, hardUntil:0, timer:null, fadeTimer:null },
+
+  badSet: new Set(),
+  badTris: { w1: new Set(), w2: new Set() },
+  badRuns: { w1: [], w2: [] },
+
+  twoSet: new Set(),
+  twoTris: { w1: new Set(), w2: new Set() },
+
+  exclSet: new Set(),
+  exclTris: { w1: new Set(), w2: new Set() },
+
+  overlapMsgOn: false,
+
+  lastTap: null,
+  lastDragEndedAt: 0,
+};
+
+function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
+function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+function current(){ return PUZZLES[state.i]; }
+function norm(s){ return String(s||"").toLowerCase().replace(/[^a-z]/g,""); }
+function isAlpha(ch){ return /^[a-z]$/i.test(ch); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function shakeGrid(){
+  el.gridWrap.classList.remove('shake');
+  void el.gridWrap.offsetWidth;
+  el.gridWrap.classList.add('shake');
+  setTimeout(()=> el.gridWrap.classList.remove('shake'), 420);
+}
+
+/* ===== tip ===== */
+function clearTipTimers(){
+  if(state.tip.timer){ clearTimeout(state.tip.timer); state.tip.timer=null; }
+  if(state.tip.fadeTimer){ clearTimeout(state.tip.fadeTimer); state.tip.fadeTimer=null; }
+}
+function hardClearTip(){
+  clearTipTimers();
+  state.tip.active = false;
+  state.tip.group = null;
+  el.tipFloat.classList.remove('show','below','above','fading');
+  el.tipFloat.style.left = "50%";
+  el.tipFloat.style.top = "0px";
+}
+function hideTipSoft(){
+  clearTipTimers();
+  state.tip.active = false;
+  state.tip.group = null;
+  el.tipFloat.classList.add('fading');
+  el.tipFloat.classList.remove('show');
+  state.tip.fadeTimer = setTimeout(()=>{ el.tipFloat.classList.remove('fading'); }, 460);
+}
+function scheduleTipHide(){
+  if(!state.tip.active) return;
+  clearTipTimers();
+  const delay = Math.max(0, state.tip.hideAt - performance.now());
+  state.tip.timer = setTimeout(()=>{
+    if(!state.tip.active) return;
+    const now = performance.now();
+    if(now < state.tip.hideAt - 20){ scheduleTipHide(); return; }
+    hideTipSoft();
+    render(false);
+  }, delay + 30);
+}
+function bumpTipLinger(){
+  if(!state.tip.active) return;
+  const now = performance.now();
+  const ACTION_LINGER_MS = 1200; /* shorter */
+  const target = Math.max(state.tip.hideAt, state.tip.minUntil, now + ACTION_LINGER_MS);
+  state.tip.hideAt = Math.min(state.tip.hardUntil, target);
+  scheduleTipHide();
+}
+function showTipForGroupOnce(group){
+  if(state.typedTipShown) return;
+  if(state.finished || state.revealedAnswer) return;
+
+  state.typedTipShown = true;
+
+  const now = performance.now();
+  state.tip.active = true;
+  state.tip.group = group;
+
+  state.tip.minUntil  = now + 1200;
+  state.tip.hardUntil = now + 5500;
+  state.tip.hideAt    = now + 4200;
+
+  el.tipFloat.textContent = "Double tap to cycle";
+  el.tipFloat.classList.remove('fading','show');
+  positionTip();
+  requestAnimationFrame(()=> el.tipFloat.classList.add('show'));
+  scheduleTipHide();
+}
+
+/* ===== messages ===== */
+function clearMsgTimer(){
+  if(state.msgTimer){ clearTimeout(state.msgTimer); state.msgTimer=null; }
+  state.msgTransient = false;
+}
+function setMsg(text, kind){
+  clearMsgTimer();
+  el.msg.classList.remove('show','warn','result');
+  el.msg.textContent = text || "";
+  if(!text) return;
+  void el.msg.offsetWidth;
+  el.msg.classList.add('show');
+  if(kind === 'warn') el.msg.classList.add('warn');
+  if(kind === 'result') el.msg.classList.add('result');
+}
+function setTransientMsg(text, ms=2200){
+  setMsg(text);
+  state.msgTransient = true;
+  state.msgTimer = setTimeout(()=>{
+    el.msg.classList.remove('show','warn','result');
+    el.msg.textContent = "";
+    state.msgTimer = null;
+    state.msgTransient = false;
+  }, ms);
+}
+function clearTransientOnAnyChange(){
+  bumpTipLinger();
+
+  if(state.lockMsg){
+    state.lockMsg = false;
+    setMsg("");
   }
 
-  function cloneGrid(src){
-    return src.map(row =>
-      row.map(cell => ({
-        letter: cell.letter,
-        blockId: cell.blockId,
-        locked: cell.locked
-      }))
-    );
+  if(state.msgTransient){
+    el.msg.classList.remove('show','warn','result');
+    el.msg.textContent = "";
+    clearMsgTimer();
   }
+}
 
-  function cloneBlocks(src){
-    const out = {};
-    for (const id in src){
-      out[id] = {
-        id,
-        colorIndex: src[id].colorIndex,
-        cells: src[id].cells.map(pos => ({ r: pos.r, c: pos.c }))
-      };
-    }
-    return out;
+/* ===== clue underline helpers ===== */
+function splitClueTwoWords(clue){
+  const s = String(clue||"").trim();
+  const m = s.match(/^(\S+)\s+(\S+)\s*$/);
+  if(m) return [m[1], m[2]];
+  const parts = s.split(/\s+/).filter(Boolean);
+  return [parts[0]||"", parts[1]||""];
+}
+function underlineBySubstrings(token, items){
+  const chars = Array.from(token);
+  const map=[];
+  let clean="";
+  for(let i=0;i<chars.length;i++){
+    if(/[A-Za-z]/.test(chars[i])){ map.push(i); clean += chars[i].toLowerCase(); }
   }
+  if(!clean) return escapeHtml(token);
 
-  function letterAt(r,c){
-    if (!grid[r] || !grid[r][c]) return "";
-    return grid[r][c].letter;
-  }
+  const clsAt = new Array(chars.length).fill(null);
+  const prio = (cls)=> (cls === "u-red" ? 3 : (cls === "u-w1" || cls === "u-w2" ? 2 : 1));
 
-  const base = createGridAndBlocks(level.letters, level.blocks);
-  const baseGrid = base.grid;
-  const baseBlocks = base.blocks;
-
-  let grid = cloneGrid(baseGrid);
-  let blocks = cloneBlocks(baseBlocks);
-  let currentClueIndex = 0;
-  let selectedBlockId = null;
-
-  // pointer / drag state
-  const pointerState = {
-    active: false,
-    blockId: null,
-    startX: 0,
-    startY: 0,
-    previewDir: null,   // 'h' or 'v'
-    previewSteps: 0
-  };
-
-  // DOM references
-  const gridEl = document.getElementById("grid");
-  const rowIndicatorsEl = document.getElementById("row-indicators");
-  const colIndicatorsEl = document.getElementById("column-indicators");
-  const clueTextEl = document.getElementById("clue-text");
-  const clueMetaEl = document.getElementById("clue-meta");
-  const statusEl = document.getElementById("status");
-  const resetBtn = document.getElementById("reset-btn");
-  const nudgeBtn = document.getElementById("nudge-btn");
-
-  let rowIndicators = [];
-  let colIndicators = [];
-  let cellSizeCache = null;
-
-  function getCellSize(){
-    if (cellSizeCache != null) return cellSizeCache;
-    const cell = gridEl.querySelector(".cell");
-    if (!cell) return 40;
-    const rect = cell.getBoundingClientRect();
-    cellSizeCache = rect.width; // assume square
-    return cellSizeCache;
-  }
-
-  // ========================
-  // DOM construction
-  // ========================
-  function buildGridDOM(){
-    gridEl.innerHTML = "";
-    gridEl.style.gridTemplateColumns = "repeat(" + size + ", 40px)";
-    for (let r = 0; r < size; r++){
-      for (let c = 0; c < size; c++){
-        const cell = document.createElement("div");
-        cell.className = "cell";
-        cell.dataset.row = r;
-        cell.dataset.col = c;
-        cell.addEventListener("mousedown", onCellMouseDown);
-        gridEl.appendChild(cell);
+  for(const it of items){
+    const sub = norm(it.sub);
+    if(!sub) continue;
+    let pos = clean.indexOf(sub);
+    while(pos >= 0){
+      for(let k=0;k<sub.length;k++){
+        const oi = map[pos+k];
+        if(oi == null) continue;
+        const cur = clsAt[oi];
+        if(!cur || prio(it.cls) >= prio(cur)) clsAt[oi] = it.cls;
       }
-    }
-
-    rowIndicatorsEl.innerHTML = "";
-    rowIndicators = [];
-    for (let r = 0; r < size; r++){
-      const el = document.createElement("div");
-      el.className = "row-indicator";
-      rowIndicatorsEl.appendChild(el);
-      rowIndicators.push(el);
-    }
-
-    colIndicatorsEl.innerHTML = "";
-    colIndicatorsEl.style.gridTemplateColumns = "repeat(" + size + ", 40px)";
-    colIndicators = [];
-    for (let c = 0; c < size; c++){
-      const el = document.createElement("div");
-      el.className = "col-indicator";
-      colIndicatorsEl.appendChild(el);
-      colIndicators.push(el);
-    }
-
-    document.addEventListener("mouseup", onGlobalMouseUp);
-    document.addEventListener("mousemove", onGlobalMouseMove);
-  }
-
-  function renderGrid(){
-    const allCells = gridEl.querySelectorAll(".cell");
-    allCells.forEach(el => {
-      const r = parseInt(el.dataset.row, 10);
-      const c = parseInt(el.dataset.col, 10);
-      const data = grid[r][c];
-
-      el.textContent = data.letter || "";
-      el.classList.toggle("blank", !data.letter && !data.locked);
-      el.classList.toggle("locked", data.locked);
-
-      const isSelected = selectedBlockId && data.blockId === selectedBlockId;
-      el.classList.toggle("selected", !!isSelected);
-
-      if (data.blockId && data.letter && blocks[data.blockId]){
-        el.dataset.blockColor = blocks[data.blockId].colorIndex;
-      } else {
-        delete el.dataset.blockColor;
-      }
-    });
-  }
-
-  function clearTargetsAndIndicators(){
-    gridEl.querySelectorAll(".cell.target").forEach(el => {
-      el.classList.remove("target");
-    });
-    rowIndicators.forEach(el => {
-      el.textContent = "";
-      el.classList.remove("active");
-    });
-    colIndicators.forEach(el => {
-      el.textContent = "";
-      el.classList.remove("active");
-    });
-  }
-
-  function highlightTargetLine(clue){
-    clearTargetsAndIndicators();
-    if (!clue) return;
-
-    const len = clue.answer.length;
-    if (clue.orientation === "row"){
-      const r = clue.index;
-      for (let c = 0; c < size; c++){
-        const el = gridEl.querySelector('.cell[data-row="'+r+'"][data-col="'+c+'"]');
-        if (el) el.classList.add("target");
-      }
-      if (rowIndicators[r]){
-        rowIndicators[r].textContent = len;
-        rowIndicators[r].classList.add("active");
-      }
-    } else {
-      const c = clue.index;
-      for (let r = 0; r < size; r++){
-        const el = gridEl.querySelector('.cell[data-row="'+r+'"][data-col="'+c+'"]');
-        if (el) el.classList.add("target");
-      }
-      if (colIndicators[c]){
-        colIndicators[c].textContent = len;
-        colIndicators[c].classList.add("active");
-      }
+      break;
     }
   }
 
-  // ========================
-  // Clue display
-  // ========================
-  function showClue(){
-    const clue = level.clues[currentClueIndex];
-    if (!clue){
-      clueTextEl.textContent = "";
-      clueMetaEl.textContent = "";
-      statusEl.innerHTML = "<strong>All clues solved!</strong>";
-      highlightTargetLine(null);
+  let out = "";
+  let open = null;
+  for(let i=0;i<chars.length;i++){
+    const c = chars[i];
+    const cls = clsAt[i];
+    if(cls !== open){
+      if(open) out += "</span>";
+      if(cls) out += `<span class="${cls}">`;
+      open = cls || null;
+    }
+    out += escapeHtml(c);
+  }
+  if(open) out += "</span>";
+  return out;
+}
+
+/* ===== grid model ===== */
+function gridIndexFromPoint(x,y){
+  const els = document.elementsFromPoint ? document.elementsFromPoint(x,y) : [document.elementFromPoint(x,y)];
+  for(const n of els){
+    if(!n) continue;
+    const cell = n.closest ? n.closest('.cell') : null;
+    if(cell && cell.dataset && cell.dataset.idx != null){
+      const idx = Number(cell.dataset.idx);
+      if(Number.isFinite(idx)) return idx;
+    }
+  }
+  return null;
+}
+function trigramCells(start){ return [start, start+1, start+2]; }
+function overlapCount(aStart, bStart){
+  const aset = new Set(trigramCells(aStart));
+  let c=0;
+  for(const i of trigramCells(bStart)) if(aset.has(i)) c++;
+  return c;
+}
+function overlapMatchIdx(aStart, bStart){
+  const aset = new Set(trigramCells(aStart));
+  for(const i of trigramCells(bStart)) if(aset.has(i)) return i;
+  return null;
+}
+function trigramAtIndex(idx){
+  for(const group of ['w1','w2']){
+    const pl = state.placed[group];
+    if(!pl) continue;
+    if(idx >= pl.start && idx < pl.start + TR){
+      return {group, start: pl.start, tri: pl.tri, offset: idx - pl.start};
+    }
+  }
+  return null;
+}
+function singleAt(idx){
+  return state.singles.find(s => s.idx === idx) || null;
+}
+function cellChar(idx){
+  const t = trigramAtIndex(idx);
+  if(t) return t.tri[t.offset];
+  const s = singleAt(idx);
+  if(s) return s.ch;
+  return "";
+}
+function removeSinglesInCells(cells){
+  const set = new Set(cells);
+  state.singles = state.singles.filter(s => !set.has(s.idx));
+}
+function lockedTri(group){
+  const p = current();
+  if(group === 'w1' && state.hint >= 1) return norm(p.tri1);
+  if(group === 'w2' && state.hint >= 2) return norm(p.tri2);
+  return null;
+}
+function deleteTrigramGroup(group){
+  if(!state.placed[group]) return false;
+  const start = state.placed[group].start;
+  state.placed[group] = null;
+  state.focusIdx = clamp(start, 0, N-1);
+  return true;
+}
+function deleteAtIndex(idx){
+  const t = trigramAtIndex(idx);
+  if(t) return deleteTrigramGroup(t.group);
+  const s = singleAt(idx);
+  if(s){
+    state.singles = state.singles.filter(x => x.idx !== idx);
+    state.focusIdx = clamp(idx, 0, N-1);
+    return true;
+  }
+  return false;
+}
+function focusCell(idx){
+  const i = clamp(idx, 0, N-1);
+  state.focusIdx = i;
+  const inp = el.grid.querySelector(`input[data-idx="${i}"]`);
+  if(inp) inp.focus();
+}
+
+/* ===== "always active" typing helpers ===== */
+function isGridInput(node){
+  return !!(node && node.tagName === "INPUT" && node.dataset && node.dataset.idx != null && node.closest && node.closest('#gridWrap'));
+}
+function nextEditableFrom(startIdx, dir){
+  let i = clamp(startIdx, 0, N-1);
+  while(i >= 0 && i < N){
+    if(!trigramAtIndex(i)) return i;
+    i += dir;
+  }
+  return null;
+}
+function typeLetterIntoGrid(letter){
+  if(state.finished) return false;
+  const ch = String(letter || "").slice(0,1);
+  if(!isAlpha(ch)) return false;
+
+  clearTransientOnAnyChange();
+
+  let idx = clamp(state.focusIdx ?? 0, 0, N-1);
+  if(trigramAtIndex(idx)){
+    const found = nextEditableFrom(idx, +1);
+    if(found == null) return false;
+    idx = found;
+  }
+
+  const lower = ch.toLowerCase();
+  state.singles = state.singles.filter(x => x.idx !== idx);
+  state.singles.push({id: uid(), ch: lower, idx});
+
+  const next = nextEditableFrom(idx + 1, +1);
+  state.focusIdx = (next == null) ? clamp(idx + 1, 0, N-1) : next;
+
+  render();
+  requestAnimationFrame(()=> focusCell(state.focusIdx));
+  return true;
+}
+
+/* ===== key handling ===== */
+function handleGridKeydown(e, idx){
+  if(state.finished) return;
+
+  if(e.key === " " || e.code === "Space" || e.key === "Spacebar"){
+    e.preventDefault(); e.stopPropagation();
+    clearTransientOnAnyChange();
+    focusCell(idx + 1);
+    return;
+  }
+  if(e.key === "ArrowLeft"){ e.preventDefault(); e.stopPropagation(); clearTransientOnAnyChange(); focusCell(idx - 1); return; }
+  if(e.key === "ArrowRight"){ e.preventDefault(); e.stopPropagation(); clearTransientOnAnyChange(); focusCell(idx + 1); return; }
+
+  if(e.key !== "Backspace" && e.key !== "Delete") return;
+
+  e.preventDefault();
+  e.stopPropagation(); /* prevents double-delete/skips */
+  clearTransientOnAnyChange();
+
+  if(e.key === "Backspace"){
+    const tHere = trigramAtIndex(idx);
+    if(!tHere && singleAt(idx)){
+      deleteAtIndex(idx);
+      render();
       return;
     }
-
-    const ansLen = clue.answer.length;
-    const orientLabel = clue.orientation === "row" ? "Row" : "Column";
-
-    clueTextEl.textContent = `${currentClueIndex + 1}. ${clue.text}`;
-    clueMetaEl.textContent = `${orientLabel} · length ${ansLen}`;
-    statusEl.textContent = "Drag a coloured block; it slides until it hits something.";
-    highlightTargetLine(clue);
-  }
-
-  // ========================
-  // Drag helpers
-  // ========================
-  function clearDragPreview(){
-    const allCells = gridEl.querySelectorAll(".cell");
-    allCells.forEach(el => {
-      el.style.transform = "";
-    });
-    pointerState.previewDir = null;
-    pointerState.previewSteps = 0;
-  }
-
-  function onCellMouseDown(e){
-    if (e.button !== 0) return; // only left-click
-    const el = e.currentTarget;
-    const r = parseInt(el.dataset.row, 10);
-    const c = parseInt(el.dataset.col, 10);
-    const cell = grid[r][c];
-
-    clearDragPreview();
-
-    pointerState.active = true;
-    pointerState.blockId = cell.blockId || null;
-    pointerState.startX = e.clientX;
-    pointerState.startY = e.clientY;
-
-    if (cell.blockId){
-      selectedBlockId = cell.blockId;
-      renderGrid();
-    }
-
-    e.preventDefault();
-  }
-
-  function onGlobalMouseMove(e){
-    if (!pointerState.active) return;
-    const blockId = pointerState.blockId;
-    if (!blockId) return; // dragging from blank does nothing
-
-    const block = blocks[blockId];
-    if (!block) return;
-
-    const dx = e.clientX - pointerState.startX;
-    const dy = e.clientY - pointerState.startY;
-    const dist = Math.hypot(dx, dy);
-    const DRAG_START_THRESHOLD = 5;
-
-    if (dist < DRAG_START_THRESHOLD){
-      clearDragPreview();
+    if(idx === 0){
+      if(tHere) { deleteTrigramGroup(tHere.group); render(); }
       return;
     }
-
-    const absX = Math.abs(dx);
-    const absY = Math.abs(dy);
-    const PIXELS_PER_STEP = getCellSize() * 0.9; // a bit forgiving
-
-    let dir;
-    let steps;
-
-    if (absX >= absY){
-      dir = "h";
-      const sign = dx > 0 ? 1 : -1;
-      steps = Math.round(absX / PIXELS_PER_STEP) * sign;
-    } else {
-      dir = "v";
-      const sign = dy > 0 ? 1 : -1;
-      steps = Math.round(absY / PIXELS_PER_STEP) * sign;
-    }
-
-    const MAX_STEPS = 6;
-    if (steps >  MAX_STEPS) steps =  MAX_STEPS;
-    if (steps < -MAX_STEPS) steps = -MAX_STEPS;
-
-    const effectiveSteps = maxStepsForBlock(block, dir, steps);
-
-    // If no actual movement possible, treat as no preview
-    if (effectiveSteps === 0){
-      clearDragPreview();
-      return;
-    }
-
-    pointerState.previewDir = dir;
-    pointerState.previewSteps = effectiveSteps;
-
-    const px = getCellSize() * effectiveSteps;
-    block.cells.forEach(pos => {
-      const cellEl = gridEl.querySelector('.cell[data-row="'+pos.r+'"][data-col="'+pos.c+'"]');
-      if (cellEl){
-        if (dir === "h"){
-          cellEl.style.transform = "translate(" + px + "px, 0)";
-        } else {
-          cellEl.style.transform = "translate(0, " + px + "px)";
-        }
-      }
-    });
+    if(deleteAtIndex(idx - 1)){ render(); return; }
+    focusCell(idx - 1);
+    return;
   }
 
-  function onGlobalMouseUp(e){
-    if (!pointerState.active) return;
-    const { blockId, startX, startY } = pointerState;
-    pointerState.active = false;
-
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    const dist = Math.hypot(dx, dy);
-    const CLICK_THRESHOLD = 10;
-
-    // No block – maybe clear selection on tap
-    if (!blockId){
-      if (dist < CLICK_THRESHOLD && selectedBlockId){
-        selectedBlockId = null;
-        renderGrid();
-        statusEl.textContent = "Selection cleared.";
-      }
-      clearDragPreview();
-      return;
-    }
-
-    const block = blocks[blockId];
-    if (!block){
-      clearDragPreview();
-      return;
-    }
-
-    // If no preview direction (no meaningful drag), treat as click
-    if (dist < CLICK_THRESHOLD || !pointerState.previewDir){
-      handleBlockClick(blockId);
-      clearDragPreview();
-      return;
-    }
-
-    const dir = pointerState.previewDir;
-    const steps = pointerState.previewSteps;
-
-    clearDragPreview();
-
-    if (!steps){
-      handleBlockClick(blockId);
-      return;
-    }
-
-    const dr = dir === "v" ? steps : 0;
-    const dc = dir === "h" ? steps : 0;
-
-    moveBlock(block, dr, dc);
-    selectedBlockId = blockId;
-    renderGrid();
-    checkCurrentClue();
-
-    const dirWord = dir === "h"
-      ? (steps > 0 ? "right" : "left")
-      : (steps > 0 ? "down" : "up");
-
-    statusEl.textContent =
-      `Block moved ${Math.abs(steps)} step${Math.abs(steps) > 1 ? "s" : ""} ${dirWord}.`;
+  if(deleteAtIndex(idx)){ render(); return; }
+  if(idx < N-1){
+    if(deleteAtIndex(idx+1)){ render(); return; }
+    focusCell(idx+1);
+    return;
   }
+}
 
-  function handleBlockClick(blockId){
-    if (!blockId) return;
-    if (!selectedBlockId || selectedBlockId !== blockId){
-      selectedBlockId = blockId;
-      statusEl.textContent = "Block selected. Drag it to slide.";
-    } else {
-      selectedBlockId = null;
-      statusEl.textContent = "Selection cleared.";
-    }
-    renderGrid();
-  }
-
-  // Simulation for max steps in a direction without modifying grid
-  function maxStepsForBlock(block, dir, wishSteps){
-    if (!wishSteps) return 0;
-
-    const sign = wishSteps > 0 ? 1 : -1;
-    const drUnit = dir === "v" ? sign : 0;
-    const dcUnit = dir === "h" ? sign : 0;
-
-    let moved = 0;
-    let tempCells = block.cells.map(p => ({ r: p.r, c: p.c }));
-
-    function cellsCanMoveOnce(cells){
-      for (const pos of cells){
-        const nr = pos.r + drUnit;
-        const nc = pos.c + dcUnit;
-        if (nr < 0 || nr >= size || nc < 0 || nc >= size) return false;
-        const target = grid[nr][nc];
-        if (target.locked) return false;
-        if (target.blockId && target.blockId !== block.id) return false;
-      }
+/* Delete-from-end fallback (works even after clicking "check") */
+function deleteFromEnd(){
+  if(state.finished) return false;
+  for(let i=N-1;i>=0;i--){
+    if(!cellChar(i)) continue;
+    const t = trigramAtIndex(i);
+    if(t){
+      deleteTrigramGroup(t.group);
       return true;
     }
-
-    for (let i = 0; i < Math.abs(wishSteps); i++){
-      if (!cellsCanMoveOnce(tempCells)) break;
-      moved += sign;
-      tempCells = tempCells.map(p => ({ r: p.r + drUnit, c: p.c + dcUnit }));
+    const s = singleAt(i);
+    if(s){
+      state.singles = state.singles.filter(x => x.idx !== i);
+      state.focusIdx = clamp(i,0,N-1);
+      return true;
     }
-
-    return moved;
   }
+  return false;
+}
 
-  function moveBlock(block, dr, dc){
-    const oldLetters = block.cells.map(pos => grid[pos.r][pos.c].letter);
-
-    block.cells.forEach(pos => {
-      grid[pos.r][pos.c].letter = "";
-      grid[pos.r][pos.c].blockId = null;
-    });
-
-    const newCells = block.cells.map(pos => ({
-      r: pos.r + dr,
-      c: pos.c + dc
-    }));
-
-    newCells.forEach((pos, i) => {
-      grid[pos.r][pos.c].letter = oldLetters[i];
-      grid[pos.r][pos.c].blockId = block.id;
-    });
-
-    block.cells = newCells;
+/* ===== typed trigram detection / promotion ===== */
+function allowedSet(group){
+  const p = current();
+  const lock = lockedTri(group);
+  if(lock) return new Set([lock]);
+  const w = norm(group==='w1' ? p.word1 : p.word2);
+  const out = new Set();
+  if(w.length < TR) return out;
+  for(let i=0;i<=w.length-TR;i++) out.add(w.slice(i,i+TR));
+  return out;
+}
+function overlapIsValid(aStart, aTri, bStart, bTri){
+  const ol = overlapCount(aStart, bStart);
+  if(ol === 0) return true;
+  if(ol !== 1) return false;
+  const common = overlapMatchIdx(aStart, bStart);
+  const aCh = aTri[common - aStart];
+  const bCh = bTri[common - bStart];
+  return aCh === bCh;
+}
+function compressMaximalStrings(arr){
+  const uniq = Array.from(new Set(arr.filter(Boolean)));
+  uniq.sort((a,b)=> b.length - a.length);
+  const kept = [];
+  for(const s of uniq){
+    if(!kept.some(k => k.includes(s))) kept.push(s);
   }
+  return kept;
+}
+function computeMax3Invalid(){
+  const p = current();
+  const w1 = norm(p.word1);
+  const w2 = norm(p.word2);
 
-  // ========================
-  // Clue checking & letter removal
-  // ========================
-  function checkCurrentClue(){
-    const clue = level.clues[currentClueIndex];
-    if (!clue) return;
+  state.badSet = new Set();
+  state.badTris = { w1: new Set(), w2: new Set() };
+  const runsW1 = [];
+  const runsW2 = [];
 
-    const answer = clue.answer.toUpperCase();
-    const len = answer.length;
-    let line = "";
+  const chars = Array.from({length:N}, (_,i)=>cellChar(i));
+  let i=0;
 
-    if (clue.orientation === "row"){
-      for (let c = 0; c < size; c++){
-        line += letterAt(clue.index, c) || ".";
-      }
-    } else {
-      for (let r = 0; r < size; r++){
-        line += letterAt(r, clue.index) || ".";
-      }
-    }
+  while(i<N){
+    if(!chars[i]){ i++; continue; }
+    let j=i;
+    while(j<N && chars[j]) j++;
+    const len = j - i;
 
-    for (let start = 0; start <= line.length - len; start++){
-      const segment = line.slice(start, start + len);
-      if (segment === answer){
-        const coords = [];
-        if (clue.orientation === "row"){
-          for (let i = 0; i < len; i++){
-            coords.push({ r: clue.index, c: start + i });
-          }
-        } else {
-          for (let i = 0; i < len; i++){
-            coords.push({ r: start + i, c: clue.index });
+    if(len >= 4){
+      for(let a=i; a<j; a++){
+        for(let b=a+4; b<=j; b++){
+          const s = chars.slice(a,b).join("").toLowerCase();
+          const inW1 = (w1 && w1.includes(s));
+          const inW2 = (w2 && w2.includes(s));
+          if(inW1 || inW2){
+            for(let k=a;k<b;k++) state.badSet.add(k);
+            for(let t=0; t<=s.length-TR; t++){
+              const tri = s.slice(t,t+TR);
+              if(inW1) state.badTris.w1.add(tri);
+              if(inW2) state.badTris.w2.add(tri);
+            }
+            if(inW1) runsW1.push(s);
+            if(inW2) runsW2.push(s);
           }
         }
+      }
+    }
+    i = j;
+  }
 
-        const removedKeys = new Set();
+  state.badRuns.w1 = compressMaximalStrings(runsW1);
+  state.badRuns.w2 = compressMaximalStrings(runsW2);
+}
+function computeTwoTrigramsInvalid(){
+  const p = current();
+  const w1 = norm(p.word1);
+  const w2 = norm(p.word2);
 
-        coords.forEach(({ r, c }) => {
-          const key = r + ":" + c;
-          removedKeys.add(key);
+  state.twoSet = new Set();
+  state.twoTris = { w1: new Set(), w2: new Set() };
 
-          const cell = grid[r][c];
-          const bid = cell.blockId;
+  const chars = Array.from({length:N}, (_,i)=>cellChar(i));
+  const occ = { w1: [], w2: [] };
 
-          const cellEl = gridEl.querySelector('.cell[data-row="'+r+'"][data-col="'+c+'"]');
-          if (cellEl){
-            cellEl.classList.add("found");
-            setTimeout(() => cellEl.classList.remove("found"), 220);
-          }
+  for(let s=0; s<=N-TR; s++){
+    if(!chars[s] || !chars[s+1] || !chars[s+2]) continue;
+    const tri = (chars[s] + chars[s+1] + chars[s+2]).toLowerCase();
+    if(w1 && w1.includes(tri)) occ.w1.push({start:s, tri});
+    if(w2 && w2.includes(tri)) occ.w2.push({start:s, tri});
+  }
 
-          cell.letter = "";
-          cell.blockId = null;
+  for(const group of ['w1','w2']){
+    if(occ[group].length >= 2){
+      for(const o of occ[group]){
+        state.twoTris[group].add(o.tri);
+        for(const k of trigramCells(o.start)) state.twoSet.add(k);
+      }
+    }
+  }
+}
+function computeHintExcludedTrigrams(){
+  state.exclSet = new Set();
+  state.exclTris = { w1: new Set(), w2: new Set() };
 
-          if (bid && blocks[bid]){
-            const b = blocks[bid];
-            b.cells = b.cells.filter(pos => (pos.r + ":" + pos.c) !== key);
-            if (b.cells.length === 0){
-              delete blocks[bid];
-            }
-          }
-        });
+  const p = current();
+  const chars = Array.from({length:N}, (_,i)=>cellChar(i));
 
-        renderGrid();
-        statusEl.innerHTML = `Nice! You found <strong>${answer}</strong>.`;
+  function scan(group, word, locked){
+    const w = norm(word);
+    if(!w) return;
+    for(let s=0; s<=N-TR; s++){
+      if(!chars[s] || !chars[s+1] || !chars[s+2]) continue;
+      const tri = (chars[s]+chars[s+1]+chars[s+2]).toLowerCase();
+      if(tri === locked) continue;
+      if(w.includes(tri)){
+        state.exclTris[group].add(tri);
+        state.exclSet.add(s); state.exclSet.add(s+1); state.exclSet.add(s+2);
+      }
+    }
+  }
 
-        currentClueIndex++;
-        showClue();
-        return;
+  if(state.hint >= 1) scan('w1', p.word1, norm(p.tri1));
+  if(state.hint >= 2) scan('w2', p.word2, norm(p.tri2));
+}
+function setMiniHighlightToTri(group, tri){
+  const lock = lockedTri(group);
+  if(lock) return;
+  const p = current();
+  const w = norm(group==='w1' ? p.word1 : p.word2);
+  const pos = w.indexOf(tri);
+  const maxStart = Math.max(0, w.length - TR);
+  if(pos >= 0) {
+    if(group==='w1') state.sel1 = clamp(pos, 0, maxStart);
+    else state.sel2 = clamp(pos, 0, maxStart);
+  } else {
+    if(group==='w1') state.sel1 = 0;
+    else state.sel2 = 0;
+  }
+}
+function candidatesForTyped(group){
+  if(state.placed[group]) return [];
+  const set = allowedSet(group);
+  if(!set.size) return [];
+
+  const otherGroup = group==='w1' ? 'w2' : 'w1';
+  const other = state.placed[otherGroup];
+
+  const out=[];
+  for(let s=0; s<=N-TR; s++){
+    let chars = [];
+    let borrowed = 0;
+    let ok = true;
+
+    for(let k=0;k<TR;k++){
+      const idx = s + k;
+      const t = trigramAtIndex(idx);
+
+      if(t){
+        if(t.group !== otherGroup){ ok = false; break; }
+        borrowed++;
+        chars.push(t.tri[t.offset]);
+      }else{
+        const sn = state.singles.find(x=>x.idx===idx);
+        if(!sn){ ok = false; break; }
+        chars.push(sn.ch);
       }
     }
 
-    statusEl.textContent = "No complete word there yet – keep sliding!";
+    if(!ok) continue;
+    if(borrowed > 1) continue;
+
+    const tri = chars.join("").toLowerCase();
+    if(!set.has(tri)) continue;
+
+    if(other){
+      const ol = overlapCount(s, other.start);
+      if(ol > 1) continue;
+      if(ol === 1 && !overlapIsValid(s, tri, other.start, other.tri)) continue;
+      if(borrowed === 1 && ol !== 1) continue;
+    }else{
+      if(borrowed !== 0) continue;
+    }
+
+    out.push({start:s, tri});
+  }
+  return out;
+}
+function promoteTypedCandidate(group, cand){
+  if(!cand) return false;
+  if(state.placed[group]) return false;
+
+  const otherGroup = group==='w1' ? 'w2' : 'w1';
+  const other = state.placed[otherGroup];
+  if(other){
+    if(overlapCount(cand.start, other.start) > 1) return false;
+    if(!overlapIsValid(cand.start, cand.tri, other.start, other.tri)) return false;
   }
 
-  // ========================
-  // Controls
-  // ========================
-  resetBtn.addEventListener("click", () => {
-    grid = cloneGrid(baseGrid);
-    blocks = cloneBlocks(baseBlocks);
-    currentClueIndex = 0;
-    selectedBlockId = null;
-    clearDragPreview();
-    renderGrid();
-    showClue();
-  });
+  state.placed[group] = {start: cand.start, tri: cand.tri};
+  removeSinglesInCells(trigramCells(cand.start));
+  setMiniHighlightToTri(group, cand.tri);
+  return true;
+}
+function autoPromoteTypedTrigrams(){
+  if(state.finished || state.revealedAnswer) return false;
 
-  nudgeBtn.addEventListener("click", () => {
-    checkCurrentClue();
-  });
+  let changed = false;
+  let tipGroup = null;
 
-  // ========================
-  // Init
-  // ========================
-  buildGridDOM();
-  renderGrid();
-  showClue();
-})();
+  const c1 = candidatesForTyped('w1');
+  const c2 = candidatesForTyped('w2');
+
+  let w1Cand = (c1.length === 1) ? c1[0] : null;
+  let w2Cand = (c2.length === 1) ? c2[0] : null;
+
+  if(w1Cand && w2Cand){
+    if(overlapCount(w1Cand.start, w2Cand.start) > 1) { w1Cand = null; w2Cand = null; }
+    else if(!overlapIsValid(w1Cand.start, w1Cand.tri, w2Cand.start, w2Cand.tri)) { w1Cand = null; w2Cand = null; }
+  }
+
+  if(w1Cand && w2Cand && !state.placed.w1 && !state.placed.w2){
+    state.placed.w1 = {start: w1Cand.start, tri: w1Cand.tri};
+    state.placed.w2 = {start: w2Cand.start, tri: w2Cand.tri};
+    removeSinglesInCells(trigramCells(w1Cand.start));
+    removeSinglesInCells(trigramCells(w2Cand.start));
+    setMiniHighlightToTri('w1', w1Cand.tri);
+    setMiniHighlightToTri('w2', w2Cand.tri);
+    changed = true;
+    tipGroup = 'w2';
+  } else {
+    if(w1Cand && !state.placed.w1){
+      const did = promoteTypedCandidate('w1', w1Cand);
+      if(did){ changed = true; tipGroup = tipGroup || 'w1'; }
+    }
+    if(w2Cand && !state.placed.w2){
+      const did = promoteTypedCandidate('w2', w2Cand);
+      if(did){ changed = true; tipGroup = tipGroup || 'w2'; }
+    }
+  }
+
+  if(changed && tipGroup){
+    showTipForGroupOnce(tipGroup);
+  }
+
+  return changed;
+}
+
+/* ===== overlap helpers ===== */
+function overlapActiveNow(){
+  const a = state.placed.w1, b = state.placed.w2;
+  if(!a || !b) return false;
+  if(overlapCount(a.start, b.start) !== 1) return false;
+  return overlapIsValid(a.start, a.tri, b.start, b.tri);
+}
+function isOverlapCell(idx){
+  const a = state.placed.w1, b = state.placed.w2;
+  if(!a || !b) return false;
+  if(overlapCount(a.start, b.start) !== 1) return false;
+  if(!overlapIsValid(a.start, a.tri, b.start, b.tri)) return false;
+  const inA = (idx >= a.start && idx < a.start + TR);
+  const inB = (idx >= b.start && idx < b.start + TR);
+  return inA && inB;
+}
+function tipInvalidNow(){
+  if(!state.tip.active) return false;
+  const group = state.tip.group;
+  const pl = group ? state.placed[group] : null;
+  if(!pl) return true;
+  if(lockedTri(group)) return true;
+  if(overlapActiveNow()) return true;
+  for(const idx of trigramCells(pl.start)){
+    if(isOverlapCell(idx)) return true;
+    if(state.badSet.has(idx) || state.twoSet.has(idx) || state.exclSet.has(idx)) return true;
+  }
+  return false;
+}
+function positionTip(){
+  if(!state.tip.group) return;
+  const group = state.tip.group;
+  const pl = group ? state.placed[group] : null;
+  if(!pl) return;
+
+  const cells = trigramCells(pl.start);
+  const rects = cells.map(i=>{
+    const cellEl = el.grid.querySelector(`.cell[data-idx="${i}"]`);
+    return cellEl ? cellEl.getBoundingClientRect() : null;
+  }).filter(Boolean);
+
+  if(!rects.length) return;
+
+  const left = Math.min(...rects.map(r=>r.left));
+  const right = Math.max(...rects.map(r=>r.right));
+  const top = Math.min(...rects.map(r=>r.top));
+  const bottom = Math.max(...rects.map(r=>r.bottom));
+
+  const cx = (left + right) / 2;
+  const gap = 12;
+  const wantAbove = (top - 56) > 6;
+
+  el.tipFloat.classList.remove('above','below');
+  if(wantAbove){
+    el.tipFloat.classList.add('above');
+    el.tipFloat.style.left = `${cx}px`;
+    el.tipFloat.style.top = `${top - gap}px`;
+  }else{
+    el.tipFloat.classList.add('below');
+    el.tipFloat.style.left = `${cx}px`;
+    el.tipFloat.style.top = `${bottom + gap}px`;
+  }
+}
+
+/* ===== hint 3 bank ===== */
+function computeHint3Letters(){
+  const p = current();
+  const ans = norm(p.answer);
+  const covered = new Set();
+  for(let k=0;k<TR;k++) covered.add(p.tri1_pos + k);
+  for(let k=0;k<TR;k++) covered.add(p.tri2_pos + k);
+  const leftover = [];
+  for(let i=0;i<N;i++) if(!covered.has(i)) leftover.push(ans[i]);
+  leftover.sort();
+  return leftover;
+}
+function rebuildBank(){
+  state.bank = computeHint3Letters().map(ch => ({id: uid(), ch}));
+}
+
+/* ===== hint placement by clicking hint blocks ===== */
+function applyHintLock(group){
+  const p = current();
+  const lock = norm(group==='w1' ? p.tri1 : p.tri2);
+  const pl = state.placed[group];
+  if(pl && pl.tri !== lock) state.placed[group] = null;
+  if(group === 'w1') state.sel1 = null;
+  if(group === 'w2') state.sel2 = null;
+}
+function placeFromHintClick(group, tri){
+  if(state.finished) return;
+  clearTransientOnAnyChange();
+
+  const t = norm(tri);
+  const lock = lockedTri(group);
+  if(lock && lock !== t) return;
+
+  if(state.placed[group] && state.placed[group].tri === t) return;
+
+  const otherGroup = group==='w1' ? 'w2' : 'w1';
+  const other = state.placed[otherGroup];
+
+  let start = (state.placed[group] ? state.placed[group].start : null);
+  const focus = clamp(state.focusIdx ?? 0, 0, N-1);
+  const prefStart = clamp(focus, 0, START_MAX);
+
+  function tryStartsInOrder(){
+    const order = [];
+    order.push(prefStart);
+    for(let d=1; d<=START_MAX; d++){
+      if(prefStart-d >= 0) order.push(prefStart-d);
+      if(prefStart+d <= START_MAX) order.push(prefStart+d);
+    }
+    return order;
+  }
+
+  if(start == null){
+    start = null;
+    for(const s of tryStartsInOrder()){
+      if(other){
+        const ol = overlapCount(s, other.start);
+        if(ol > 1) continue;
+        if(ol === 1 && !overlapIsValid(s, t, other.start, other.tri)) continue;
+      }
+      start = s; break;
+    }
+    if(start == null){
+      setTransientMsg("can’t place", 1800);
+      return;
+    }
+  }else{
+    if(other){
+      const ol = overlapCount(start, other.start);
+        const ok = (ol <= 1) && (ol !== 1 || overlapIsValid(start, t, other.start, other.tri));
+      if(!ok){
+        start = null;
+        for(const s of tryStartsInOrder()){
+          const ol2 = overlapCount(s, other.start);
+          if(ol2 > 1) continue;
+          if(ol2 === 1 && !overlapIsValid(s, t, other.start, other.tri)) continue;
+          start = s; break;
+        }
+        if(start == null){
+          setTransientMsg("can’t place", 1800);
+          return;
+        }
+      }
+    }
+  }
+
+  state.placed[group] = {start, tri:t};
+  removeSinglesInCells(trigramCells(start));
+  setMiniHighlightToTri(group, t);
+}
+
+/* ===== cycle trigram ===== */
+function cyclePlacedTrigram(group){
+  if(state.finished) return;
+  if(lockedTri(group)) return;
+
+  const pl = state.placed[group];
+  if(!pl) return;
+
+  const p = current();
+  const w = norm(group === 'w1' ? p.word1 : p.word2);
+  const maxStart = Math.max(0, w.length - TR);
+  if(maxStart === 0) return;
+
+  const curTri = norm(pl.tri);
+  const curPos = w.indexOf(curTri);
+  if(curPos >= 0){
+    if(group === 'w1') state.sel1 = clamp(curPos, 0, maxStart);
+    else state.sel2 = clamp(curPos, 0, maxStart);
+  }else{
+    if(group === 'w1') state.sel1 = 0;
+    else state.sel2 = 0;
+  }
+
+  let s = (group === 'w1' ? state.sel1 : state.sel2);
+  if(s == null) s = 0;
+  s = (s + 1) % (maxStart + 1);
+  if(group === 'w1') state.sel1 = s; else state.sel2 = s;
+
+  const tri = w.slice(s, s+TR);
+  placeFromHintClick(group, tri);
+}
+function computeOverlapIdxSet(){
+  const a = state.placed.w1, b = state.placed.w2;
+  const set = new Set();
+  if(!a || !b) return set;
+  if(overlapCount(a.start, b.start) !== 1) return set;
+  const common = overlapMatchIdx(a.start, b.start);
+  if(common == null) return set;
+  const aCh = a.tri[common - a.start];
+  const bCh = b.tri[common - b.start];
+  if(aCh === bCh) set.add(common);
+  return set;
+}
+
+/* ===== double-tap handling ===== */
+function maybeHandleDoubleTapOnTrigramCell(cellIdx){
+  if(overlapActiveNow()) return;
+  if(isOverlapCell(cellIdx)) return;
+
+  const t = trigramAtIndex(cellIdx);
+  if(!t) return;
+
+  const isRed = state.badSet.has(cellIdx) || state.twoSet.has(cellIdx) || state.exclSet.has(cellIdx);
+  if(isRed){
+    const allow =
+      state.badSet.has(cellIdx) &&
+      state.placed.w1 && state.placed.w2 &&
+      !state.twoSet.has(cellIdx) &&
+      !state.exclSet.has(cellIdx);
+    if(!allow) return;
+  }
+  cyclePlacedTrigram(t.group);
+  render();
+}
+function installTapDetectorForTrigram(pointerDownEvent, cellIdx){
+  const pid = pointerDownEvent.pointerId;
+  const startX = pointerDownEvent.clientX;
+  const startY = pointerDownEvent.clientY;
+  const downT = performance.now();
+
+  const onUp = (ev)=>{
+    if(ev.pointerId !== pid) return;
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onCancel);
+
+    if(state.drag) return;
+    if(performance.now() - state.lastDragEndedAt < 60) return;
+
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    if((dx*dx + dy*dy) > 64) return;
+    if((performance.now() - downT) > 520) return;
+
+    const t = trigramAtIndex(cellIdx);
+    if(!t) return;
+
+    const key = `${t.group}:${t.start}:${t.tri}`;
+    const now = performance.now();
+    const last = state.lastTap;
+    const DOUBLE_MS = 320;
+
+    if(last && last.key === key && (now - last.t) <= DOUBLE_MS){
+      state.lastTap = null;
+      maybeHandleDoubleTapOnTrigramCell(cellIdx);
+      return;
+    }
+    state.lastTap = { t: now, key };
+  };
+
+  const onCancel = ()=>{
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onCancel);
+  };
+
+  window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onCancel);
+}
+
+/* ===== status messages ===== */
+function updateStatusMessages(){
+  if(state.finished) return;
+  if(state.lockMsg) return;
+
+  const hasMax3 = state.badSet && state.badSet.size > 0;
+  const hasTwo  = state.twoSet && state.twoSet.size > 0;
+  const hasExcluded = state.exclSet && state.exclSet.size > 0;
+  const hasOverlap = overlapActiveNow();
+
+  if(hasMax3){ setMsg("Max 3 contiguous letters allowed", 'warn'); state.overlapMsgOn=false; return; }
+  if(hasTwo){  setMsg(TWOTRI_TEXT, 'warn'); state.overlapMsgOn=false; return; }
+  if(hasExcluded){ setMsg(EXCL_TEXT, 'warn'); state.overlapMsgOn=false; return; }
+
+  if(el.msg.classList.contains('warn') && !state.msgTransient) setMsg("");
+  if(state.msgTransient) return;
+
+  if(hasOverlap){
+    if(el.msg.textContent !== OVERLAP_TEXT || el.msg.classList.contains('warn')) setMsg(OVERLAP_TEXT);
+    state.overlapMsgOn = true;
+  }else{
+    if(state.overlapMsgOn && el.msg.textContent === OVERLAP_TEXT) setMsg("");
+    state.overlapMsgOn = false;
+  }
+}
+
+/* ===== intelligent check feedback ===== */
+function canEnableCheckNow(){
+  for(let i=0;i<N;i++) if(!cellChar(i)) return false;
+  return true;
+}
+function countTrigramsInWord(attempt, word){
+  const w = norm(word);
+  const found = [];
+  if(!w) return found;
+  for(let s=0; s<=N-TR; s++){
+    const tri = attempt.slice(s, s+TR);
+    if(w.includes(tri)) found.push(tri);
+  }
+  return found;
+}
+function hintPhraseText(h){
+  if(h === 0) return "with no hints";
+  if(h === 1) return "with 1 hint";
+  return `with ${h} hints`;
+}
+function fireWin(text){
+  el.winToast.textContent = text;
+  el.winToast.classList.remove('show');
+  void el.winToast.offsetWidth;
+  el.winToast.classList.add('show');
+}
+function onCheck(){
+  if(state.finished) return;
+  clearTransientOnAnyChange();
+
+  if(!canEnableCheckNow()){
+    setTransientMsg("Fill all 7");
+    return;
+  }
+
+  computeMax3Invalid();
+  computeTwoTrigramsInvalid();
+  computeHintExcludedTrigrams();
+
+  const attempt = Array.from({length:N}, (_,i)=>cellChar(i)).join("").toLowerCase();
+  const p = current();
+  const ans = norm(p.answer);
+
+  if(attempt === ans){
+    setMsg(`Correct — ${hintPhraseText(state.hint)}!`, 'result');
+    state.finished = true;
+    state.revealedAnswer = false;
+    hideTipSoft();
+    fireWin("Correct!");
+    render();
+    return;
+  }
+
+  shakeGrid();
+
+  if(state.badSet.size){
+    setMsg("Max 3 contiguous letters allowed", "warn");
+    render(false);
+    focusCell(N-1);
+    return;
+  }
+  if(state.twoSet.size){
+    setMsg(TWOTRI_TEXT, "warn");
+    render(false);
+    focusCell(N-1);
+    return;
+  }
+  if(state.exclSet.size){
+    setMsg(EXCL_TEXT, "warn");
+    render(false);
+    focusCell(N-1);
+    return;
+  }
+
+  const w1Hits = countTrigramsInWord(attempt, p.word1);
+  const w2Hits = countTrigramsInWord(attempt, p.word2);
+
+  let msg = "";
+  if(w1Hits.length === 0 && w2Hits.length === 0){
+    msg = "No trigrams";
+  }else if(w1Hits.length === 0){
+    msg = "No trigram from word 1";
+  }else if(w2Hits.length === 0){
+    msg = "No trigram from word 2";
+  }else if(w1Hits.length > 1 || w2Hits.length > 1){
+    msg = TWOTRI_TEXT;
+  }
+
+  if(msg){
+    state.lockMsg = true;
+    setMsg(msg, "warn");
+  }else{
+    setMsg("");
+  }
+
+  render(false);
+  focusCell(N-1);
+}
+
+/* ===== hint track UI ===== */
+function makeTrigramBlock(tri, cls, labelText, onClick){
+  const block = document.createElement('div');
+  block.className = "trackBlock";
+
+  const lblTop = document.createElement('div');
+  lblTop.className = "tinyLbl";
+  lblTop.textContent = labelText;
+  block.appendChild(lblTop);
+
+  const box = document.createElement('div');
+  box.className = "letters clickable";
+  box.setAttribute("role","button");
+  box.setAttribute("aria-label", labelText);
+  box.addEventListener('click', onClick);
+
+  for(let i=0;i<tri.length;i++){
+    const d = document.createElement('div');
+    d.className = "letter " + cls;
+    d.textContent = tri[i];
+    box.appendChild(d);
+  }
+  block.appendChild(box);
+
+  return block;
+}
+
+/* ===== drag (trigrams only) ===== */
+function makeGhostBox(text, bg){
+  const ghost = document.createElement('div');
+  ghost.className = "ghost";
+  ghost.style.display = "flex";
+  ghost.style.alignItems = "center";
+  ghost.style.justifyContent = "center";
+  ghost.style.borderRadius = "12px";
+  ghost.style.border = "4px solid var(--ink)";
+  ghost.style.fontWeight = "900";
+  ghost.style.fontStyle = "italic";
+  ghost.style.textTransform = "lowercase";
+  ghost.style.background = bg;
+  ghost.textContent = text;
+  document.body.appendChild(ghost);
+  return ghost;
+}
+function moveGhost(e){
+  if(!state.drag) return;
+  state.drag.ghost.style.left = e.clientX + "px";
+  state.drag.ghost.style.top = e.clientY + "px";
+}
+function beginDragWithThreshold(e, startFn){
+  const startX = e.clientX, startY = e.clientY;
+  let started = false;
+
+  const onMove = (ev)=>{
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    if(!started && (dx*dx + dy*dy) > 144){
+      started = true;
+      clearTransientOnAnyChange();
+      startFn(ev);
+    }
+    if(started){
+      ev.preventDefault();
+      onDragMove(ev);
+    }
+  };
+  const onUp = (ev)=>{
+    window.removeEventListener('pointermove', onMove);
+    if(started) onDragEnd(ev);
+  };
+
+  window.addEventListener('pointermove', onMove, {passive:false});
+  window.addEventListener('pointerup', onUp, {once:true});
+}
+function startDragTrigram(ev, group, tri, idx0, start0){
+  const ghost = makeGhostBox(tri, (group === 'w1') ? "var(--w1)" : "var(--w2)");
+  ghost.style.width = "112px";
+  ghost.style.height = "40px";
+  ghost.style.letterSpacing = ".18em";
+
+  state.drag = { kind:'trigram', group, tri, grabOffset: idx0 - start0, ghost, lastIdx:null };
+  moveGhost(ev);
+}
+function pairForDragPinnedThenPush(group, desiredStart, idxNow){
+  const mine = state.placed[group];
+  const otherGroup = group==='w1' ? 'w2' : 'w1';
+  const other = state.placed[otherGroup];
+  if(!mine || !other){
+    return { mineStart: clamp(desiredStart, 0, START_MAX), otherStart: other ? other.start : null };
+  }
+
+  const currM = mine.start;
+  const currO = other.start;
+  const mineLeft = currM <= currO;
+
+  const pointerInsideOther = (idxNow >= currO && idxNow < currO + TR);
+  const idxInto = idxNow - currO;
+  const olNow = overlapCount(currM, currO);
+
+  const deepPush = pointerInsideOther && (
+    mineLeft
+      ? (idxInto >= (olNow === 1 ? 1 : 2))
+      : (idxInto <= (olNow === 1 ? 1 : 0))
+  );
+
+  if(!deepPush){
+    let sM = clamp(desiredStart, 0, START_MAX);
+    const sO = currO;
+
+    if(mineLeft){
+      const maxNoTouch = sO - TR;
+      const overlapStart = sO - (TR-1);
+      if(sM > maxNoTouch){
+        if(overlapStart >= 0 && overlapStart <= START_MAX && overlapIsValid(overlapStart, mine.tri, sO, other.tri)){
+          sM = overlapStart;
+        } else if(maxNoTouch >= 0){
+          sM = maxNoTouch;
+        } else {
+          sM = currM;
+        }
+      }
+    }else{
+      const minNoTouch = sO + TR;
+      const overlapStart = sO + (TR-1);
+      if(sM < minNoTouch){
+        if(overlapStart >= 0 && overlapStart <= START_MAX && overlapIsValid(overlapStart, mine.tri, sO, other.tri)){
+          sM = overlapStart;
+        } else if(minNoTouch <= START_MAX){
+          sM = minNoTouch;
+        } else {
+          sM = currM;
+        }
+      }
+    }
+    return { mineStart: clamp(sM, 0, START_MAX), otherStart: sO };
+  }
+
+  let best = null;
+  const currOl = olNow;
+
+  for(let sM=0; sM<=START_MAX; sM++){
+    for(let sO=0; sO<=START_MAX; sO++){
+      const ol = overlapCount(sM, sO);
+      if(ol > 1) continue;
+      if(ol === 1 && !overlapIsValid(sM, mine.tri, sO, other.tri)) continue;
+
+      const orderFlip = ((currM <= currO) !== (sM <= sO));
+
+      let cost = 12*Math.abs(sM - desiredStart) + 5*Math.abs(sO - currO) + 2*Math.abs(ol - currOl);
+      if(orderFlip) cost += (olNow === 1 ? 2 : 8);
+      if(pointerInsideOther && ol === 0) cost -= 1;
+
+      if(best == null || cost < best.cost) best = {cost, sM, sO};
+    }
+  }
+
+  if(!best) return { mineStart: clamp(desiredStart,0,START_MAX), otherStart: currO };
+  return { mineStart: best.sM, otherStart: best.sO };
+}
+function onDragMove(e){
+  if(!state.drag) return;
+  moveGhost(e);
+
+  const idxNow = gridIndexFromPoint(e.clientX, e.clientY);
+  if(idxNow == null) return;
+  if(state.drag.lastIdx === idxNow) return;
+  state.drag.lastIdx = idxNow;
+
+  const d = state.drag;
+  if(d.kind !== 'trigram') return;
+
+  const group = d.group;
+  const otherGroup = group==='w1' ? 'w2' : 'w1';
+
+  const mine = state.placed[group];
+  const other = state.placed[otherGroup];
+  if(!mine) return;
+
+  const rawStart = idxNow - d.grabOffset;
+  const desired = clamp(rawStart, 0, START_MAX);
+
+  if(!other){
+    mine.start = desired;
+    removeSinglesInCells(trigramCells(mine.start));
+    render(false);
+    return;
+  }
+
+  const pair = pairForDragPinnedThenPush(group, desired, idxNow);
+  mine.start = pair.mineStart;
+  other.start = pair.otherStart;
+
+  removeSinglesInCells(trigramCells(mine.start));
+  removeSinglesInCells(trigramCells(other.start));
+  render(false);
+}
+function rectDistance(x,y,rect){
+  const dx = (x < rect.left) ? (rect.left - x) : (x > rect.right ? x - rect.right : 0);
+  const dy = (y < rect.top) ? (rect.top - y) : (y > rect.bottom ? y - rect.bottom : 0);
+  return Math.hypot(dx,dy);
+}
+function onDragEnd(e){
+  if(!state.drag) return;
+  const d = state.drag;
+  d.ghost.remove();
+  state.drag = null;
+  state.lastDragEndedAt = performance.now();
+
+  const rect = el.gridWrap.getBoundingClientRect();
+  const dist = rectDistance(e.clientX, e.clientY, rect);
+  const REMOVE_DIST = 150;
+  if(dist > REMOVE_DIST){
+    deleteTrigramGroup(d.group);
+    render();
+    return;
+  }
+  render();
+}
+
+/* ===== clue / error underline ===== */
+function triForClue(group){
+  const lock = lockedTri(group);
+  if(lock) return lock;
+  const pl = state.placed[group];
+  if(pl) return pl.tri;
+  return null;
+}
+function errorItemsForGroup(group){
+  if(state.badRuns[group] && state.badRuns[group].length){
+    return state.badRuns[group].map(s => ({sub:s, cls:"u-red"}));
+  }
+  if(state.twoTris[group] && state.twoTris[group].size){
+    return Array.from(state.twoTris[group]).map(t => ({sub:t, cls:"u-red"}));
+  }
+  if(state.exclTris[group] && state.exclTris[group].size){
+    return Array.from(state.exclTris[group]).map(t => ({sub:t, cls:"u-red"}));
+  }
+  return [];
+}
+
+/* ===== hint track ===== */
+function renderHintTrack(){
+  const p = current();
+  el.trackW1.innerHTML = "";
+  el.trackW2.innerHTML = "";
+  el.trackExtras.innerHTML = "";
+
+  el.trackW1.style.display = "none";
+  el.trackW2.style.display = "none";
+  el.trackExtras.style.display = "none";
+
+  if(state.hint >= 1){
+    el.trackW1.appendChild(
+      makeTrigramBlock(norm(p.tri1), "sel-w1", "hint 1", ()=>{
+        placeFromHintClick('w1', norm(p.tri1));
+        render();
+      })
+    );
+    el.trackW1.style.display = "";
+  }
+
+  if(state.hint >= 2){
+    el.trackW2.appendChild(
+      makeTrigramBlock(norm(p.tri2), "sel-w2", "hint 2", ()=>{
+        placeFromHintClick('w2', norm(p.tri2));
+        render();
+      })
+    );
+    el.trackW2.style.display = "";
+  }
+
+  if(state.hint >= 3){
+    if(state.bank.length === 0) rebuildBank();
+
+    const block = document.createElement('div');
+    block.className = "trackBlock";
+
+    const lbl = document.createElement('div');
+    lbl.className = "tinyLbl";
+    lbl.textContent = "hint 3";
+    block.appendChild(lbl);
+
+    const row = document.createElement('div');
+    row.className = "extrasRow";
+
+    for(const tile of state.bank){
+      const box = document.createElement('div');
+      box.className = "letters";
+
+      const d = document.createElement('div');
+      d.className = "letter extra";
+      d.textContent = tile.ch;
+      d.addEventListener('click', ()=>{
+        if(state.finished) return;
+        clearTransientOnAnyChange();
+        for(let i=0;i<N;i++){
+          if(trigramAtIndex(i)) continue;
+          if(state.singles.find(s=>s.idx===i)) continue;
+          state.singles.push({id: uid(), ch: tile.ch, idx: i});
+          state.focusIdx = clamp(i+1,0,N-1);
+          render();
+          return;
+        }
+        setTransientMsg("No blank spot", 2000);
+      });
+
+      box.appendChild(d);
+      row.appendChild(box);
+    }
+
+    block.appendChild(row);
+    el.trackExtras.appendChild(block);
+    el.trackExtras.style.display = "";
+  }
+}
+
+/* ===== render grid ===== */
+function renderGrid(stealFocus=true){
+  for(let k=0;k<2;k++){
+    if(!autoPromoteTypedTrigrams()) break;
+  }
+
+  computeMax3Invalid();
+  computeTwoTrigramsInvalid();
+  computeHintExcludedTrigrams();
+
+  if(state.tip.active && tipInvalidNow()){
+    hideTipSoft();
+  }
+
+  const overlapSet = computeOverlapIdxSet();
+  el.grid.innerHTML = "";
+
+  for(let i=0;i<N;i++){
+    const cell = document.createElement('div');
+    cell.className = "cell";
+    cell.dataset.idx = String(i);
+
+    const tri = trigramAtIndex(i);
+
+    if(tri){
+      if(overlapSet.has(i)) cell.classList.add('bg-ol');
+      else cell.classList.add(tri.group==='w1' ? 'bg-w1' : 'bg-w2');
+      cell.classList.add('grabbable');
+    }
+
+    if(state.badSet.has(i) || state.twoSet.has(i) || state.exclSet.has(i)) cell.classList.add('bg-bad');
+
+    const input = document.createElement('input');
+    input.inputMode = "text";
+    input.autocapitalize = "none";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.maxLength = 1;
+    input.dataset.idx = String(i);
+    input.value = cellChar(i);
+
+    input.readOnly = !!tri || state.finished;
+
+    input.addEventListener('focus', ()=>{ state.focusIdx = i; });
+    input.addEventListener('keydown', (e)=> handleGridKeydown(e, i));
+
+    if(!input.readOnly){
+      input.addEventListener('input', ()=>{
+        clearTransientOnAnyChange();
+        const v = input.value || "";
+        const ch = v.slice(-1);
+        if(!ch){ render(); return; }
+        if(!isAlpha(ch)){ input.value = ""; render(); return; }
+
+        const lower = ch.toLowerCase();
+        state.singles = state.singles.filter(x => x.idx !== i);
+        state.singles.push({id: uid(), ch: lower, idx: i});
+        state.focusIdx = clamp(i+1,0,N-1);
+        render();
+      });
+    }
+
+    cell.addEventListener('pointerdown', (e)=>{
+      if(state.finished) return;
+      requestAnimationFrame(()=>input.focus());
+
+      const t = trigramAtIndex(i);
+      if(t){
+        e.preventDefault();
+        clearTransientOnAnyChange();
+        installTapDetectorForTrigram(e, i);
+        beginDragWithThreshold(e, (ev)=>startDragTrigram(ev, t.group, t.tri, i, t.start));
+      }
+    });
+
+    cell.appendChild(input);
+    el.grid.appendChild(cell);
+  }
+
+  if(state.tip.active){
+    positionTip();
+  }
+
+  if(stealFocus && !state.finished){
+    requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
+  }
+}
+
+function render(stealFocus=true){
+  const p = current();
+  el.count.textContent = `${state.i+1}/${PUZZLES.length}`;
+
+  el.wrap.classList.toggle('solved', state.finished);
+
+  el.hintBtn.textContent =
+    (state.hint === 0) ? "hint 1" :
+    (state.hint === 1) ? "hint 2" :
+    (state.hint === 2) ? "hint 3" :
+    "give up";
+
+  renderGrid(stealFocus);
+
+  const [t1, t2] = splitClueTwoWords(p.clue);
+
+  const err1 = errorItemsForGroup('w1');
+  const err2 = errorItemsForGroup('w2');
+
+  let a = escapeHtml(t1);
+  let b = escapeHtml(t2);
+
+  if(err1.length){
+    a = underlineBySubstrings(t1, err1);
+  }else{
+    const tri1 = triForClue('w1');
+    if(tri1) a = underlineBySubstrings(t1, [{sub:tri1, cls:"u-w1"}]);
+  }
+
+  if(err2.length){
+    b = underlineBySubstrings(t2, err2);
+  }else{
+    const tri2 = triForClue('w2');
+    if(tri2) b = underlineBySubstrings(t2, [{sub:tri2, cls:"u-w2"}]);
+  }
+
+  el.clue.innerHTML = `${a} ${b} <span class="len">(7)</span>`;
+
+  renderHintTrack();
+
+  el.checkBtn.classList.toggle('ready', canEnableCheckNow());
+  el.hintBtn.disabled = state.finished;
+  el.checkBtn.disabled = state.finished;
+
+  updateStatusMessages();
+}
+
+/* ===== hint / nav ===== */
+el.hintBtn.addEventListener('click', ()=>{
+  if(state.finished) return;
+  clearTransientOnAnyChange();
+
+  if(state.hint >= 3){
+    hardClearTip();
+    state.typedTipShown = true;
+
+    const ans = norm(current().answer);
+    state.placed = {w1:null, w2:null};
+    state.singles = [];
+    for(let i=0;i<N;i++) state.singles.push({id:uid(), ch: ans[i], idx:i});
+
+    state.finished = true;
+    state.revealedAnswer = true;
+
+    setMsg(`Answer: ${ans}`, "result");
+    fireWin("Answer!");
+    render();
+    return;
+  }
+
+  const prev = state.hint;
+  state.hint = Math.min(3, state.hint + 1);
+
+  if(prev < 1 && state.hint >= 1) applyHintLock('w1');
+  if(prev < 2 && state.hint >= 2) applyHintLock('w2');
+  if(prev < 3 && state.hint >= 3){
+    if(state.bank.length === 0) rebuildBank();
+  }
+  render();
+});
+
+el.checkBtn.addEventListener('click', onCheck);
+
+el.prevBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearTransientOnAnyChange(); state.i=(state.i-1+PUZZLES.length)%PUZZLES.length; resetAllForPuzzle(); render(); });
+el.nextBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearTransientOnAnyChange(); state.i=(state.i+1)%PUZZLES.length; resetAllForPuzzle(); render(); });
+
+/* ===== always-active focus: click/tap background snaps focus back ===== */
+document.addEventListener('pointerdown', (e)=>{
+  if(state.finished) return;
+  if(e.target && e.target.closest && e.target.closest('#gridWrap')) return;
+  if(e.target && e.target.closest && e.target.closest('button,a,.letters')) return;
+  requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
+});
+
+/* ===== keyboard handler (includes "always-active typing") ===== */
+document.addEventListener('keydown', (e)=>{
+  if(state.finished) return;
+
+  const target = e.target;
+  const inGrid = target && target.closest && target.closest('#gridWrap');
+
+  // Always-active typing: if user types a letter while focus isn't in the grid, put it in the grid.
+  if(!inGrid && e.key && e.key.length === 1 && isAlpha(e.key)){
+    // don't steal from other text inputs (none in this UI, but safe)
+    const isOtherTyping = target && target.tagName === "INPUT" && !isGridInput(target);
+    if(!isOtherTyping){
+      e.preventDefault();
+      typeLetterIntoGrid(e.key);
+      return;
+    }
+  }
+
+  if(e.key === "Enter" && inGrid && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey){
+    e.preventDefault();
+    clearTransientOnAnyChange();
+    onCheck();
+    return;
+  }
+
+  // Delete-from-end fallback still works after clicking check / losing focus
+  if((e.key === "Backspace" || e.key === "Delete") && !inGrid){
+    const isTypingElsewhere = target && target.tagName === "INPUT" && !isGridInput(target);
+    if(isTypingElsewhere) return;
+
+    e.preventDefault();
+    clearTransientOnAnyChange();
+    if(deleteFromEnd()){
+      render();
+      focusCell(state.focusIdx ?? 0);
+    }else{
+      focusCell(state.focusIdx ?? 0);
+    }
+    return;
+  }
+});
+
+window.addEventListener('resize', ()=>{ if(state.tip.active) positionTip(); });
+window.addEventListener('scroll', ()=>{ if(state.tip.active) positionTip(); }, {passive:true});
+
+/* ===== resets ===== */
+function resetMainGridOnly(){
+  state.placed = {w1:null, w2:null};
+  state.singles = [];
+  state.focusIdx = 0;
+  state.sel1 = null;
+  state.sel2 = null;
+  setMsg("");
+  state.overlapMsgOn = false;
+  state.lockMsg = false;
+  hardClearTip();
+}
+function resetAllForPuzzle(){
+  state.hint = 0;
+  state.finished = false;
+  state.revealedAnswer = false;
+  state.bank = [];
+  state.typedTipShown = false;
+  resetMainGridOnly();
+}
+
+render();
 </script>
 </body>
 </html>
