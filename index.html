@@ -221,12 +221,12 @@
 .cell.active.bg-w1::after,
 .cell.active.bg-w2::after,
 .cell.active.bg-ol::after{
-  opacity:0;
+  background: transparent; /* NOT opacity (opacity is animated) */
 }
 
 /* …but DO show it if the cell is red (invalid/excluded), even if it’s also a trigram */
 .cell.active.bg-bad::after{
-  opacity:1;
+  background: var(--caret);
 }
 
     @keyframes caretBlink{
