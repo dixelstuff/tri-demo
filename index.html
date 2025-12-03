@@ -17,7 +17,7 @@
       --bad:#ffc9d2;  /* red/pink warning */
       --submit:#F4D2FD;
 
-      --shadow:0 8px 18px rgba(0,0,0,.14);
+      --shadow:0 7px 16px rgba(0,0,0,.12);
       --kb-h: 260px;
     }
 
@@ -48,6 +48,12 @@
 
     .wrap.solved .gridWrap{ pointer-events:none; }
     .wrap.solved .hintTrack{ opacity:0; pointer-events:none; }
+    .wrap.solved .gridWrap{ animation:pop .18s ease-out 0s 1; }
+    @keyframes pop{
+      0%{ transform:scale(1); }
+      55%{ transform:scale(1.035); }
+      100%{ transform:scale(1); }
+    }
 
     .toprow{
       width:100%;
@@ -82,7 +88,7 @@
       display:block;
       width:fit-content;
       max-width:min(940px,94vw);
-      margin:40px auto 26px;       /* nav→clue slightly more; clue→grid slightly more */
+      margin:36px auto 34px;       /* nav→clue slightly less; clue→grid more */
       padding:14px 20px 15px;
       background:var(--bubble);
       border-radius:18px;
@@ -156,8 +162,8 @@
       background:transparent;
       text-align:center;
       font-size:clamp(24px,4.4vw,36px);
-      font-weight:800;          /* back to “default-ish”, less stylised */
-      font-style:normal;
+      font-weight:800;
+      font-style:italic;          /* restore italic in main grid */
       padding:0; margin:0;
       color:var(--ink);
       text-transform:lowercase;
@@ -165,6 +171,8 @@
       cursor:text;
       -webkit-appearance:none;
       appearance:none;
+      border-radius:0;
+      box-shadow:none;
     }
 
     .cell.bg-w1{ background:var(--w1); }
@@ -176,21 +184,24 @@
     .cell.grabbable:active{ cursor:grabbing; }
     .cell.grabbable input{ pointer-events:none; cursor:grab; }
 
-    /* when custom KB enabled: prevent iOS keyboard */
-    html.has-kb .cell input{ pointer-events:none; }
+    /* IMPORTANT: do NOT disable pointer-events on inputs with custom KB
+       (we want readonly focus so caret shows, but no native keyboard) */
+    /* html.has-kb .cell input{ pointer-events:none; } */
 
+    /* ========= centered message area (fix squashed/right-shift) ========= */
     .msgSlot{
-      position:relative;
-      height:58px;
+      width:100%;
       max-width:760px;
+      min-height:58px;
       margin:14px auto 0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:0 12px;
       user-select:none;
       flex:0 0 auto;
     }
     .msg{
-      position:absolute;
-      left:0; right:0;
-      top:10px;
       margin:0;
       font-weight:900;
       opacity:0;
@@ -198,11 +209,16 @@
       transition:opacity .18s ease, transform .18s ease;
       font-style:italic;
       font-size:20px;
+      line-height:1.15;
+      max-width:100%;
+      text-align:center;
       pointer-events:none;
+      word-break:normal;
+      overflow-wrap:anywhere;
     }
     .msg.show{ opacity:.92; transform:translateY(0); }
     .msg.warn{ opacity:.92; font-size:19px; font-style:italic; }
-    .msg.result{ top:18px; }
+    .msg.result{ }
 
     .hintTrack{
       margin:14px auto 0;
@@ -281,7 +297,7 @@
 
     /* Buttons: smaller; position differs with/without keyboard */
     .btnRow{
-      margin-top:22px;            /* desktop: slightly lower */
+      margin-top:22px;
       display:flex;
       justify-content:center;
       gap:10px;
@@ -301,7 +317,7 @@
       cursor:pointer;
       user-select:none;
       text-transform:lowercase;
-      color:var(--ink);                 /* fixes iOS “blue link” vibe */
+      color:var(--ink);
       -webkit-text-fill-color:var(--ink);
       -webkit-appearance:none;
       appearance:none;
@@ -317,7 +333,7 @@
     html.has-kb .btnRow{
       position:fixed;
       left:0; right:0;
-      bottom: calc(var(--kb-h) + 18px + env(safe-area-inset-bottom)); /* mobile: up a touch from keyboard */
+      bottom: calc(var(--kb-h) + 16px + env(safe-area-inset-bottom)); /* up a touch */
       margin:0;
       z-index:9997;
       pointer-events:auto;
@@ -344,7 +360,7 @@
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border-top:3px solid rgba(0,0,0,.18);
-      box-shadow:none; /* remove top shadow cast over page */
+      box-shadow:none;
       touch-action:manipulation;
     }
     html.has-kb .kbHost{ display:block; }
@@ -367,8 +383,8 @@
       border:2px solid rgba(0,0,0,.16);
       border-radius:14px;
       background:rgba(255,255,255,.80);
-      font-weight:700;          /* lighter */
-      font-style:normal;        /* non-italic */
+      font-weight:700;
+      font-style:normal;
       text-transform:uppercase;
       font-size:18px;
       box-shadow:none;
@@ -388,19 +404,19 @@
       font-size:18px;
       letter-spacing:.5px;
     }
-    .kbKey.enter{ background:var(--submit); }
+    .kbKey.enter{ background:rgba(255,255,255,.80); } /* no special background */
     .kbKey.delete{ background:rgba(255,255,255,.88); }
 
     @media (max-width:520px){
       .clue{
-        font-size:clamp(30px,6.2vw,40px); /* mobile clue a touch bigger */
-        margin:42px auto 28px;
+        font-size:clamp(30px,6.2vw,40px);
+        margin:34px auto 38px; /* nav→clue slightly less; clue→grid more */
       }
       .grid{ width:min(310px,92vw); }
-      .cell input{ font-size:clamp(28px,8.2vw,40px); } /* mobile grid a touch bigger */
+      .cell input{ font-size:clamp(28px,8.4vw,41px); }
       .letter{ width:28px; height:28px; font-size:18px; }
       .btn{ font-size:19px; padding:9px 15px; min-width:100px; }
-      .msgSlot{ height:56px; margin-top:14px; }
+      .msgSlot{ min-height:56px; margin-top:14px; }
       .msg{ font-size:19px; }
       .kbKey{ height:48px; }
     }
@@ -470,7 +486,6 @@ const el = {
 
   hintBtn: document.getElementById('hintBtn'),
   checkBtn: document.getElementById('checkBtn'),
-  btnRow: document.getElementById('btnRow'),
 
   prevBtn: document.getElementById('prevBtn'),
   nextBtn: document.getElementById('nextBtn'),
@@ -544,6 +559,7 @@ function setCustomKBEnabled(on){
   document.documentElement.classList.toggle('has-kb', state.useCustomKB);
   buildKeyboard();
   requestAnimationFrame(()=> updateKeyboardPadding());
+  requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));   // keep caret visible
 }
 function updateKeyboardPadding(){
   if(!state.useCustomKB) return;
@@ -571,7 +587,7 @@ function makeKey(label, aria, cls, onPress){
   return b;
 }
 
-/* Make taps between keys pick the nearest key (more forgiving) */
+/* forgiving taps between keys */
 function installRowForgivingTap(rowEl){
   rowEl.addEventListener('pointerdown', (e)=>{
     if(state.finished) return;
@@ -616,10 +632,9 @@ function buildKeyboard(){
   installRowForgivingTap(row2);
   kb.appendChild(row2);
 
-  // Wordle-like bottom row: [enter] zxcvbnm [delete]
   const row3 = document.createElement('div');
   row3.className = "kbRow";
-  row3.appendChild(makeKey("⏎", "Enter", "wide enter", ()=> onCheck()));
+  row3.appendChild(makeKey("⏎", "Enter", "wide enter", ()=> onCheck())); // looks normal now
   for(const ch of "zxcvbnm") row3.appendChild(makeKey(ch.toUpperCase(), `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
   row3.appendChild(makeKey("⌫", "Delete", "wide delete", ()=> kbBackspace()));
   installRowForgivingTap(row3);
@@ -793,15 +808,13 @@ function deleteAtIndex(idx){
 function focusCell(idx){
   const i = clamp(idx, 0, N-1);
   state.focusIdx = i;
-  if(state.useCustomKB) return;
   const inp = el.grid.querySelector(`input[data-idx="${i}"]`);
-  if(inp) inp.focus();
+  if(inp){
+    try{ inp.focus({preventScroll:true}); } catch(_){ inp.focus(); }
+  }
 }
 
 /* ===== always active typing ===== */
-function isGridInput(node){
-  return !!(node && node.tagName === "INPUT" && node.dataset && node.dataset.idx != null && node.closest && node.closest('#gridWrap'));
-}
 function nextEditableFrom(startIdx, dir){
   let i = clamp(startIdx, 0, N-1);
   while(i >= 0 && i < N){
@@ -829,6 +842,7 @@ function typeLetterAtIndex(idx, letter){
   const next = nextEditableFrom(idx + 1, +1);
   state.focusIdx = (next == null) ? clamp(idx + 1, 0, N-1) : next;
   render();
+  focusCell(state.focusIdx);
   return true;
 }
 function typeLetterIntoGrid(letter){
@@ -853,6 +867,7 @@ function typeLetterIntoGrid(letter){
   state.focusIdx = (next == null) ? clamp(idx + 1, 0, N-1) : next;
 
   render();
+  focusCell(state.focusIdx);
   return true;
 }
 
@@ -864,25 +879,19 @@ function kbBackspace(){
   const fake = { key:'Backspace', preventDefault(){}, stopPropagation(){} };
   handleGridKeydown(fake, idx);
   render();
+  focusCell(state.focusIdx);
 }
 
 /* ===== key handling ===== */
 function handleGridKeydown(e, idx){
   if(state.finished) return;
 
-  // Replace letter if user types on a filled cell (desktop/non-kb mode too)
   if(e.key && e.key.length === 1 && isAlpha(e.key)){
     e.preventDefault(); e.stopPropagation();
     typeLetterAtIndex(idx, e.key);
     return;
   }
 
-  if(e.key === " " || e.code === "Space" || e.key === "Spacebar"){
-    e.preventDefault(); e.stopPropagation();
-    clearTransientOnAnyChange();
-    focusCell(idx + 1);
-    return;
-  }
   if(e.key === "ArrowLeft"){ e.preventDefault(); e.stopPropagation(); clearTransientOnAnyChange(); focusCell(idx - 1); return; }
   if(e.key === "ArrowRight"){ e.preventDefault(); e.stopPropagation(); clearTransientOnAnyChange(); focusCell(idx + 1); return; }
 
@@ -897,20 +906,21 @@ function handleGridKeydown(e, idx){
     if(!tHere && singleAt(idx)){
       deleteAtIndex(idx);
       render();
+      focusCell(state.focusIdx);
       return;
     }
     if(idx === 0){
-      if(tHere) { deleteTrigramGroup(tHere.group); render(); }
+      if(tHere) { deleteTrigramGroup(tHere.group); render(); focusCell(state.focusIdx); }
       return;
     }
-    if(deleteAtIndex(idx - 1)){ render(); return; }
+    if(deleteAtIndex(idx - 1)){ render(); focusCell(state.focusIdx); return; }
     focusCell(idx - 1);
     return;
   }
 
-  if(deleteAtIndex(idx)){ render(); return; }
+  if(deleteAtIndex(idx)){ render(); focusCell(state.focusIdx); return; }
   if(idx < N-1){
-    if(deleteAtIndex(idx+1)){ render(); return; }
+    if(deleteAtIndex(idx+1)){ render(); focusCell(state.focusIdx); return; }
     focusCell(idx+1);
     return;
   }
@@ -1178,16 +1188,7 @@ function overlapActiveNow(){
   if(overlapCount(a.start, b.start) !== 1) return false;
   return overlapIsValid(a.start, a.tri, b.start, b.tri);
 }
-function isOverlapCell(idx){
-  const a = state.placed.w1, b = state.placed.w2;
-  if(!a || !b) return false;
-  if(overlapCount(a.start, b.start) !== 1) return false;
-  if(!overlapIsValid(a.start, a.tri, b.start, b.tri)) return false;
-  const inA = (idx >= a.start && idx < a.start + TR);
-  const inB = (idx >= b.start && idx < b.start + TR);
-  return inA && inB;
-}
-function computeOverlapIdxSet(){
+function overlapMatchIdxSet(){
   const a = state.placed.w1, b = state.placed.w2;
   const set = new Set();
   if(!a || !b) return set;
@@ -1262,10 +1263,7 @@ function placeFromHintClick(group, tri){
       }
       start = s; break;
     }
-    if(start == null){
-      setTransientMsg("can’t place", 1800);
-      return;
-    }
+    if(start == null){ setTransientMsg("can’t place", 1800); return; }
   }else{
     if(other){
       const ol = overlapCount(start, other.start);
@@ -1278,10 +1276,7 @@ function placeFromHintClick(group, tri){
           if(ol2 === 1 && !overlapIsValid(s, t, other.start, other.tri)) continue;
           start = s; break;
         }
-        if(start == null){
-          setTransientMsg("can’t place", 1800);
-          return;
-        }
+        if(start == null){ setTransientMsg("can’t place", 1800); return; }
       }
     }
   }
@@ -1291,7 +1286,7 @@ function placeFromHintClick(group, tri){
   setMiniHighlightToTri(group, t);
 }
 
-/* Cycle via clue tap */
+/* Cycle/place via clue tap */
 function cyclePlacedTrigram(group){
   if(state.finished) return;
   if(lockedTri(group)) return;
@@ -1322,7 +1317,6 @@ function cyclePlacedTrigram(group){
   const tri = w.slice(s, s+TR);
   placeFromHintClick(group, tri);
 }
-
 function firstTriForGroup(group){
   const lock = lockedTri(group);
   if(lock) return lock;
@@ -1334,9 +1328,8 @@ function onClueTap(group){
   if(state.finished) return;
   clearTransientOnAnyChange();
 
-  if(state.placed[group]){
-    cyclePlacedTrigram(group);
-  }else{
+  if(state.placed[group]) cyclePlacedTrigram(group);
+  else{
     const tri = firstTriForGroup(group);
     if(tri) placeFromHintClick(group, tri);
   }
@@ -1402,6 +1395,11 @@ function startDragTrigram(ev, group, tri, idx0, start0){
   ghost.style.letterSpacing = ".18em";
   state.drag = { kind:'trigram', group, tri, grabOffset: idx0 - start0, ghost, lastIdx:null };
   moveGhost(ev);
+}
+function overlapMatchIdx(aStart, bStart){
+  const aset = new Set(trigramCells(aStart));
+  for(const i of trigramCells(bStart)) if(aset.has(i)) return i;
+  return null;
 }
 function pairForDragPinnedThenPush(group, desiredStart, idxNow){
   const mine = state.placed[group];
@@ -1532,9 +1530,11 @@ function onDragEnd(e){
   if(dist > 150){
     deleteTrigramGroup(d.group);
     render();
+    focusCell(state.focusIdx);
     return;
   }
   render();
+  focusCell(state.focusIdx);
 }
 
 /* ===== status messages ===== */
@@ -1563,7 +1563,7 @@ function updateStatusMessages(){
   }
 }
 
-/* ===== intelligent check feedback ===== */
+/* ===== check ===== */
 function canEnableCheckNow(){
   for(let i=0;i<N;i++) if(!cellChar(i)) return false;
   return true;
@@ -1724,6 +1724,7 @@ function renderHintTrack(){
           state.singles.push({id: uid(), ch: tile.ch, idx: i});
           state.focusIdx = clamp(i+1,0,N-1);
           render();
+          focusCell(state.focusIdx);
           return;
         }
         setTransientMsg("No blank spot", 2000);
@@ -1770,7 +1771,7 @@ function renderGrid(stealFocus=true){
   computeTwoTrigramsInvalid();
   computeHintExcludedTrigrams();
 
-  const overlapSet = computeOverlapIdxSet();
+  const overlapSet = overlapMatchIdxSet();
   el.grid.innerHTML = "";
 
   for(let i=0;i<N;i++){
@@ -1797,9 +1798,9 @@ function renderGrid(stealFocus=true){
     input.dataset.idx = String(i);
     input.value = cellChar(i);
 
+    // readonly inputs can still show caret when focused (and iOS won't pop the keyboard)
     const ro = !!tri || state.finished || state.useCustomKB;
     input.readOnly = ro;
-    input.tabIndex = state.useCustomKB ? -1 : 0;
 
     input.addEventListener('focus', ()=>{ state.focusIdx = i; });
     input.addEventListener('keydown', (e)=> handleGridKeydown(e, i));
@@ -1817,18 +1818,16 @@ function renderGrid(stealFocus=true){
         state.singles.push({id: uid(), ch: lower, idx: i});
         state.focusIdx = clamp(i+1,0,N-1);
         render();
+        focusCell(state.focusIdx);
       });
     }
 
     cell.addEventListener('pointerdown', (e)=>{
       if(state.finished) return;
 
-      if(state.useCustomKB){
-        state.focusIdx = i;
-        render(false);
-      }else{
-        requestAnimationFrame(()=>input.focus());
-      }
+      // always focus (so caret appears even on mobile)
+      state.focusIdx = i;
+      requestAnimationFrame(()=>{ try{ input.focus({preventScroll:true}); } catch(_){ input.focus(); } });
 
       const t = trigramAtIndex(i);
       if(t){
@@ -1842,7 +1841,7 @@ function renderGrid(stealFocus=true){
     el.grid.appendChild(cell);
   }
 
-  if(stealFocus && !state.finished && !state.useCustomKB){
+  if(stealFocus && !state.finished){
     requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
   }
 }
@@ -1929,7 +1928,7 @@ el.checkBtn.addEventListener('click', onCheck);
 el.prevBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearTransientOnAnyChange(); state.i=(state.i-1+PUZZLES.length)%PUZZLES.length; resetAllForPuzzle(); render(); });
 el.nextBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearTransientOnAnyChange(); state.i=(state.i+1)%PUZZLES.length; resetAllForPuzzle(); render(); });
 
-/* Tap/click clue word to cycle or place */
+/* Tap/clue word to cycle or place */
 el.clue.addEventListener('pointerdown', (e)=>{
   const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
   if(!w) return;
@@ -1937,7 +1936,6 @@ el.clue.addEventListener('pointerdown', (e)=>{
   const g = w.dataset.group;
   if(g === 'w1' || g === 'w2') onClueTap(g);
 }, {passive:false});
-
 el.clue.addEventListener('keydown', (e)=>{
   const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
   if(!w) return;
@@ -1948,28 +1946,14 @@ el.clue.addEventListener('keydown', (e)=>{
   }
 });
 
-/* ===== always-active focus ===== */
-document.addEventListener('pointerdown', (e)=>{
-  if(state.finished) return;
-  if(e.target && e.target.closest && e.target.closest('#gridWrap')) return;
-  if(e.target && e.target.closest && e.target.closest('button,a,.letters,.kbHost,.clue')) return;
-  requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
-});
-
-/* ===== keyboard handler ===== */
+/* ===== global keyboard handler ===== */
 document.addEventListener('keydown', (e)=>{
   if(state.finished) return;
 
-  const target = e.target;
-  const inGrid = target && target.closest && target.closest('#gridWrap');
-
-  if(!inGrid && e.key && e.key.length === 1 && isAlpha(e.key)){
-    const isOtherTyping = target && target.tagName === "INPUT" && !isGridInput(target);
-    if(!isOtherTyping){
-      e.preventDefault();
-      typeLetterIntoGrid(e.key);
-      return;
-    }
+  if(e.key && e.key.length === 1 && isAlpha(e.key)){
+    e.preventDefault();
+    typeLetterIntoGrid(e.key);
+    return;
   }
 
   if(e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey){
@@ -1980,12 +1964,10 @@ document.addEventListener('keydown', (e)=>{
   }
 
   if(e.key === "Backspace" || e.key === "Delete"){
-    if(!inGrid || state.useCustomKB){
-      e.preventDefault();
-      clearTransientOnAnyChange();
-      if(deleteFromEnd()) render();
-      return;
-    }
+    e.preventDefault();
+    clearTransientOnAnyChange();
+    if(deleteFromEnd()) render();
+    focusCell(state.focusIdx);
   }
 });
 
@@ -1996,7 +1978,11 @@ window.addEventListener('resize', ()=>{
 });
 
 /* ===== resets ===== */
-function resetMainGridOnly(){
+function resetAllForPuzzle(){
+  state.hint = 0;
+  state.finished = false;
+  state.revealedAnswer = false;
+  state.bank = [];
   state.placed = {w1:null, w2:null};
   state.singles = [];
   state.focusIdx = 0;
@@ -2006,17 +1992,11 @@ function resetMainGridOnly(){
   state.overlapMsgOn = false;
   state.lockMsg = false;
 }
-function resetAllForPuzzle(){
-  state.hint = 0;
-  state.finished = false;
-  state.revealedAnswer = false;
-  state.bank = [];
-  resetMainGridOnly();
-}
 
 /* ===== init ===== */
 setCustomKBEnabled(shouldUseCustomKB());
 render();
+focusCell(0);
 </script>
 </body>
 </html>
