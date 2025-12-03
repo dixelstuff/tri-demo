@@ -568,38 +568,44 @@
 </head>
 
 <body>
-  <div class="wrap" id="wrap">
-    <div class="toprow">
-      <div class="nav">
-        <a href="#" id="prevBtn" aria-label="Previous puzzle">‹</a>
-        <span class="count" id="count"></span>
-        <a href="#" id="nextBtn" aria-label="Next puzzle">›</a>
-      </div>
-    </div>
-
-    <div class="clue" id="clue"></div>
-
-    <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
-      <div class="grid" id="grid"></div>
-    </div>
-
-    <div class="msgSlot" id="msgSlot" aria-live="polite">
-      <div class="msg" id="msg"></div>
-    </div>
-
-    <div class="hintTrack" id="hintTrack" aria-label="Hint tracker">
-      <div class="trackRow" id="trackRow">
-        <div class="trackBlock" id="trackW1"></div>
-        <div class="trackBlock" id="trackW2"></div>
-        <div class="trackBlock" id="trackExtras"></div>
-      </div>
-    </div>
-
-    <div class="btnRow" id="btnRow">
-      <button class="btn hints" id="hintBtn" type="button">hint 1</button>
-      <button class="btn check" id="checkBtn" type="button">check</button>
+<div class="wrap" id="wrap">
+  <div class="toprow">
+    <div class="nav">
+      <a href="#" id="prevBtn" aria-label="Previous puzzle">‹</a>
+      <span class="count" id="count"></span>
+      <a href="#" id="nextBtn" aria-label="Next puzzle">›</a>
     </div>
   </div>
+
+  <!-- message zone -->
+  <div class="msgSlot" id="msgSlot" aria-live="polite">
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <!-- main grid -->
+  <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <!-- clue -->
+  <div class="clue" id="clue"></div>
+
+  <!-- hint zone -->
+  <div class="hintTrack" id="hintTrack" aria-label="Hint tracker">
+    <div class="trackRow" id="trackRow">
+      <div class="trackBlock" id="trackW1"></div>
+      <div class="trackBlock" id="trackW2"></div>
+      <div class="trackBlock" id="trackExtras"></div>
+    </div>
+  </div>
+
+  <!-- bottom buttons -->
+  <div class="btnRow" id="btnRow">
+    <button class="btn hints" id="hintBtn" type="button">hint 1</button>
+    <button class="btn check" id="checkBtn" type="button">check</button>
+  </div>
+</div>
+
 
   <div class="kbHost" id="kbHost" aria-label="On-screen keyboard"></div>
 
