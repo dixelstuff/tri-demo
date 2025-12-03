@@ -5,11 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover" />
   <title>Trigram Demo</title>
 
-  <!-- Sansita for the grid (as per spec) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Sansita:ital,wght@0,700;0,900;1,700;1,900&display=swap" rel="stylesheet">
-
   <style>
     :root{
       --bg:#a9cdf3;
@@ -21,8 +16,6 @@
       --ol:#c9f3d6;   /* green */
       --bad:#ffc9d2;  /* red/pink warning */
       --submit:#F4D2FD;
-
-      --shadow:0 10px 24px rgba(0,0,0,.18);
 
       /* estimated keyboard height for padding, JS will set to actual */
       --kb-h: 260px;
@@ -44,12 +37,10 @@
       background:var(--bg);
       color:var(--ink);
       text-align:center;
-      /* extra guard for iOS bounce */
       position:fixed;
       inset:0;
     }
 
-    /* Harden default button styling on iOS / embedded contexts */
     button{
       font:inherit;
       color:inherit;
@@ -61,9 +52,7 @@
       margin:0;
       -webkit-tap-highlight-color: transparent;
     }
-    a{
-      -webkit-tap-highlight-color: transparent;
-    }
+    a{ -webkit-tap-highlight-color: transparent; }
     a:visited{ color:inherit; }
 
     .wrap{
@@ -79,9 +68,9 @@
       overflow:hidden;
     }
 
-    /* when custom keyboard is visible, add bottom padding so buttons stay tappable */
+    /* when custom keyboard is visible, add bottom padding so content isn't covered */
     html.has-kb .wrap{
-      padding-bottom: calc(14px + var(--kb-h) + env(safe-area-inset-bottom));
+      padding-bottom: calc(14px + var(--kb-h) + env(safe-area-inset-bottom) + 60px);
     }
 
     .wrap.solved .gridWrap{
@@ -92,7 +81,7 @@
     .wrap.solved .cell{ background:#fff !important; }
     .wrap.solved .hintTrack{ opacity:0; pointer-events:none; }
 
-    /* ===== TOP NAV (smaller + less vertical whitespace) ===== */
+    /* ===== TOP NAV ===== */
     .toprow{
       width:100%;
       display:flex;
@@ -123,23 +112,23 @@
     .nav a:active{ transform:translateY(1px); }
     .count{ font-weight:900; opacity:.7; min-width:54px; text-align:center; font-size:14px; }
 
-    /* ===== CLUE (bigger on mobile, less gap overall) ===== */
+    /* ===== CLUE (reduced shadow, more gap below) ===== */
     .clue{
       display:block;
       width:fit-content;
       max-width:min(940px,94vw);
-      margin:12px auto 18px; /* reduced substantially */
+      margin:12px auto 24px;          /* more space down to grid */
       padding:12px 18px 14px;
       background:var(--bubble);
       border-radius:18px;
-      box-shadow:var(--shadow);
+      box-shadow:0 6px 16px rgba(0,0,0,.12); /* reduced */
       font-size:clamp(26px,3.2vw,40px);
       line-height:1.12;
       letter-spacing:.12px;
       font-weight:400;
       flex:0 0 auto;
     }
-    .clue .len{ opacity:.55; font-weight:inherit; font-style:inherit; }
+    .clue .len{ opacity:.55; }
 
     .u-w1, .u-w2, .u-red{
       text-decoration: underline;
@@ -186,10 +175,19 @@
     }
     .cell:not(:nth-child(7n+1)){ border-left:3px solid var(--ink); }
 
-    /* Active cursor cell — subtle ring, NOT an ugly black box */
-    .cell.active{
-      outline:none;
-      box-shadow: inset 0 0 0 3px rgba(0,0,0,.20);
+    /* Removed grey active box entirely */
+    .cell.active{ box-shadow:none; }
+
+    /* Mobile/custom-keyboard “cursor” */
+    @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+    html.has-kb .cell.active::after{
+      content:"";
+      position:absolute;
+      width:2px;
+      height:58%;
+      background:rgba(0,0,0,.45);
+      border-radius:2px;
+      animation: blink 1s step-end infinite;
     }
 
     .cell input{
@@ -201,7 +199,7 @@
       font-size:clamp(22px,3.8vw,34px);
       font-weight:900;
       font-style:italic;
-      font-family:"Sansita", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; /* reverted */
       padding:0; margin:0;
       color:var(--ink);
       text-transform:lowercase;
@@ -217,10 +215,8 @@
     .cell.grabbable:active{ cursor:grabbing; }
     .cell.grabbable input{ pointer-events:none; cursor:grab; }
 
-    /* When custom KB enabled: don't let inputs be interactive (prevents iOS keyboard) */
     html.has-kb .cell input{ pointer-events:none; }
 
-    /* fixed message slot so buttons never shift */
     .msgSlot{
       position:relative;
       height:60px;
@@ -244,54 +240,8 @@
       pointer-events:none;
     }
     .msg.show{ opacity:.92; transform:translateY(0); }
-    .msg.warn{ opacity:.92; font-size:20px; font-style:italic; }
+    .msg.warn{ opacity:.92; font-size:20px; }
     .msg.result{ top:18px; }
-
-    /* floating tip that points at a trigram */
-    .tipFloat{
-      position:fixed;
-      left:50%;
-      top:0;
-      transform:translate(-50%, -100%);
-      padding:8px 12px;
-      border-radius:999px;
-      border:3px solid rgba(0,0,0,.20);
-      background:rgba(255,255,255,.88);
-      font-weight:900;
-      font-style:italic;
-      font-size:15px;
-      user-select:none;
-      pointer-events:none;
-      opacity:0;
-      transition:opacity .12s ease-out, transform .12s ease-out;
-      z-index:9998;
-      white-space:nowrap;
-      box-shadow:0 10px 22px rgba(0,0,0,.14);
-    }
-    .tipFloat.show{ opacity:.98; }
-    .tipFloat.fading{ transition:opacity .42s ease-in; }
-    .tipFloat::after{
-      content:"";
-      position:absolute;
-      left:50%;
-      transform:translateX(-50%);
-      width:0; height:0;
-      border-left:10px solid transparent;
-      border-right:10px solid transparent;
-    }
-    .tipFloat.above::after{
-      bottom:-10px;
-      border-top:10px solid rgba(255,255,255,.88);
-      filter: drop-shadow(0 2px 0 rgba(0,0,0,.18));
-    }
-    .tipFloat.below{
-      transform:translate(-50%, 0);
-    }
-    .tipFloat.below::after{
-      top:-10px;
-      border-bottom:10px solid rgba(255,255,255,.88);
-      filter: drop-shadow(0 -2px 0 rgba(0,0,0,.18));
-    }
 
     .hintTrack{
       margin:14px auto 0;
@@ -340,7 +290,6 @@
       font-size:19px;
       text-transform:lowercase;
       border-left:2px solid rgba(0,0,0,.10);
-      position:relative;
       background:rgba(255,255,255,.35);
       transition:opacity .15s ease, background .15s ease, transform .08s ease;
     }
@@ -350,7 +299,6 @@
     .letter.extra{
       background:rgba(255,255,255,.95);
       cursor:pointer;
-      box-shadow:none;
       font-style:italic;
     }
     .letter.extra:active{ transform:translateY(1px); }
@@ -374,18 +322,28 @@
       flex-wrap:nowrap;
     }
 
-    /* ===== BUTTONS anchored to bottom of viewport (via flex) ===== */
+    /* ===== BUTTONS (not forced to bottom on desktop) ===== */
     .btnRow{
-      margin-top:auto; /* pushes buttons to bottom without scrolling */
+      margin-top:12px;
       display:flex;
       justify-content:center;
       gap:12px;
       flex-wrap:wrap;
-      padding-top:12px;
+      padding-top:6px;
       padding-bottom: max(10px, env(safe-area-inset-bottom));
       width:100%;
       flex:0 0 auto;
     }
+    /* But float just above the keyboard on mobile */
+    html.has-kb .btnRow{
+      position:fixed;
+      left:0; right:0;
+      bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 8px);
+      margin:0;
+      padding:10px 0;
+      z-index:9995;
+    }
+
     .btn{
       -webkit-appearance:none;
       appearance:none;
@@ -402,7 +360,6 @@
       user-select:none;
       text-transform:lowercase;
 
-      /* iOS/embedded hardening: stop "blue link" look */
       color:var(--ink) !important;
       -webkit-text-fill-color: var(--ink) !important;
       text-decoration:none !important;
@@ -454,11 +411,11 @@
       z-index:9996;
       display:none;
       padding:10px 10px calc(10px + env(safe-area-inset-bottom));
-      background:rgba(255,255,255,.86);
+      background:rgba(255,255,255,.90);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border-top:4px solid rgba(0,0,0,.20);
-      box-shadow: 0 -16px 30px rgba(0,0,0,.14);
+      box-shadow:none; /* removed top shadow */
       touch-action: manipulation;
     }
     html.has-kb .kbHost{ display:block; }
@@ -480,19 +437,19 @@
       height: 48px;
       border:3px solid rgba(0,0,0,.18);
       border-radius:14px;
-      background:rgba(255,255,255,.75);
+      background:rgba(255,255,255,.80);
       font-weight:900;
       font-style:italic;
-      text-transform:lowercase;
-      font-size: 20px;
-      box-shadow:0 6px 0 rgba(0,0,0,.12);
+      text-transform:uppercase; /* CAPS */
+      font-size: 18px;
+      box-shadow:none;          /* removed key shadows */
       cursor:pointer;
       user-select:none;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
       color:var(--ink);
     }
-    .kbKey:active{ transform:translateY(1px); box-shadow:0 5px 0 rgba(0,0,0,.12); }
+    .kbKey:active{ transform:translateY(1px); }
     .kbKey.wide{
       width: calc(clamp(28px, 8.4vw, 46px) * 2.2);
       font-style:normal;
@@ -500,17 +457,18 @@
       font-size:18px;
     }
     .kbKey.enter{ background:var(--submit); }
-    .kbKey.delete{ background:rgba(255,255,255,.88); }
+    .kbKey.delete{ background:rgba(255,255,255,.92); }
 
     @media (max-width:520px){
       .grid{ width:min(304px,92vw); }
 
-      /* clue bigger on mobile specifically */
+      /* clue slightly bigger on mobile */
       .clue{
-        font-size:clamp(30px, 7.2vw, 44px);
-        margin:10px auto 16px;
+        font-size:clamp(33px, 7.8vw, 48px);
+        margin:10px auto 26px; /* more gap */
         padding:12px 16px 14px;
       }
+
       .nav a{ padding:4px 9px; }
       .count{ font-size:13px; min-width:50px; }
 
@@ -519,7 +477,6 @@
       .msgSlot{ height:56px; margin-top:12px; }
       .msg{ font-size:20px; top:8px; }
       .msg.result{ top:18px; }
-      .tipFloat{ font-size:14px; }
       .kbKey{ height:46px; }
     }
   </style>
@@ -527,7 +484,6 @@
 
 <body>
   <div class="winToast" id="winToast" aria-live="polite">Correct!</div>
-  <div class="tipFloat above" id="tipFloat" aria-live="polite">Double tap to cycle</div>
 
   <div class="wrap" id="wrap">
     <div class="toprow">
@@ -585,7 +541,6 @@ const el = {
   grid: document.getElementById('grid'),
   msg: document.getElementById('msg'),
   winToast: document.getElementById('winToast'),
-  tipFloat: document.getElementById('tipFloat'),
 
   hintTrack: document.getElementById('hintTrack'),
   trackW1: document.getElementById('trackW1'),
@@ -626,10 +581,6 @@ const state = {
   msgTimer: null,
   msgTransient: false,
   lockMsg: false,
-
-  typedTipShown: false,
-
-  tip: { active:false, group:null, hideAt:0, minUntil:0, hardUntil:0, timer:null, fadeTimer:null },
 
   badSet: new Set(),
   badTris: { w1: new Set(), w2: new Set() },
@@ -698,8 +649,6 @@ function makeKey(label, aria, cls, onPress){
 
   return b;
 }
-
-/* Wordle-style: 3 letter rows, then bottom row = ENTER (left), letters, DELETE (right) */
 function buildKeyboard(){
   el.kbHost.innerHTML = "";
   if(!state.useCustomKB) return;
@@ -708,83 +657,21 @@ function buildKeyboard(){
   kb.className = "kb";
 
   const r1 = document.createElement('div'); r1.className = "kbRow";
-  for(const ch of "qwertyuiop") r1.appendChild(makeKey(ch, `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
+  for(const ch of "QWERTYUIOP") r1.appendChild(makeKey(ch, `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
   kb.appendChild(r1);
 
   const r2 = document.createElement('div'); r2.className = "kbRow";
-  for(const ch of "asdfghjkl") r2.appendChild(makeKey(ch, `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
+  for(const ch of "ASDFGHJKL") r2.appendChild(makeKey(ch, `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
   kb.appendChild(r2);
 
   const r3 = document.createElement('div'); r3.className = "kbRow";
   r3.appendChild(makeKey("enter", "Enter", "wide enter", ()=> onCheck()));
-  for(const ch of "zxcvbnm") r3.appendChild(makeKey(ch, `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
+  for(const ch of "ZXCVBNM") r3.appendChild(makeKey(ch, `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
   r3.appendChild(makeKey("⌫", "Delete", "wide delete", ()=> kbBackspace()));
   kb.appendChild(r3);
 
   el.kbHost.appendChild(kb);
   requestAnimationFrame(()=> updateKeyboardPadding());
-}
-
-/* ===== tip ===== */
-function clearTipTimers(){
-  if(state.tip.timer){ clearTimeout(state.tip.timer); state.tip.timer=null; }
-  if(state.tip.fadeTimer){ clearTimeout(state.tip.fadeTimer); state.tip.fadeTimer=null; }
-}
-function hardClearTip(){
-  clearTipTimers();
-  state.tip.active = false;
-  state.tip.group = null;
-  el.tipFloat.classList.remove('show','below','above','fading');
-  el.tipFloat.style.left = "50%";
-  el.tipFloat.style.top = "0px";
-}
-function hideTipSoft(){
-  clearTipTimers();
-  state.tip.active = false;
-  state.tip.group = null;
-  el.tipFloat.classList.add('fading');
-  el.tipFloat.classList.remove('show');
-  state.tip.fadeTimer = setTimeout(()=>{ el.tipFloat.classList.remove('fading'); }, 460);
-}
-function scheduleTipHide(){
-  if(!state.tip.active) return;
-  clearTipTimers();
-  const delay = Math.max(0, state.tip.hideAt - performance.now());
-  state.tip.timer = setTimeout(()=>{
-    if(!state.tip.active) return;
-    const now = performance.now();
-    if(now < state.tip.hideAt - 20){ scheduleTipHide(); return; }
-    hideTipSoft();
-    render(false);
-  }, delay + 30);
-}
-function bumpTipLinger(){
-  if(!state.tip.active) return;
-  const now = performance.now();
-  const ACTION_LINGER_MS = 1200;
-  const target = Math.max(state.tip.hideAt, state.tip.minUntil, now + ACTION_LINGER_MS);
-  state.tip.hideAt = Math.min(state.tip.hardUntil, target);
-  scheduleTipHide();
-}
-function showTipForGroupOnce(group){
-  if(state.typedTipShown) return;
-  if(state.finished || state.revealedAnswer) return;
-
-  state.typedTipShown = true;
-
-  const now = performance.now();
-  state.tip.active = true;
-  state.tip.group = group;
-
-  state.tip.minUntil  = now + 1200;
-  state.tip.hardUntil = now + 5500;
-  state.tip.hideAt    = now + 4200;
-
-  el.tipFloat.textContent = "Double tap to cycle";
-  el.tipFloat.classList.remove('fading','show');
-  positionTip();
-  requestAnimationFrame(()=> el.tipFloat.classList.add('show'));
-  scheduleTipHide();
 }
 
 /* ===== messages ===== */
@@ -813,13 +700,10 @@ function setTransientMsg(text, ms=2200){
   }, ms);
 }
 function clearTransientOnAnyChange(){
-  bumpTipLinger();
-
   if(state.lockMsg){
     state.lockMsg = false;
     setMsg("");
   }
-
   if(state.msgTransient){
     el.msg.classList.remove('show','warn','result');
     el.msg.textContent = "";
@@ -995,8 +879,6 @@ function typeLetterIntoGrid(letter){
   render();
   return true;
 }
-
-/* Backspace for custom keyboard */
 function kbBackspace(){
   if(state.finished) return;
   clearTransientOnAnyChange();
@@ -1048,17 +930,12 @@ function handleGridKeydown(e, idx){
     return;
   }
 }
-
-/* Delete-from-end fallback */
 function deleteFromEnd(){
   if(state.finished) return false;
   for(let i=N-1;i>=0;i--){
     if(!cellChar(i)) continue;
     const t = trigramAtIndex(i);
-    if(t){
-      deleteTrigramGroup(t.group);
-      return true;
-    }
+    if(t){ deleteTrigramGroup(t.group); return true; }
     const s = singleAt(i);
     if(s){
       state.singles = state.singles.filter(x => x.idx !== i);
@@ -1276,7 +1153,6 @@ function autoPromoteTypedTrigrams(){
   if(state.finished || state.revealedAnswer) return false;
 
   let changed = false;
-  let tipGroup = null;
 
   const c1 = candidatesForTyped('w1');
   const c2 = candidatesForTyped('w2');
@@ -1297,20 +1173,15 @@ function autoPromoteTypedTrigrams(){
     setMiniHighlightToTri('w1', w1Cand.tri);
     setMiniHighlightToTri('w2', w2Cand.tri);
     changed = true;
-    tipGroup = 'w2';
   } else {
     if(w1Cand && !state.placed.w1){
       const did = promoteTypedCandidate('w1', w1Cand);
-      if(did){ changed = true; tipGroup = tipGroup || 'w1'; }
+      if(did) changed = true;
     }
     if(w2Cand && !state.placed.w2){
       const did = promoteTypedCandidate('w2', w2Cand);
-      if(did){ changed = true; tipGroup = tipGroup || 'w2'; }
+      if(did) changed = true;
     }
-  }
-
-  if(changed && tipGroup){
-    showTipForGroupOnce(tipGroup);
   }
 
   return changed;
@@ -1332,52 +1203,108 @@ function isOverlapCell(idx){
   const inB = (idx >= b.start && idx < b.start + TR);
   return inA && inB;
 }
-function tipInvalidNow(){
-  if(!state.tip.active) return false;
-  const group = state.tip.group;
-  const pl = group ? state.placed[group] : null;
-  if(!pl) return true;
-  if(lockedTri(group)) return true;
-  if(overlapActiveNow()) return true;
-  for(const idx of trigramCells(pl.start)){
-    if(isOverlapCell(idx)) return true;
-    if(state.badSet.has(idx) || state.twoSet.has(idx) || state.exclSet.has(idx)) return true;
-  }
-  return false;
+function computeOverlapIdxSet(){
+  const a = state.placed.w1, b = state.placed.w2;
+  const set = new Set();
+  if(!a || !b) return set;
+  if(overlapCount(a.start, b.start) !== 1) return set;
+  const common = overlapMatchIdx(a.start, b.start);
+  if(common == null) return set;
+  const aCh = a.tri[common - a.start];
+  const bCh = b.tri[common - b.start];
+  if(aCh === bCh) set.add(common);
+  return set;
 }
-function positionTip(){
-  if(!state.tip.group) return;
-  const group = state.tip.group;
-  const pl = group ? state.placed[group] : null;
+
+/* ===== double-tap cycling (message removed; feature kept) ===== */
+function cyclePlacedTrigram(group){
+  if(state.finished) return;
+  if(lockedTri(group)) return;
+
+  const pl = state.placed[group];
   if(!pl) return;
 
-  const cells = trigramCells(pl.start);
-  const rects = cells.map(i=>{
-    const cellEl = el.grid.querySelector(`.cell[data-idx="${i}"]`);
-    return cellEl ? cellEl.getBoundingClientRect() : null;
-  }).filter(Boolean);
+  const p = current();
+  const w = norm(group === 'w1' ? p.word1 : p.word2);
+  const maxStart = Math.max(0, w.length - TR);
+  if(maxStart === 0) return;
 
-  if(!rects.length) return;
-
-  const left = Math.min(...rects.map(r=>r.left));
-  const right = Math.max(...rects.map(r=>r.right));
-  const top = Math.min(...rects.map(r=>r.top));
-  const bottom = Math.max(...rects.map(r=>r.bottom));
-
-  const cx = (left + right) / 2;
-  const gap = 12;
-  const wantAbove = (top - 56) > 6;
-
-  el.tipFloat.classList.remove('above','below');
-  if(wantAbove){
-    el.tipFloat.classList.add('above');
-    el.tipFloat.style.left = `${cx}px`;
-    el.tipFloat.style.top = `${top - gap}px`;
+  const curTri = norm(pl.tri);
+  const curPos = w.indexOf(curTri);
+  if(curPos >= 0){
+    if(group === 'w1') state.sel1 = clamp(curPos, 0, maxStart);
+    else state.sel2 = clamp(curPos, 0, maxStart);
   }else{
-    el.tipFloat.classList.add('below');
-    el.tipFloat.style.left = `${cx}px`;
-    el.tipFloat.style.top = `${bottom + gap}px`;
+    if(group === 'w1') state.sel1 = 0;
+    else state.sel2 = 0;
   }
+
+  let s = (group === 'w1' ? state.sel1 : state.sel2);
+  if(s == null) s = 0;
+  s = (s + 1) % (maxStart + 1);
+  if(group === 'w1') state.sel1 = s; else state.sel2 = s;
+
+  const tri = w.slice(s, s+TR);
+  placeFromHintClick(group, tri);
+}
+function maybeHandleDoubleTapOnTrigramCell(cellIdx){
+  if(overlapActiveNow()) return;
+  if(isOverlapCell(cellIdx)) return;
+
+  const t = trigramAtIndex(cellIdx);
+  if(!t) return;
+
+  const isRed = state.badSet.has(cellIdx) || state.twoSet.has(cellIdx) || state.exclSet.has(cellIdx);
+  if(isRed){
+    const allow =
+      state.badSet.has(cellIdx) &&
+      state.placed.w1 && state.placed.w2 &&
+      !state.twoSet.has(cellIdx) &&
+      !state.exclSet.has(cellIdx);
+    if(!allow) return;
+  }
+  cyclePlacedTrigram(t.group);
+  render();
+}
+function installTapDetectorForTrigram(pointerDownEvent, cellIdx){
+  const pid = pointerDownEvent.pointerId;
+  const startX = pointerDownEvent.clientX;
+  const startY = pointerDownEvent.clientY;
+  const downT = performance.now();
+  const onUp = (ev)=>{
+    if(ev.pointerId !== pid) return;
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onCancel);
+
+    if(state.drag) return;
+    if(performance.now() - state.lastDragEndedAt < 60) return;
+
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    if((dx*dx + dy*dy) > 64) return;
+    if((performance.now() - downT) > 520) return;
+
+    const t = trigramAtIndex(cellIdx);
+    if(!t) return;
+
+    const key = `${t.group}:${t.start}:${t.tri}`;
+    const now = performance.now();
+    const last = state.lastTap;
+    const DOUBLE_MS = 320;
+
+    if(last && last.key === key && (now - last.t) <= DOUBLE_MS){
+      state.lastTap = null;
+      maybeHandleDoubleTapOnTrigramCell(cellIdx);
+      return;
+    }
+    state.lastTap = { t: now, key };
+  };
+  const onCancel = ()=>{
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onCancel);
+  };
+  window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onCancel);
 }
 
 /* ===== hint 3 bank ===== */
@@ -1471,114 +1398,6 @@ function placeFromHintClick(group, tri){
   setMiniHighlightToTri(group, t);
 }
 
-/* ===== cycle trigram ===== */
-function cyclePlacedTrigram(group){
-  if(state.finished) return;
-  if(lockedTri(group)) return;
-
-  const pl = state.placed[group];
-  if(!pl) return;
-
-  const p = current();
-  const w = norm(group === 'w1' ? p.word1 : p.word2);
-  const maxStart = Math.max(0, w.length - TR);
-  if(maxStart === 0) return;
-
-  const curTri = norm(pl.tri);
-  const curPos = w.indexOf(curTri);
-  if(curPos >= 0){
-    if(group === 'w1') state.sel1 = clamp(curPos, 0, maxStart);
-    else state.sel2 = clamp(curPos, 0, maxStart);
-  }else{
-    if(group === 'w1') state.sel1 = 0;
-    else state.sel2 = 0;
-  }
-
-  let s = (group === 'w1' ? state.sel1 : state.sel2);
-  if(s == null) s = 0;
-  s = (s + 1) % (maxStart + 1);
-  if(group === 'w1') state.sel1 = s; else state.sel2 = s;
-
-  const tri = w.slice(s, s+TR);
-  placeFromHintClick(group, tri);
-}
-function computeOverlapIdxSet(){
-  const a = state.placed.w1, b = state.placed.w2;
-  const set = new Set();
-  if(!a || !b) return set;
-  if(overlapCount(a.start, b.start) !== 1) return set;
-  const common = overlapMatchIdx(a.start, b.start);
-  if(common == null) return set;
-  const aCh = a.tri[common - a.start];
-  const bCh = b.tri[common - b.start];
-  if(aCh === bCh) set.add(common);
-  return set;
-}
-
-/* ===== double-tap handling ===== */
-function maybeHandleDoubleTapOnTrigramCell(cellIdx){
-  if(overlapActiveNow()) return;
-  if(isOverlapCell(cellIdx)) return;
-
-  const t = trigramAtIndex(cellIdx);
-  if(!t) return;
-
-  const isRed = state.badSet.has(cellIdx) || state.twoSet.has(cellIdx) || state.exclSet.has(cellIdx);
-  if(isRed){
-    const allow =
-      state.badSet.has(cellIdx) &&
-      state.placed.w1 && state.placed.w2 &&
-      !state.twoSet.has(cellIdx) &&
-      !state.exclSet.has(cellIdx);
-    if(!allow) return;
-  }
-  cyclePlacedTrigram(t.group);
-  render();
-}
-function installTapDetectorForTrigram(pointerDownEvent, cellIdx){
-  const pid = pointerDownEvent.pointerId;
-  const startX = pointerDownEvent.clientX;
-  const startY = pointerDownEvent.clientY;
-  const downT = performance.now();
-
-  const onUp = (ev)=>{
-    if(ev.pointerId !== pid) return;
-    window.removeEventListener('pointerup', onUp);
-    window.removeEventListener('pointercancel', onCancel);
-
-    if(state.drag) return;
-    if(performance.now() - state.lastDragEndedAt < 60) return;
-
-    const dx = ev.clientX - startX;
-    const dy = ev.clientY - startY;
-    if((dx*dx + dy*dy) > 64) return;
-    if((performance.now() - downT) > 520) return;
-
-    const t = trigramAtIndex(cellIdx);
-    if(!t) return;
-
-    const key = `${t.group}:${t.start}:${t.tri}`;
-    const now = performance.now();
-    const last = state.lastTap;
-    const DOUBLE_MS = 320;
-
-    if(last && last.key === key && (now - last.t) <= DOUBLE_MS){
-      state.lastTap = null;
-      maybeHandleDoubleTapOnTrigramCell(cellIdx);
-      return;
-    }
-    state.lastTap = { t: now, key };
-  };
-
-  const onCancel = ()=>{
-    window.removeEventListener('pointerup', onUp);
-    window.removeEventListener('pointercancel', onCancel);
-  };
-
-  window.addEventListener('pointerup', onUp);
-  window.addEventListener('pointercancel', onCancel);
-}
-
 /* ===== status messages ===== */
 function updateStatusMessages(){
   if(state.finished) return;
@@ -1605,7 +1424,7 @@ function updateStatusMessages(){
   }
 }
 
-/* ===== intelligent check feedback ===== */
+/* ===== check ===== */
 function canEnableCheckNow(){
   for(let i=0;i<N;i++) if(!cellChar(i)) return false;
   return true;
@@ -1652,7 +1471,6 @@ function onCheck(){
     setMsg(`Correct — ${hintPhraseText(state.hint)}!`, 'result');
     state.finished = true;
     state.revealedAnswer = false;
-    hideTipSoft();
     fireWin("Correct!");
     render();
     return;
@@ -1749,8 +1567,6 @@ function moveGhost(e){
   state.drag.ghost.style.left = e.clientX + "px";
   state.drag.ghost.style.top = e.clientY + "px";
 }
-
-/* Robust cleanup so ghost never gets stuck */
 function cleanupDrag(){
   if(!state.drag) return;
   try{ state.drag.ghost && state.drag.ghost.remove(); }catch(_){}
@@ -1761,7 +1577,6 @@ function cleanupDrag(){
   }catch(_){}
   state.drag = null;
 }
-
 function beginDragWithThreshold(e, startFn){
   const pid = e.pointerId;
   const startX = e.clientX, startY = e.clientY;
@@ -1802,7 +1617,6 @@ function startDragTrigram(ev, group, tri, idx0, start0){
   ghost.style.height = "40px";
   ghost.style.letterSpacing = ".18em";
 
-  // capture pointer so we always get an end/cancel
   try{ el.gridWrap.setPointerCapture && el.gridWrap.setPointerCapture(ev.pointerId); }catch(_){}
 
   state.drag = { kind:'trigram', group, tri, grabOffset: idx0 - start0, ghost, lastIdx:null, pid: ev.pointerId };
@@ -1873,7 +1687,6 @@ function pairForDragPinnedThenPush(group, desiredStart, idxNow){
       if(ol === 1 && !overlapIsValid(sM, mine.tri, sO, other.tri)) continue;
 
       const orderFlip = ((currM <= currO) !== (sM <= sO));
-
       let cost = 12*Math.abs(sM - desiredStart) + 5*Math.abs(sO - currO) + 2*Math.abs(ol - currOl);
       if(orderFlip) cost += (olNow === 1 ? 2 : 8);
       if(pointerInsideOther && ol === 0) cost -= 1;
@@ -1935,16 +1748,13 @@ function onDragEnd(e){
 
   const rect = el.gridWrap.getBoundingClientRect();
   const dist = rectDistance(e.clientX, e.clientY, rect);
-  const REMOVE_DIST = 150;
-  if(dist > REMOVE_DIST){
+  if(dist > 150){
     deleteTrigramGroup(d.group);
     render();
     return;
   }
   render();
 }
-
-/* global cleanup hooks for “ghost stuck” */
 window.addEventListener('blur', ()=>{ if(state.drag){ cleanupDrag(); render(false); } });
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden && state.drag){ cleanupDrag(); } });
 
@@ -2055,10 +1865,6 @@ function renderGrid(stealFocus=true){
   computeTwoTrigramsInvalid();
   computeHintExcludedTrigrams();
 
-  if(state.tip.active && tipInvalidNow()){
-    hideTipSoft();
-  }
-
   const overlapSet = computeOverlapIdxSet();
   el.grid.innerHTML = "";
 
@@ -2136,8 +1942,6 @@ function renderGrid(stealFocus=true){
     el.grid.appendChild(cell);
   }
 
-  if(state.tip.active) positionTip();
-
   if(stealFocus && !state.finished && !state.useCustomKB){
     requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
   }
@@ -2196,9 +2000,6 @@ el.hintBtn.addEventListener('click', ()=>{
   clearTransientOnAnyChange();
 
   if(state.hint >= 3){
-    hardClearTip();
-    state.typedTipShown = true;
-
     const ans = norm(current().answer);
     state.placed = {w1:null, w2:null};
     state.singles = [];
@@ -2223,7 +2024,6 @@ el.hintBtn.addEventListener('click', ()=>{
   }
   render();
 });
-
 el.checkBtn.addEventListener('click', onCheck);
 
 el.prevBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearTransientOnAnyChange(); state.i=(state.i-1+PUZZLES.length)%PUZZLES.length; resetAllForPuzzle(); render(); });
@@ -2274,9 +2074,7 @@ window.addEventListener('resize', ()=>{
   const next = shouldUseCustomKB();
   if(next !== state.useCustomKB) setCustomKBEnabled(next);
   updateKeyboardPadding();
-  if(state.tip.active) positionTip();
 });
-window.addEventListener('scroll', ()=>{ if(state.tip.active) positionTip(); }, {passive:true});
 
 /* ===== resets ===== */
 function resetMainGridOnly(){
@@ -2288,14 +2086,12 @@ function resetMainGridOnly(){
   setMsg("");
   state.overlapMsgOn = false;
   state.lockMsg = false;
-  hardClearTip();
 }
 function resetAllForPuzzle(){
   state.hint = 0;
   state.finished = false;
   state.revealedAnswer = false;
   state.bank = [];
-  state.typedTipShown = false;
   resetMainGridOnly();
 }
 
