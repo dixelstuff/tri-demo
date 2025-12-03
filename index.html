@@ -17,13 +17,11 @@
       --bad:#ffc9d2;  /* red/pink warning */
       --submit:#F4D2FD;
 
-      /* estimated keyboard height for padding, JS will set to actual */
       --kb-h: 260px;
     }
 
     *{ box-sizing:border-box; }
 
-    /* ===== NO SCROLL EVER ===== */
     html, body{
       height:100%;
       overflow:hidden;
@@ -52,8 +50,6 @@
       margin:0;
       -webkit-tap-highlight-color: transparent;
     }
-    a{ -webkit-tap-highlight-color: transparent; }
-    a:visited{ color:inherit; }
 
     .wrap{
       height:100%;
@@ -68,7 +64,6 @@
       overflow:hidden;
     }
 
-    /* when custom keyboard is visible, add bottom padding so content isn't covered */
     html.has-kb .wrap{
       padding-bottom: calc(14px + var(--kb-h) + env(safe-area-inset-bottom) + 60px);
     }
@@ -112,23 +107,35 @@
     .nav a:active{ transform:translateY(1px); }
     .count{ font-weight:900; opacity:.7; min-width:54px; text-align:center; font-size:14px; }
 
-    /* ===== CLUE (reduced shadow, more gap below) ===== */
+    /* ===== CLUE ===== */
     .clue{
       display:block;
       width:fit-content;
       max-width:min(940px,94vw);
-      margin:12px auto 24px;          /* more space down to grid */
+      margin:12px auto 24px;
       padding:12px 18px 14px;
       background:var(--bubble);
       border-radius:18px;
-      box-shadow:0 6px 16px rgba(0,0,0,.12); /* reduced */
+      box-shadow:0 6px 16px rgba(0,0,0,.12);
       font-size:clamp(26px,3.2vw,40px);
       line-height:1.12;
       letter-spacing:.12px;
       font-weight:400;
       flex:0 0 auto;
+      user-select:none;
     }
     .clue .len{ opacity:.55; }
+
+    /* TEST: clickable clue words */
+    .clueWord{
+      display:inline-block;
+      cursor:pointer;
+      padding:2px 4px;
+      border-radius:10px;
+    }
+    .clueWord:active{
+      transform:translateY(1px);
+    }
 
     .u-w1, .u-w2, .u-red{
       text-decoration: underline;
@@ -175,10 +182,8 @@
     }
     .cell:not(:nth-child(7n+1)){ border-left:3px solid var(--ink); }
 
-    /* Removed grey active box entirely */
     .cell.active{ box-shadow:none; }
 
-    /* Mobile/custom-keyboard “cursor” */
     @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
     html.has-kb .cell.active::after{
       content:"";
@@ -199,7 +204,7 @@
       font-size:clamp(22px,3.8vw,34px);
       font-weight:900;
       font-style:italic;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; /* reverted */
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
       padding:0; margin:0;
       color:var(--ink);
       text-transform:lowercase;
@@ -322,7 +327,7 @@
       flex-wrap:nowrap;
     }
 
-    /* ===== BUTTONS (not forced to bottom on desktop) ===== */
+    /* ===== BUTTONS ===== */
     .btnRow{
       margin-top:12px;
       display:flex;
@@ -334,7 +339,6 @@
       width:100%;
       flex:0 0 auto;
     }
-    /* But float just above the keyboard on mobile */
     html.has-kb .btnRow{
       position:fixed;
       left:0; right:0;
@@ -370,30 +374,6 @@
     .btn.check.ready{ opacity:1; background:var(--submit); }
     .btn:disabled{ opacity:.35 !important; cursor:default; transform:none !important; box-shadow:none !important; }
 
-    .winToast{
-      position:fixed;
-      top:14px;
-      left:50%;
-      transform:translateX(-50%);
-      background:#fff;
-      border:5px solid var(--ink);
-      border-radius:999px;
-      padding:10px 18px;
-      font-weight:900;
-      font-style:italic;
-      opacity:0;
-      pointer-events:none;
-      box-shadow:0 14px 28px rgba(0,0,0,.25);
-      z-index:9997;
-    }
-    .winToast.show{ animation:pop 1.15s ease both; }
-    @keyframes pop{
-      0%   { opacity:0; transform: translateX(-50%) translateY(-10px) scale(.92); }
-      18%  { opacity:1; transform: translateX(-50%) translateY(0) scale(1.06); }
-      45%  { opacity:1; transform: translateX(-50%) translateY(0) scale(1.0); }
-      100% { opacity:0; transform: translateX(-50%) translateY(-8px) scale(.98); }
-    }
-
     .ghost{
       position:fixed;
       z-index:9999;
@@ -415,7 +395,7 @@
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border-top:4px solid rgba(0,0,0,.20);
-      box-shadow:none; /* removed top shadow */
+      box-shadow:none;
       touch-action: manipulation;
     }
     html.has-kb .kbHost{ display:block; }
@@ -433,16 +413,16 @@
       gap:6px;
     }
     .kbKey{
-      width: clamp(28px, 8.4vw, 46px);
-      height: 48px;
+      width: clamp(28px, 8.8vw, 48px);
+      height: 50px;
       border:3px solid rgba(0,0,0,.18);
       border-radius:14px;
       background:rgba(255,255,255,.80);
       font-weight:900;
       font-style:italic;
-      text-transform:uppercase; /* CAPS */
+      text-transform:uppercase;
       font-size: 18px;
-      box-shadow:none;          /* removed key shadows */
+      box-shadow:none;
       cursor:pointer;
       user-select:none;
       -webkit-tap-highlight-color: transparent;
@@ -451,22 +431,25 @@
     }
     .kbKey:active{ transform:translateY(1px); }
     .kbKey.wide{
-      width: calc(clamp(28px, 8.4vw, 46px) * 2.2);
+      width: calc(clamp(28px, 8.8vw, 48px) * 2.2);
       font-style:normal;
       text-transform:none;
       font-size:18px;
     }
-    .kbKey.enter{ background:var(--submit); }
     .kbKey.delete{ background:rgba(255,255,255,.92); }
 
     @media (max-width:520px){
       .grid{ width:min(304px,92vw); }
 
-      /* clue slightly bigger on mobile */
       .clue{
         font-size:clamp(33px, 7.8vw, 48px);
-        margin:10px auto 26px; /* more gap */
+        margin:10px auto 26px;
         padding:12px 16px 14px;
+      }
+
+      /* Bigger main grid letters on mobile */
+      .cell input{
+        font-size: clamp(25px, 6.1vw, 38px);
       }
 
       .nav a{ padding:4px 9px; }
@@ -477,14 +460,12 @@
       .msgSlot{ height:56px; margin-top:12px; }
       .msg{ font-size:20px; top:8px; }
       .msg.result{ top:18px; }
-      .kbKey{ height:46px; }
+      .kbKey{ height:48px; }
     }
   </style>
 </head>
 
 <body>
-  <div class="winToast" id="winToast" aria-live="polite">Correct!</div>
-
   <div class="wrap" id="wrap">
     <div class="toprow">
       <div class="nav">
@@ -518,7 +499,6 @@
     </div>
   </div>
 
-  <!-- Custom keyboard host -->
   <div class="kbHost" id="kbHost" aria-label="On-screen keyboard"></div>
 
 <script>
@@ -540,7 +520,6 @@ const el = {
   gridWrap: document.getElementById('gridWrap'),
   grid: document.getElementById('grid'),
   msg: document.getElementById('msg'),
-  winToast: document.getElementById('winToast'),
 
   hintTrack: document.getElementById('hintTrack'),
   trackW1: document.getElementById('trackW1'),
@@ -633,22 +612,30 @@ function updateKeyboardPadding(){
     document.documentElement.style.setProperty('--kb-h', `${Math.ceil(rect.height)}px`);
   }
 }
-function makeKey(label, aria, cls, onPress){
+
+function pressKey(k){
+  if(state.finished) return;
+  if(k === 'DEL') kbBackspace();
+  else typeLetterIntoGrid(k);
+}
+
+function makeKey(label, key, cls){
   const b = document.createElement('button');
   b.type = "button";
   b.className = `kbKey ${cls||""}`.trim();
   b.textContent = label;
-  b.setAttribute('aria-label', aria || label);
+  b.dataset.k = key;
+  b.setAttribute('aria-label', key === 'DEL' ? 'Delete' : `Letter ${label}`);
 
   b.addEventListener('pointerdown', (e)=>{
     e.preventDefault();
     e.stopPropagation();
-    if(state.finished) return;
-    onPress();
+    pressKey(key);
   }, {passive:false});
 
   return b;
 }
+
 function buildKeyboard(){
   el.kbHost.innerHTML = "";
   if(!state.useCustomKB) return;
@@ -657,21 +644,62 @@ function buildKeyboard(){
   kb.className = "kb";
 
   const r1 = document.createElement('div'); r1.className = "kbRow";
-  for(const ch of "QWERTYUIOP") r1.appendChild(makeKey(ch, `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
+  for(const ch of "QWERTYUIOP") r1.appendChild(makeKey(ch, ch, ""));
   kb.appendChild(r1);
 
   const r2 = document.createElement('div'); r2.className = "kbRow";
-  for(const ch of "ASDFGHJKL") r2.appendChild(makeKey(ch, `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
+  for(const ch of "ASDFGHJKL") r2.appendChild(makeKey(ch, ch, ""));
   kb.appendChild(r2);
 
+  // No ENTER key now; CHECK button does that.
   const r3 = document.createElement('div'); r3.className = "kbRow";
-  r3.appendChild(makeKey("enter", "Enter", "wide enter", ()=> onCheck()));
-  for(const ch of "ZXCVBNM") r3.appendChild(makeKey(ch, `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
-  r3.appendChild(makeKey("⌫", "Delete", "wide delete", ()=> kbBackspace()));
+  for(const ch of "ZXCVBNM") r3.appendChild(makeKey(ch, ch, ""));
+  r3.appendChild(makeKey("DEL", "DEL", "wide delete"));
   kb.appendChild(r3);
 
   el.kbHost.appendChild(kb);
+
+  // More forgiving: tapping between keys snaps to nearest key (within generous radius)
+  installKeyboardMagnet();
   requestAnimationFrame(()=> updateKeyboardPadding());
+}
+
+function installKeyboardMagnet(){
+  if(el.kbHost._magnetInstalled) return;
+  el.kbHost._magnetInstalled = true;
+
+  el.kbHost.addEventListener('pointerdown', (e)=>{
+    if(!state.useCustomKB || state.finished) return;
+
+    const keyEl = e.target.closest && e.target.closest('.kbKey');
+    if(keyEl) return; // normal key handlers will fire
+
+    const keys = Array.from(el.kbHost.querySelectorAll('.kbKey'));
+    if(!keys.length) return;
+
+    const x = e.clientX, y = e.clientY;
+    let best = null;
+
+    for(const k of keys){
+      const r = k.getBoundingClientRect();
+      const cx = (r.left + r.right) / 2;
+      const cy = (r.top + r.bottom) / 2;
+      const dx = x - cx, dy = y - cy;
+      const d2 = dx*dx + dy*dy;
+      if(!best || d2 < best.d2) best = { el:k, r, d2 };
+    }
+
+    if(!best) return;
+
+    const rr = best.r;
+    const thresh = Math.max(34, Math.min(rr.width, rr.height) * 0.85); // generous
+    if(Math.sqrt(best.d2) <= thresh){
+      e.preventDefault();
+      e.stopPropagation();
+      const k = best.el.dataset.k;
+      if(k) pressKey(k);
+    }
+  }, {passive:false});
 }
 
 /* ===== messages ===== */
@@ -1216,7 +1244,7 @@ function computeOverlapIdxSet(){
   return set;
 }
 
-/* ===== double-tap cycling (message removed; feature kept) ===== */
+/* ===== cycling ===== */
 function cyclePlacedTrigram(group){
   if(state.finished) return;
   if(lockedTri(group)) return;
@@ -1247,6 +1275,7 @@ function cyclePlacedTrigram(group){
   const tri = w.slice(s, s+TR);
   placeFromHintClick(group, tri);
 }
+
 function maybeHandleDoubleTapOnTrigramCell(cellIdx){
   if(overlapActiveNow()) return;
   if(isOverlapCell(cellIdx)) return;
@@ -1254,35 +1283,33 @@ function maybeHandleDoubleTapOnTrigramCell(cellIdx){
   const t = trigramAtIndex(cellIdx);
   if(!t) return;
 
-  const isRed = state.badSet.has(cellIdx) || state.twoSet.has(cellIdx) || state.exclSet.has(cellIdx);
-  if(isRed){
-    const allow =
-      state.badSet.has(cellIdx) &&
-      state.placed.w1 && state.placed.w2 &&
-      !state.twoSet.has(cellIdx) &&
-      !state.exclSet.has(cellIdx);
-    if(!allow) return;
-  }
   cyclePlacedTrigram(t.group);
   render();
 }
+
 function installTapDetectorForTrigram(pointerDownEvent, cellIdx){
   const pid = pointerDownEvent.pointerId;
   const startX = pointerDownEvent.clientX;
   const startY = pointerDownEvent.clientY;
-  const downT = performance.now();
+  let started = false;
+
+  const onMove = (ev)=>{
+    if(ev.pointerId !== pid) return;
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    if((dx*dx + dy*dy) > 144) started = true;
+  };
+
   const onUp = (ev)=>{
     if(ev.pointerId !== pid) return;
+    window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
     window.removeEventListener('pointercancel', onCancel);
 
     if(state.drag) return;
     if(performance.now() - state.lastDragEndedAt < 60) return;
 
-    const dx = ev.clientX - startX;
-    const dy = ev.clientY - startY;
-    if((dx*dx + dy*dy) > 64) return;
-    if((performance.now() - downT) > 520) return;
+    if(started) return;
 
     const t = trigramAtIndex(cellIdx);
     if(!t) return;
@@ -1299,10 +1326,15 @@ function installTapDetectorForTrigram(pointerDownEvent, cellIdx){
     }
     state.lastTap = { t: now, key };
   };
-  const onCancel = ()=>{
+
+  const onCancel = (ev)=>{
+    if(ev.pointerId !== pid) return;
+    window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
     window.removeEventListener('pointercancel', onCancel);
   };
+
+  window.addEventListener('pointermove', onMove, {passive:false});
   window.addEventListener('pointerup', onUp);
   window.addEventListener('pointercancel', onCancel);
 }
@@ -1444,12 +1476,6 @@ function hintPhraseText(h){
   if(h === 1) return "with 1 hint";
   return `with ${h} hints`;
 }
-function fireWin(text){
-  el.winToast.textContent = text;
-  el.winToast.classList.remove('show');
-  void el.winToast.offsetWidth;
-  el.winToast.classList.add('show');
-}
 function onCheck(){
   if(state.finished) return;
   clearTransientOnAnyChange();
@@ -1471,7 +1497,6 @@ function onCheck(){
     setMsg(`Correct — ${hintPhraseText(state.hint)}!`, 'result');
     state.finished = true;
     state.revealedAnswer = false;
-    fireWin("Correct!");
     render();
     return;
   }
@@ -1983,7 +2008,11 @@ function render(stealFocus=true){
     if(tri2) b = underlineBySubstrings(t2, [{sub:tri2, cls:"u-w2"}]);
   }
 
-  el.clue.innerHTML = `${a} ${b} <span class="len">(7)</span>`;
+  // clickable clue words (TEST) to cycle trigram
+  el.clue.innerHTML =
+    `<span class="clueWord" data-clue="w1">${a}</span> ` +
+    `<span class="clueWord" data-clue="w2">${b}</span> ` +
+    `<span class="len">(7)</span>`;
 
   renderHintTrack();
 
@@ -1993,6 +2022,18 @@ function render(stealFocus=true){
 
   updateStatusMessages();
 }
+
+/* ===== clue click -> cycle trigram (TEST) ===== */
+el.clue.addEventListener('click', (e)=>{
+  if(state.finished) return;
+  const t = e.target && e.target.closest && e.target.closest('.clueWord');
+  if(!t) return;
+  const group = t.dataset.clue;
+  if(group !== 'w1' && group !== 'w2') return;
+  if(overlapActiveNow()) return;  // don't break a current overlap
+  cyclePlacedTrigram(group);
+  render();
+});
 
 /* ===== hint / nav ===== */
 el.hintBtn.addEventListener('click', ()=>{
@@ -2009,7 +2050,6 @@ el.hintBtn.addEventListener('click', ()=>{
     state.revealedAnswer = true;
 
     setMsg(`Answer: ${ans}`, "result");
-    fireWin("Answer!");
     render();
     return;
   }
@@ -2033,7 +2073,7 @@ el.nextBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearTransientOn
 document.addEventListener('pointerdown', (e)=>{
   if(state.finished) return;
   if(e.target && e.target.closest && e.target.closest('#gridWrap')) return;
-  if(e.target && e.target.closest && e.target.closest('button,a,.letters,.kbHost')) return;
+  if(e.target && e.target.closest && e.target.closest('button,a,.letters,.kbHost,.clue')) return;
   requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
 });
 
