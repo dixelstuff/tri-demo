@@ -200,20 +200,35 @@
     }
     .cell:not(:nth-child(7n+1)){ border-left:3px solid var(--ink); }
 
-    /* Pseudo caret ONLY in keyboard mode (mobile): bottom horizontal line (blink) */
-    html.has-kb .cell.active::after{
-      content:"";
-      position:absolute;
-      height:3px;
-      width:62%;
-      left:50%;
-      bottom:12%;
-      transform:translateX(-50%);
-      background:var(--caret);
-      border-radius:999px;
-      animation: caretBlink 1.1s steps(2,end) infinite;
-      pointer-events:none;
-    }
+/* Active-cell indicator (desktop + mobile): bottom horizontal line (blink)
+   Hidden on non-red trigram cells; shown on red invalid cells. */
+.cell.active::after{
+  content:"";
+  position:absolute;
+  height:3px;
+  width:62%;
+  left:50%;
+  bottom:12%;
+  transform:translateX(-50%);
+  background:var(--caret);
+  border-radius:999px;
+  animation: caretBlink 1.1s steps(2,end) infinite;
+  pointer-events:none;
+  opacity:1;
+}
+
+/* Don’t show the underline when the active cell is inside a (valid) trigram */
+.cell.active.bg-w1::after,
+.cell.active.bg-w2::after,
+.cell.active.bg-ol::after{
+  opacity:0;
+}
+
+/* …but DO show it if the cell is red (invalid/excluded), even if it’s also a trigram */
+.cell.active.bg-bad::after{
+  opacity:1;
+}
+
     @keyframes caretBlink{
       0%, 46%{ opacity:1; }
       47%, 100%{ opacity:0; }
@@ -231,7 +246,7 @@
       padding:0; margin:0;
       color:var(--ink);
       text-transform:lowercase;
-      caret-color: rgba(0,0,0,.45);
+      caret-color: transparent;
       cursor:text;
       appearance:none;
       -webkit-appearance:none;
@@ -497,14 +512,15 @@
     }
     .kbKey:active{ transform:translateY(1px); }
 
-    .kbKey.wide{
-      width: calc(var(--keyW) * 1.55);
-      font-size: 16px;         /* small CHECK */
-      font-weight:900;
-      letter-spacing:.02em;
-      background:rgba(255,255,255,.82);
-      padding:0;
-    }
+.kbKey.wide{
+  width: calc(var(--keyW) * 1.55);
+  font-size: 12px;         /* smaller CHECK so it always fits */
+  font-weight:900;
+  letter-spacing:.08em;
+  background:rgba(255,255,255,.82);
+  padding:0;
+}
+
 
     /* DEL: slightly greyer background to distinguish */
     .kbKey.delete{
@@ -522,10 +538,10 @@
 
     @media (max-width:520px){
       .nav a{ padding:4px 9px; }
-      .clue{
-        font-size:clamp(27px,6.25vw,36px);
-        margin-top: clamp(16px, 3.4vh, 28px);
-      }
+     .clue{
+  font-size:clamp(29px,6.6vw,38px);
+  margin-top: clamp(16px, 3.4vh, 28px);
+}
 
       .grid{ width:min(302px,92vw); }
       .cell input{ font-size:clamp(24px,6.05vw,36px); }
