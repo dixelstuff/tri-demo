@@ -13,7 +13,7 @@
 
       --w1:#fff3b3;   /* yellow */
       --w2:#cfe8ff;   /* blue */
-      --ol:#c9f3d6;   /* green */
+      --ol:#c9f3d6;   /* green overlap */
       --bad:#ffc9d2;  /* red/pink warning */
       --submit:#F4D2FD;
 
@@ -25,7 +25,7 @@
     html, body{
       height:100%;
       margin:0;
-      overflow:hidden;              /* never scroll */
+      overflow:hidden;
       overscroll-behavior:none;
       background:var(--bg);
       color:var(--ink);
@@ -46,14 +46,28 @@
       align-items:center;
     }
 
+    /* solved animation: move down + green ring */
+    .gridWrap{
+      display:block;
+      width:fit-content;
+      margin:0 auto 6px;
+      border:4px solid var(--ink);
+      border-radius:14px;
+      overflow:hidden;
+      background:#fff;
+      box-shadow:0 10px 22px rgba(0,0,0,.10);
+      flex:0 0 auto;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .wrap.solved .gridWrap{
+      transform: translateY(10px);
+      box-shadow:
+        0 0 0 4px rgba(46, 204, 113, .85),
+        0 10px 22px rgba(0,0,0,.10);
+    }
+
     .wrap.solved .gridWrap{ pointer-events:none; }
     .wrap.solved .hintTrack{ opacity:0; pointer-events:none; }
-    .wrap.solved .gridWrap{ animation:pop .18s ease-out 0s 1; }
-    @keyframes pop{
-      0%{ transform:scale(1); }
-      55%{ transform:scale(1.035); }
-      100%{ transform:scale(1); }
-    }
 
     .toprow{
       width:100%;
@@ -84,15 +98,16 @@
     .nav a:active{ transform:translateY(1px); }
     .count{ font-weight:900; opacity:.7; min-width:56px; text-align:center; }
 
+    /* spacing: nav→clue slightly smaller, clue→grid slightly larger */
     .clue{
       display:block;
       width:fit-content;
       max-width:min(940px,94vw);
-      margin:36px auto 34px;       /* nav→clue slightly less; clue→grid more */
+      margin:36px auto 38px;
       padding:14px 20px 15px;
       background:var(--bubble);
       border-radius:18px;
-      box-shadow:var(--shadow);    /* reduced */
+      box-shadow:var(--shadow);
       font-size:clamp(26px,3.0vw,40px);
       line-height:1.12;
       letter-spacing:.12px;
@@ -119,26 +134,6 @@
     .u-w2{ text-decoration-color: rgba(70,160,255,.92); }
     .u-red{ text-decoration-color: rgba(235,80,92,.92); }
 
-    .gridWrap{
-      display:block;
-      width:fit-content;
-      margin:0 auto 6px;
-      border:4px solid var(--ink);
-      border-radius:14px;
-      overflow:hidden;
-      background:#fff;
-      box-shadow:0 10px 22px rgba(0,0,0,.10);
-      flex:0 0 auto;
-    }
-    .gridWrap.shake{ animation:shake .16s linear 0s 2; }
-    @keyframes shake{
-      0%{ transform:translateX(0); }
-      25%{ transform:translateX(-6px); }
-      50%{ transform:translateX(6px); }
-      75%{ transform:translateX(-4px); }
-      100%{ transform:translateX(0); }
-    }
-
     .grid{
       display:grid;
       grid-template-columns:repeat(7,1fr);
@@ -163,7 +158,7 @@
       text-align:center;
       font-size:clamp(24px,4.4vw,36px);
       font-weight:800;
-      font-style:italic;          /* restore italic in main grid */
+      font-style:italic;
       padding:0; margin:0;
       color:var(--ink);
       text-transform:lowercase;
@@ -173,6 +168,8 @@
       appearance:none;
       border-radius:0;
       box-shadow:none;
+      /* extra: discourage autofill */
+      autocomplete: off;
     }
 
     .cell.bg-w1{ background:var(--w1); }
@@ -184,11 +181,23 @@
     .cell.grabbable:active{ cursor:grabbing; }
     .cell.grabbable input{ pointer-events:none; cursor:grab; }
 
-    /* IMPORTANT: do NOT disable pointer-events on inputs with custom KB
-       (we want readonly focus so caret shows, but no native keyboard) */
-    /* html.has-kb .cell input{ pointer-events:none; } */
+    /* Fake caret for mobile keyboard mode (no native focus needed) */
+    @keyframes caretBlink { 0%,45%{opacity:1} 50%,100%{opacity:0} }
+    html.has-kb .cell.is-active::after{
+      content:"";
+      position:absolute;
+      left:50%;
+      top:18%;
+      width:2px;
+      height:64%;
+      transform:translateX(-50%);
+      background:rgba(0,0,0,.65);
+      border-radius:2px;
+      animation: caretBlink 1s step-end infinite;
+      pointer-events:none;
+    }
 
-    /* ========= centered message area (fix squashed/right-shift) ========= */
+    /* ========= centered message area ========= */
     .msgSlot{
       width:100%;
       max-width:760px;
@@ -213,12 +222,10 @@
       max-width:100%;
       text-align:center;
       pointer-events:none;
-      word-break:normal;
       overflow-wrap:anywhere;
     }
     .msg.show{ opacity:.92; transform:translateY(0); }
     .msg.warn{ opacity:.92; font-size:19px; font-style:italic; }
-    .msg.result{ }
 
     .hintTrack{
       margin:14px auto 0;
@@ -257,14 +264,14 @@
     }
     .letters.clickable{ cursor:pointer; }
     .letter{
-      width:30px;
-      height:30px;
+      width:31px;
+      height:31px;
       display:flex;
       align-items:center;
       justify-content:center;
       font-weight:900;
       font-style:italic;
-      font-size:19px;
+      font-size:20px; /* mini-grid letters slightly bigger */
       text-transform:lowercase;
       border-left:2px solid rgba(0,0,0,.10);
       background:rgba(255,255,255,.35);
@@ -279,14 +286,16 @@
       font-style:italic;
     }
     .letter.extra:active{ transform:translateY(1px); }
+
     .tinyLbl{
-      font-size:11px;
+      font-size:12px; /* hint 1/2/3 labels slightly bigger */
       font-weight:900;
       color:#000;
       line-height:1;
       margin-top:2px;
       text-transform:lowercase;
     }
+
     .extrasRow{
       display:flex;
       gap:10px;
@@ -295,7 +304,7 @@
       flex-wrap:nowrap;
     }
 
-    /* Buttons: smaller; position differs with/without keyboard */
+    /* Buttons */
     .btnRow{
       margin-top:22px;
       display:flex;
@@ -333,7 +342,7 @@
     html.has-kb .btnRow{
       position:fixed;
       left:0; right:0;
-      bottom: calc(var(--kb-h) + 16px + env(safe-area-inset-bottom)); /* up a touch */
+      bottom: calc(var(--kb-h) + 16px + env(safe-area-inset-bottom));
       margin:0;
       z-index:9997;
       pointer-events:auto;
@@ -410,11 +419,14 @@
     @media (max-width:520px){
       .clue{
         font-size:clamp(30px,6.2vw,40px);
-        margin:34px auto 38px; /* nav→clue slightly less; clue→grid more */
+        margin:34px auto 40px;
       }
       .grid{ width:min(310px,92vw); }
-      .cell input{ font-size:clamp(28px,8.4vw,41px); }
-      .letter{ width:28px; height:28px; font-size:18px; }
+      /* main grid letters slightly smaller than before */
+      .cell input{ font-size:clamp(26px,7.8vw,39px); }
+      /* mini-grid letters slightly bigger */
+      .letter{ width:32px; height:32px; font-size:21px; }
+      .tinyLbl{ font-size:13px; }
       .btn{ font-size:19px; padding:9px 15px; min-width:100px; }
       .msgSlot{ min-height:56px; margin-top:14px; }
       .msg{ font-size:19px; }
@@ -559,7 +571,7 @@ function setCustomKBEnabled(on){
   document.documentElement.classList.toggle('has-kb', state.useCustomKB);
   buildKeyboard();
   requestAnimationFrame(()=> updateKeyboardPadding());
-  requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));   // keep caret visible
+  // do NOT focus any input in kb mode (avoids iOS AutoFill toast)
 }
 function updateKeyboardPadding(){
   if(!state.useCustomKB) return;
@@ -634,7 +646,7 @@ function buildKeyboard(){
 
   const row3 = document.createElement('div');
   row3.className = "kbRow";
-  row3.appendChild(makeKey("⏎", "Enter", "wide enter", ()=> onCheck())); // looks normal now
+  row3.appendChild(makeKey("⏎", "Enter", "wide enter", ()=> onCheck()));
   for(const ch of "zxcvbnm") row3.appendChild(makeKey(ch.toUpperCase(), `Letter ${ch}`, "", ()=> typeLetterIntoGrid(ch)));
   row3.appendChild(makeKey("⌫", "Delete", "wide delete", ()=> kbBackspace()));
   installRowForgivingTap(row3);
@@ -651,19 +663,18 @@ function clearMsgTimer(){
 }
 function setMsg(text, kind){
   clearMsgTimer();
-  el.msg.classList.remove('show','warn','result');
+  el.msg.classList.remove('show','warn');
   el.msg.textContent = text || "";
   if(!text) return;
   void el.msg.offsetWidth;
   el.msg.classList.add('show');
   if(kind === 'warn') el.msg.classList.add('warn');
-  if(kind === 'result') el.msg.classList.add('result');
 }
 function setTransientMsg(text, ms=2200){
   setMsg(text);
   state.msgTransient = true;
   state.msgTimer = setTimeout(()=>{
-    el.msg.classList.remove('show','warn','result');
+    el.msg.classList.remove('show','warn');
     el.msg.textContent = "";
     state.msgTimer = null;
     state.msgTransient = false;
@@ -675,7 +686,7 @@ function clearTransientOnAnyChange(){
     setMsg("");
   }
   if(state.msgTransient){
-    el.msg.classList.remove('show','warn','result');
+    el.msg.classList.remove('show','warn');
     el.msg.textContent = "";
     clearMsgTimer();
   }
@@ -781,12 +792,6 @@ function removeSinglesInCells(cells){
   const set = new Set(cells);
   state.singles = state.singles.filter(s => !set.has(s.idx));
 }
-function lockedTri(group){
-  const p = current();
-  if(group === 'w1' && state.hint >= 1) return norm(p.tri1);
-  if(group === 'w2' && state.hint >= 2) return norm(p.tri2);
-  return null;
-}
 function deleteTrigramGroup(group){
   if(!state.placed[group]) return false;
   const start = state.placed[group].start;
@@ -808,10 +813,8 @@ function deleteAtIndex(idx){
 function focusCell(idx){
   const i = clamp(idx, 0, N-1);
   state.focusIdx = i;
-  const inp = el.grid.querySelector(`input[data-idx="${i}"]`);
-  if(inp){
-    try{ inp.focus({preventScroll:true}); } catch(_){ inp.focus(); }
-  }
+  // In keyboard mode, do NOT focus inputs (avoids AutoFill + caret unreliability).
+  // We draw a fake caret with .cell.is-active.
 }
 
 /* ===== always active typing ===== */
@@ -842,7 +845,6 @@ function typeLetterAtIndex(idx, letter){
   const next = nextEditableFrom(idx + 1, +1);
   state.focusIdx = (next == null) ? clamp(idx + 1, 0, N-1) : next;
   render();
-  focusCell(state.focusIdx);
   return true;
 }
 function typeLetterIntoGrid(letter){
@@ -867,7 +869,6 @@ function typeLetterIntoGrid(letter){
   state.focusIdx = (next == null) ? clamp(idx + 1, 0, N-1) : next;
 
   render();
-  focusCell(state.focusIdx);
   return true;
 }
 
@@ -876,10 +877,19 @@ function kbBackspace(){
   if(state.finished) return;
   clearTransientOnAnyChange();
   const idx = clamp(state.focusIdx ?? 0, 0, N-1);
-  const fake = { key:'Backspace', preventDefault(){}, stopPropagation(){} };
-  handleGridKeydown(fake, idx);
+  const tHere = trigramAtIndex(idx);
+  if(!tHere && singleAt(idx)){
+    deleteAtIndex(idx);
+    render();
+    return;
+  }
+  if(idx === 0){
+    if(tHere) { deleteTrigramGroup(tHere.group); render(); }
+    return;
+  }
+  if(deleteAtIndex(idx - 1)){ render(); return; }
+  state.focusIdx = clamp(idx - 1, 0, N-1);
   render();
-  focusCell(state.focusIdx);
 }
 
 /* ===== key handling ===== */
@@ -892,8 +902,8 @@ function handleGridKeydown(e, idx){
     return;
   }
 
-  if(e.key === "ArrowLeft"){ e.preventDefault(); e.stopPropagation(); clearTransientOnAnyChange(); focusCell(idx - 1); return; }
-  if(e.key === "ArrowRight"){ e.preventDefault(); e.stopPropagation(); clearTransientOnAnyChange(); focusCell(idx + 1); return; }
+  if(e.key === "ArrowLeft"){ e.preventDefault(); e.stopPropagation(); clearTransientOnAnyChange(); focusCell(idx - 1); render(); return; }
+  if(e.key === "ArrowRight"){ e.preventDefault(); e.stopPropagation(); clearTransientOnAnyChange(); focusCell(idx + 1); render(); return; }
 
   if(e.key !== "Backspace" && e.key !== "Delete") return;
 
@@ -906,22 +916,23 @@ function handleGridKeydown(e, idx){
     if(!tHere && singleAt(idx)){
       deleteAtIndex(idx);
       render();
-      focusCell(state.focusIdx);
       return;
     }
     if(idx === 0){
-      if(tHere) { deleteTrigramGroup(tHere.group); render(); focusCell(state.focusIdx); }
+      if(tHere) { deleteTrigramGroup(tHere.group); render(); }
       return;
     }
-    if(deleteAtIndex(idx - 1)){ render(); focusCell(state.focusIdx); return; }
+    if(deleteAtIndex(idx - 1)){ render(); return; }
     focusCell(idx - 1);
+    render();
     return;
   }
 
-  if(deleteAtIndex(idx)){ render(); focusCell(state.focusIdx); return; }
+  if(deleteAtIndex(idx)){ render(); return; }
   if(idx < N-1){
-    if(deleteAtIndex(idx+1)){ render(); focusCell(state.focusIdx); return; }
+    if(deleteAtIndex(idx+1)){ render(); return; }
     focusCell(idx+1);
+    render();
     return;
   }
 }
@@ -948,9 +959,8 @@ function deleteFromEnd(){
 
 /* ===== typed trigram detection / promotion ===== */
 function allowedSet(group){
+  // NOTE: no “lock” restriction anymore. After hint 1/2, cycling stays active.
   const p = current();
-  const lock = lockedTri(group);
-  if(lock) return new Set([lock]);
   const w = norm(group==='w1' ? p.word1 : p.word2);
   const out = new Set();
   if(w.length < TR) return out;
@@ -1059,7 +1069,7 @@ function computeHintExcludedTrigrams(){
     for(let s=0; s<=N-TR; s++){
       if(!chars[s] || !chars[s+1] || !chars[s+2]) continue;
       const tri = (chars[s]+chars[s+1]+chars[s+2]).toLowerCase();
-      if(tri === locked) continue;
+      if(locked && tri === locked) continue;
       if(w.includes(tri)){
         state.exclTris[group].add(tri);
         state.exclSet.add(s); state.exclSet.add(s+1); state.exclSet.add(s+2);
@@ -1071,8 +1081,6 @@ function computeHintExcludedTrigrams(){
   if(state.hint >= 2) scan('w2', p.word2, norm(p.tri2));
 }
 function setMiniHighlightToTri(group, tri){
-  const lock = lockedTri(group);
-  if(lock) return;
   const p = current();
   const w = norm(group==='w1' ? p.word1 : p.word2);
   const pos = w.indexOf(tri);
@@ -1218,21 +1226,11 @@ function rebuildBank(){
 }
 
 /* ===== hint placement ===== */
-function applyHintLock(group){
-  const p = current();
-  const lock = norm(group==='w1' ? p.tri1 : p.tri2);
-  const pl = state.placed[group];
-  if(pl && pl.tri !== lock) state.placed[group] = null;
-  if(group === 'w1') state.sel1 = null;
-  if(group === 'w2') state.sel2 = null;
-}
 function placeFromHintClick(group, tri){
   if(state.finished) return;
   clearTransientOnAnyChange();
 
   const t = norm(tri);
-  const lock = lockedTri(group);
-  if(lock && lock !== t) return;
 
   if(state.placed[group] && state.placed[group].tri === t) return;
 
@@ -1289,50 +1287,44 @@ function placeFromHintClick(group, tri){
 /* Cycle/place via clue tap */
 function cyclePlacedTrigram(group){
   if(state.finished) return;
-  if(lockedTri(group)) return;
 
   const pl = state.placed[group];
-  if(!pl) return;
 
   const p = current();
   const w = norm(group === 'w1' ? p.word1 : p.word2);
   const maxStart = Math.max(0, w.length - TR);
   if(maxStart === 0) return;
 
-  const curTri = norm(pl.tri);
-  const curPos = w.indexOf(curTri);
-  if(curPos >= 0){
-    if(group === 'w1') state.sel1 = clamp(curPos, 0, maxStart);
-    else state.sel2 = clamp(curPos, 0, maxStart);
-  }else{
-    if(group === 'w1') state.sel1 = 0;
-    else state.sel2 = 0;
+  if(pl){
+    const curTri = norm(pl.tri);
+    const curPos = w.indexOf(curTri);
+    if(curPos >= 0){
+      if(group === 'w1') state.sel1 = clamp(curPos, 0, maxStart);
+      else state.sel2 = clamp(curPos, 0, maxStart);
+    }else{
+      if(group === 'w1') state.sel1 = 0;
+      else state.sel2 = 0;
+    }
+
+    let s = (group === 'w1' ? state.sel1 : state.sel2);
+    if(s == null) s = 0;
+    s = (s + 1) % (maxStart + 1);
+    if(group === 'w1') state.sel1 = s; else state.sel2 = s;
+
+    const tri = w.slice(s, s+TR);
+    placeFromHintClick(group, tri);
+    return;
   }
 
-  let s = (group === 'w1' ? state.sel1 : state.sel2);
-  if(s == null) s = 0;
-  s = (s + 1) % (maxStart + 1);
-  if(group === 'w1') state.sel1 = s; else state.sel2 = s;
+  // no trigram placed yet: tapping clue adds first trigram
+  const tri = (w.length >= TR) ? w.slice(0, TR) : null;
+  if(tri) placeFromHintClick(group, tri);
+}
 
-  const tri = w.slice(s, s+TR);
-  placeFromHintClick(group, tri);
-}
-function firstTriForGroup(group){
-  const lock = lockedTri(group);
-  if(lock) return lock;
-  const p = current();
-  const w = norm(group==='w1' ? p.word1 : p.word2);
-  return (w.length >= TR) ? w.slice(0, TR) : null;
-}
 function onClueTap(group){
   if(state.finished) return;
   clearTransientOnAnyChange();
-
-  if(state.placed[group]) cyclePlacedTrigram(group);
-  else{
-    const tri = firstTriForGroup(group);
-    if(tri) placeFromHintClick(group, tri);
-  }
+  cyclePlacedTrigram(group);
   render();
 }
 
@@ -1395,11 +1387,6 @@ function startDragTrigram(ev, group, tri, idx0, start0){
   ghost.style.letterSpacing = ".18em";
   state.drag = { kind:'trigram', group, tri, grabOffset: idx0 - start0, ghost, lastIdx:null };
   moveGhost(ev);
-}
-function overlapMatchIdx(aStart, bStart){
-  const aset = new Set(trigramCells(aStart));
-  for(const i of trigramCells(bStart)) if(aset.has(i)) return i;
-  return null;
 }
 function pairForDragPinnedThenPush(group, desiredStart, idxNow){
   const mine = state.placed[group];
@@ -1523,18 +1510,15 @@ function onDragEnd(e){
   const d = state.drag;
   if(d.ghost && d.ghost.remove) d.ghost.remove();
   state.drag = null;
-  state.lastDragEndedAt = performance.now();
 
   const rect = el.gridWrap.getBoundingClientRect();
   const dist = rectDistance(e.clientX, e.clientY, rect);
   if(dist > 150){
     deleteTrigramGroup(d.group);
     render();
-    focusCell(state.focusIdx);
     return;
   }
   render();
-  focusCell(state.focusIdx);
 }
 
 /* ===== status messages ===== */
@@ -1601,7 +1585,7 @@ function onCheck(){
   const ans = norm(p.answer);
 
   if(attempt === ans){
-    setMsg(`Correct — ${hintPhraseText(state.hint)}!`, 'result');
+    setMsg(`Correct — ${hintPhraseText(state.hint)}!`);
     state.finished = true;
     state.revealedAnswer = false;
     render();
@@ -1724,7 +1708,6 @@ function renderHintTrack(){
           state.singles.push({id: uid(), ch: tile.ch, idx: i});
           state.focusIdx = clamp(i+1,0,N-1);
           render();
-          focusCell(state.focusIdx);
           return;
         }
         setTransientMsg("No blank spot", 2000);
@@ -1742,8 +1725,6 @@ function renderHintTrack(){
 
 /* ===== clue / error underline ===== */
 function triForClue(group){
-  const lock = lockedTri(group);
-  if(lock) return lock;
   const pl = state.placed[group];
   if(pl) return pl.tri;
   return null;
@@ -1762,7 +1743,7 @@ function errorItemsForGroup(group){
 }
 
 /* ===== render grid ===== */
-function renderGrid(stealFocus=true){
+function renderGrid(){
   for(let k=0;k<2;k++){
     if(!autoPromoteTypedTrigrams()) break;
   }
@@ -1773,6 +1754,18 @@ function renderGrid(stealFocus=true){
 
   const overlapSet = overlapMatchIdxSet();
   el.grid.innerHTML = "";
+
+  // pick the active cell to show caret (avoid trigram cells)
+  let activeIdx = clamp(state.focusIdx ?? 0, 0, N-1);
+  if(trigramAtIndex(activeIdx)){
+    const nxt = nextEditableFrom(activeIdx, +1);
+    if(nxt != null) activeIdx = nxt;
+    else {
+      const prv = nextEditableFrom(activeIdx, -1);
+      if(prv != null) activeIdx = prv;
+    }
+    state.focusIdx = activeIdx;
+  }
 
   for(let i=0;i<N;i++){
     const cell = document.createElement('div');
@@ -1789,20 +1782,27 @@ function renderGrid(stealFocus=true){
 
     if(state.badSet.has(i) || state.twoSet.has(i) || state.exclSet.has(i)) cell.classList.add('bg-bad');
 
+    // fake caret only in keyboard mode + not solved
+    if(state.useCustomKB && !state.finished && !tri && i === activeIdx){
+      cell.classList.add('is-active');
+    }
+
     const input = document.createElement('input');
-    input.inputMode = "text";
+    input.type = "text";
+    input.inputMode = "none";
     input.autocapitalize = "none";
     input.autocomplete = "off";
+    input.autocorrect = "off";
     input.spellcheck = false;
     input.maxLength = 1;
     input.dataset.idx = String(i);
     input.value = cellChar(i);
 
-    // readonly inputs can still show caret when focused (and iOS won't pop the keyboard)
+    // always readonly in kb mode (we'll type via our own keyboard / document keydown)
     const ro = !!tri || state.finished || state.useCustomKB;
     input.readOnly = ro;
 
-    input.addEventListener('focus', ()=>{ state.focusIdx = i; });
+    input.addEventListener('focus', ()=>{ state.focusIdx = i; render(); });
     input.addEventListener('keydown', (e)=> handleGridKeydown(e, i));
 
     if(!input.readOnly){
@@ -1818,35 +1818,31 @@ function renderGrid(stealFocus=true){
         state.singles.push({id: uid(), ch: lower, idx: i});
         state.focusIdx = clamp(i+1,0,N-1);
         render();
-        focusCell(state.focusIdx);
       });
     }
 
     cell.addEventListener('pointerdown', (e)=>{
       if(state.finished) return;
 
-      // always focus (so caret appears even on mobile)
-      state.focusIdx = i;
-      requestAnimationFrame(()=>{ try{ input.focus({preventScroll:true}); } catch(_){ input.focus(); } });
+      // set active cell (no input focus in kb mode)
+      if(!tri){
+        state.focusIdx = i;
+        render();
+      }
 
-      const t = trigramAtIndex(i);
-      if(t){
+      if(tri){
         e.preventDefault();
         clearTransientOnAnyChange();
-        beginDragWithThreshold(e, (ev)=>startDragTrigram(ev, t.group, t.tri, i, t.start));
+        beginDragWithThreshold(e, (ev)=>startDragTrigram(ev, tri.group, tri.tri, i, tri.start));
       }
     });
 
     cell.appendChild(input);
     el.grid.appendChild(cell);
   }
-
-  if(stealFocus && !state.finished){
-    requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
-  }
 }
 
-function render(stealFocus=true){
+function render(){
   const p = current();
   el.count.textContent = `${state.i+1}/${PUZZLES.length}`;
   el.wrap.classList.toggle('solved', state.finished);
@@ -1857,7 +1853,7 @@ function render(stealFocus=true){
     (state.hint === 2) ? "hint 3" :
     "give up";
 
-  renderGrid(stealFocus);
+  renderGrid();
 
   const [t1, t2] = splitClueTwoWords(p.clue);
   const err1 = errorItemsForGroup('w1');
@@ -1908,19 +1904,13 @@ el.hintBtn.addEventListener('click', ()=>{
     state.finished = true;
     state.revealedAnswer = true;
 
-    setMsg(`Answer: ${ans}`, "result");
+    setMsg(`Answer: ${ans}`);
     render();
     return;
   }
 
-  const prev = state.hint;
   state.hint = Math.min(3, state.hint + 1);
-
-  if(prev < 1 && state.hint >= 1) applyHintLock('w1');
-  if(prev < 2 && state.hint >= 2) applyHintLock('w2');
-  if(prev < 3 && state.hint >= 3){
-    if(state.bank.length === 0) rebuildBank();
-  }
+  if(state.hint >= 3 && state.bank.length === 0) rebuildBank();
   render();
 });
 el.checkBtn.addEventListener('click', onCheck);
@@ -1928,7 +1918,7 @@ el.checkBtn.addEventListener('click', onCheck);
 el.prevBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearTransientOnAnyChange(); state.i=(state.i-1+PUZZLES.length)%PUZZLES.length; resetAllForPuzzle(); render(); });
 el.nextBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearTransientOnAnyChange(); state.i=(state.i+1)%PUZZLES.length; resetAllForPuzzle(); render(); });
 
-/* Tap/clue word to cycle or place */
+/* Tap clue word to cycle/place */
 el.clue.addEventListener('pointerdown', (e)=>{
   const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
   if(!w) return;
@@ -1936,15 +1926,6 @@ el.clue.addEventListener('pointerdown', (e)=>{
   const g = w.dataset.group;
   if(g === 'w1' || g === 'w2') onClueTap(g);
 }, {passive:false});
-el.clue.addEventListener('keydown', (e)=>{
-  const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
-  if(!w) return;
-  if(e.key === "Enter" || e.key === " "){
-    e.preventDefault();
-    const g = w.dataset.group;
-    if(g === 'w1' || g === 'w2') onClueTap(g);
-  }
-});
 
 /* ===== global keyboard handler ===== */
 document.addEventListener('keydown', (e)=>{
@@ -1967,7 +1948,6 @@ document.addEventListener('keydown', (e)=>{
     e.preventDefault();
     clearTransientOnAnyChange();
     if(deleteFromEnd()) render();
-    focusCell(state.focusIdx);
   }
 });
 
@@ -1991,12 +1971,14 @@ function resetAllForPuzzle(){
   setMsg("");
   state.overlapMsgOn = false;
   state.lockMsg = false;
+  state.badSet = new Set();
+  state.twoSet = new Set();
+  state.exclSet = new Set();
 }
 
 /* ===== init ===== */
 setCustomKBEnabled(shouldUseCustomKB());
 render();
-focusCell(0);
 </script>
 </body>
 </html>
