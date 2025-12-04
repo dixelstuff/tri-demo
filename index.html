@@ -717,12 +717,13 @@
       text-align:left;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
-      box-shadow: 0 8px 0 rgba(0,0,0,.10);
+      /* no shadows on hint options */
+      box-shadow:none !important;
       appearance:none;
       -webkit-appearance:none;
       font:inherit;
     }
-    .hintOpt:active{ transform:translateY(1px); box-shadow: 0 7px 0 rgba(0,0,0,.10); }
+    .hintOpt:active{ transform:translateY(1px); }
 
     .hintOpt .left{
       display:flex;
@@ -764,20 +765,20 @@
     .tag.lock{ background: rgba(0,0,0,.06); opacity:.70; }
     .tag.avail{ background: rgba(255,255,255,.70); }
 
+    /* USED: clearly greyed-out + non-selectable */
     .hintOpt.is-used{
-      opacity:.90;
-      box-shadow: none;
-      border-color: rgba(0,0,0,.16);
-      outline: 3px solid rgba(200,247,210,.38);
-      outline-offset:-3px;
+      opacity:.55;
+      filter: grayscale(1) saturate(.1);
+      background: rgba(0,0,0,.04) !important;
+      border-color: rgba(0,0,0,.12);
       cursor:default;
     }
     .hintOpt.is-locked{
       opacity:.50;
-      box-shadow: none;
       cursor:default;
       border-style:dashed;
-      filter: grayscale(.08) saturate(.85);
+      filter: grayscale(.25) saturate(.65);
+      background: rgba(0,0,0,.02) !important;
     }
 
     /* per-option backgrounds (keep colors per option) */
@@ -785,7 +786,6 @@
     .hintOpt.opt-w1{ background: rgba(255,243,179,.98); }
     .hintOpt.opt-w2{ background: rgba(207,232,255,.98); }
     .hintOpt.opt-extra{ background: rgba(255,255,255,.95); }
-
   </style>
 </head>
 
@@ -896,6 +896,9 @@ const OVERLAP_TEXT = "1-letter overlap allowed ✓";
    Modes
    hard = no assist
    easy = assist enabled (counts as a hint)
+
+   IMPORTANT CHANGE:
+   - In HARD (assist not taken): NO colored backgrounds in main grid.
    ======================= */
 const MODES = {
   easy: {
@@ -917,9 +920,9 @@ const MODES = {
     allowHint3TapInsert: true,  // extra letters are a hint, not "assist"
     allowDragTrigrams: false,
     allowAutoPromote: false,
-    showGridColors: true,
+    showGridColors: false,      // <- no yellow/blue/green backgrounds
     showStatusMessages: true,
-    showBadCellColor: true,
+    showBadCellColor: false,    // <- no pink backgrounds either
     checkFeedback: "detailed",
   },
 };
@@ -1071,9 +1074,6 @@ function excludedMsgText(){
 
 /* =======================
    Hint handling (Choose a hint)
-   - Enable assist mode IS a hint.
-   - Show extra letters unlocks ONLY after BOTH word 1 + word 2 trigram hints taken.
-   - Show answer is NOT in the modal; it appears as "give up" after extra letters hint used.
    ======================= */
 function canUseExtraHint(){
   return state.hintsUsed.w1 && state.hintsUsed.w2 && !state.hintsUsed.extra;
@@ -1086,7 +1086,6 @@ function applyHint(kind){
   if(state.finished) return;
   if(state.hintsUsed[kind]) return;
 
-  // Locking rules
   if(kind === 'extra' && !(state.hintsUsed.w1 && state.hintsUsed.w2)) return;
 
   clearTransientOnAnyChange();
@@ -1109,7 +1108,6 @@ function applyHint(kind){
 
 /* =======================
    Hint panel modal
-   (Modal open/close is isolated; does NOT touch drag/focus logic)
    ======================= */
 function openHintPanel(){
   if(state.finished) return;
@@ -1124,7 +1122,6 @@ function closeHintPanel(){
   el.hintModal.classList.remove('open');
   el.hintModal.setAttribute('aria-hidden','true');
 
-  // restore grid focus (desktop typing)
   if(!state.finished && !state.useCustomKB){
     const idx = clamp(state.savedFocusForPanel ?? state.focusIdx ?? 0, 0, getN()-1);
     requestAnimationFrame(()=> focusCell(idx));
@@ -1198,7 +1195,6 @@ function renderHintPanel(){
   const w2Status     = state.hintsUsed.w2 ? "used" : "avail";
   const extraStatus  = state.hintsUsed.extra ? "used" : ((state.hintsUsed.w1 && state.hintsUsed.w2) ? "avail" : "locked");
 
-  // 1) Assist mode (counts as a hint)
   el.hintList.appendChild(makeHintOption({
     title: "Enable assist mode",
     byline: "Move and cycle trigrams without typing",
@@ -1210,7 +1206,6 @@ function renderHintPanel(){
     }
   }));
 
-  // 2) Show word 1 trigram (counts as a hint)
   el.hintList.appendChild(makeHintOption({
     title: "Show word 1 trigram",
     byline: null,
@@ -1222,7 +1217,6 @@ function renderHintPanel(){
     }
   }));
 
-  // 3) Show word 2 trigram (counts as a hint)
   el.hintList.appendChild(makeHintOption({
     title: "Show word 2 trigram",
     byline: null,
@@ -1234,7 +1228,6 @@ function renderHintPanel(){
     }
   }));
 
-  // 4) Show extra letters (locked until BOTH w1 & w2 hints used)
   el.hintList.appendChild(makeHintOption({
     title: "Show extra letters",
     byline: null,
@@ -1346,7 +1339,6 @@ function buildKeyboard(){
 
   el.kbHost.appendChild(kb);
 
-  // generous near-miss taps
   el.kbHost.onpointerdown = (e)=>{
     if(!state.useCustomKB || state.finished) return;
     if(state.hintPanelOpen) return;
@@ -2516,6 +2508,10 @@ function onDragEnd(e){
 
 /* =======================
    Underline logic
+   IMPORTANT CHANGE:
+   - Do NOT underline just because a hint was taken.
+   - Underline only when a (unique) trigram from that word is present in the MAIN GRID
+     OR when that trigram is explicitly placed (assist mode).
    ======================= */
 function errorItemsForGroup(group){
   if(state.badRuns[group] && state.badRuns[group].length){
@@ -2553,19 +2549,10 @@ function inferredSingleTrigram(group){
 
   return (uniq.length === 1) ? uniq[0] : null;
 }
-
-/* If hint for that word is used, always underline the shown trigram (even without assist). */
 function triForClue(group){
-  const p = current();
-  if(group === 'w1' && state.hintsUsed.w1) return norm(p.tri1);
-  if(group === 'w2' && state.hintsUsed.w2) return norm(p.tri2);
-
-  const flags = modeFlags();
-  if(flags.allowClueTapPlace || flags.allowHintTapPlace || flags.allowAutoPromote){
-    const pl = state.placed[group];
-    return pl ? pl.tri : null;
-  }
-  return inferredSingleTrigram(group);
+  const pl = state.placed[group];
+  if(pl) return pl.tri;                // definitely in the main grid
+  return inferredSingleTrigram(group); // only underline if present in main grid (uniquely)
 }
 
 /* =======================
@@ -2738,7 +2725,6 @@ function render(stealFocus=true){
   el.count.textContent = `${state.i+1}/${PUZZLES.length}`;
   el.wrap.classList.toggle('solved', state.finished);
 
-  // Hint button label: always "Choose a hint" flow, until extra letters taken -> give up
   if(canUseGiveUp()){
     el.hintBtn.textContent = "give up";
   }else{
@@ -2786,12 +2772,10 @@ function render(stealFocus=true){
 
 /* =======================
    Hint button behavior
-   - If extra letters hint used: "give up" (not a hint) -> show answer
-   - Else: open modal to choose a hint
    ======================= */
 function showAnswerNow(){
   if(state.finished) return;
-  if(!state.hintsUsed.extra) return; // only after extra letters hint
+  if(!state.hintsUsed.extra) return;
 
   clearTransientOnAnyChange();
 
@@ -2875,10 +2859,7 @@ function onClueWordActivate(group){
   if(state.placed[group]){
     cyclePlacedTrigram(group);
   }else{
-    let tri = null;
-    if(group === 'w1' && state.hintsUsed.w1) tri = norm(current().tri1);
-    if(group === 'w2' && state.hintsUsed.w2) tri = norm(current().tri2);
-    if(!tri) tri = firstTrigramOfWord(group);
+    const tri = firstTrigramOfWord(group);
     if(tri) placeTrigram(group, tri);
   }
 
@@ -2973,11 +2954,9 @@ function resetAllForPuzzle(){
   state.finished = false;
   state.revealedAnswer = false;
 
-  // reset hints per puzzle
   state.hintCount = 0;
   state.hintsUsed = { assist:false, w1:false, w2:false, extra:false };
 
-  // assist is a hint, so default to hard every puzzle
   state.mode = "hard";
   el.wrap.classList.add('is-hard');
 
@@ -2994,7 +2973,7 @@ window.addEventListener('resize', ()=>{
 
 /* init */
 setCustomKBEnabled(shouldUseCustomKB());
-resetAllForPuzzle();   // sets mode + hints cleanly
+resetAllForPuzzle();
 renderSmart();
 </script>
 </body>
