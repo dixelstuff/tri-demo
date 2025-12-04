@@ -34,6 +34,8 @@
       overflow:hidden;
       overscroll-behavior:none;
       background:var(--bg);
+      /* deep push fix: suppress scroll/pull gestures at the root */
+      touch-action:none;
     }
     body{
       margin:0;
@@ -60,8 +62,10 @@
     }
 
     .wrap{
-      height:100dvh;
-      max-height:100dvh;
+      /* deep push fix: JS sets --app-h to visual viewport height (px) */
+      height: var(--app-h, 100dvh);
+      max-height: var(--app-h, 100dvh);
+
       width:100%;
       max-width:980px;
       margin:0 auto;
@@ -716,6 +720,39 @@
   </div>
 
 <script>
+/* =======================
+   Deep push fix (iOS bounce + stable visual viewport height)
+   ======================= */
+(function deepPushFix(){
+  const root = document.documentElement;
+  const vv = window.visualViewport;
+
+  function setAppH(){
+    const h = Math.round((vv && vv.height) ? vv.height : window.innerHeight);
+    root.style.setProperty('--app-h', h + 'px');
+  }
+  setAppH();
+  window.addEventListener('resize', setAppH);
+  if(vv){
+    vv.addEventListener('resize', setAppH);
+    vv.addEventListener('scroll', setAppH);
+  }
+
+  // Prevent rubber-band / pull-to-refresh gestures.
+  // If you later introduce a scrollable panel, mark it with [data-allow-scroll].
+  const preventMove = (e)=>{
+    if(!e.cancelable) return;
+    if(e.target && e.target.closest && e.target.closest('[data-allow-scroll]')) return;
+    e.preventDefault();
+  };
+  document.addEventListener('touchmove', preventMove, {passive:false});
+
+  // Prevent pinch zoom from changing viewport mid-game.
+  document.addEventListener('touchstart', (e)=>{
+    if(e.touches && e.touches.length > 1 && e.cancelable) e.preventDefault();
+  }, {passive:false});
+})();
+
 /* =======================
    Puzzles
    ======================= */
@@ -1918,7 +1955,6 @@ function onDragEnd(e){
    Hint chooser (auto-skip if only one choice)
    ======================= */
 function hintOptionsNow(){
-  const p = current();
   const opts = [];
 
   // 1) Assist option first
@@ -1936,7 +1972,6 @@ function hintOptionsNow(){
 
   // 3) Extra letters ONLY after both trigram hints
   if(!state.hintFlags.extra && state.hintFlags.w1 && state.hintFlags.w2){
-    // if there are actually any extras (possible 0..3), still allow as a hint; it may be empty for perfect cover
     opts.push({ key:'extra', label:'Show extra letters', cls:'opt-extra' });
   }
 
@@ -1960,7 +1995,6 @@ function openHintMenu(options){
     el.hintMenuList.appendChild(b);
   }
 
-  // show
   el.hintMenuBackdrop.hidden = false;
   el.hintMenuBackdrop.style.display = "flex";
   el.hintMenuBackdrop.classList.add('is-open');
@@ -1978,8 +2012,6 @@ function applyHintChoice(key){
   if(state.finished) return;
   closeHintMenu();
   clearTransientOnAnyChange();
-
-  const p = current();
 
   if(key === 'assist' && !state.hintFlags.assist){
     state.hintFlags.assist = true;
@@ -2019,12 +2051,10 @@ function onHintButton(){
   if(state.finished) return;
   clearTransientOnAnyChange();
 
-  // If all four hint actions used, "give up"
   const allUsed = state.hintFlags.assist && state.hintFlags.w1 && state.hintFlags.w2 && state.hintFlags.extra;
   if(allUsed){
     const ans = norm(current().answer);
 
-    // fill as singles
     state.placed = {w1:null, w2:null};
     state.singles = [];
     for(let i=0;i<N();i++) state.singles.push({id:uid(), ch: ans[i], idx:i});
@@ -2039,12 +2069,10 @@ function onHintButton(){
 
   const opts = hintOptionsNow();
   if(opts.length === 0){
-    // should not happen, but be safe
     setTransientMsg("No hints available", 1600);
     return;
   }
 
-  // Auto-skip modal if no choice
   if(opts.length === 1){
     applyHintChoice(opts[0].key);
     return;
@@ -2056,7 +2084,6 @@ function onHintButton(){
 /* Close menu interactions */
 el.hintMenuClose.addEventListener('click', (e)=>{ e.preventDefault(); closeHintMenu(); });
 el.hintMenuBackdrop.addEventListener('pointerdown', (e)=>{
-  // click outside menu closes
   if(e.target === el.hintMenuBackdrop){
     e.preventDefault();
     closeHintMenu();
@@ -2192,7 +2219,6 @@ function updateKeyboardState(){
    Render grid
    ======================= */
 function renderGrid(stealFocus=true){
-  // only auto-promote trigrams in assist mode
   if(state.assist){
     for(let k=0;k<2;k++){
       if(!autoPromoteTypedTrigrams()) break;
@@ -2217,7 +2243,6 @@ function renderGrid(stealFocus=true){
 
     const tri = trigramAtIndex(i);
 
-    // colour only in assist mode
     if(state.assist && tri){
       if(overlapSet.has(i)) cell.classList.add('bg-ol');
       else cell.classList.add(tri.group==='w1' ? 'bg-w1' : 'bg-w2');
@@ -2373,7 +2398,6 @@ function render(stealFocus=true){
 
   el.wrap.classList.toggle('solved', state.finished);
 
-  // Button label is just based on total hint actions used so far
   const used = state.hintsUsed;
   el.hintBtn.textContent = (used <= 3) ? `hint ${used+1}` : "give up";
 
@@ -2464,7 +2488,6 @@ function onClueWordActivate(group){
   if(group !== 'w1' && group !== 'w2') return;
 
   if(!state.assist){
-    // in non-assist mode, clues are just visual (underlines)
     renderSmart();
     return;
   }
