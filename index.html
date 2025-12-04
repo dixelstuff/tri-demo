@@ -599,6 +599,11 @@
       padding: 0 14px 16px;
       z-index: 9998;
     }
+    /* Force native [hidden] to actually hide (some sites override this) */
+#hintMenuBackdrop[hidden]{
+  display:none !important;
+}
+
     html.has-kb .hintMenuBackdrop{
       padding-bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 18px);
     }
@@ -708,7 +713,7 @@
   <div class="kbHost" id="kbHost" aria-label="On-screen keyboard"></div>
 
   <!-- Hint chooser -->
-  <div class="hintMenuBackdrop" id="hintMenuBackdrop" hidden>
+  <div class="hintMenuBackdrop" id="hintMenuBackdrop" hidden style="display:none;">
     <div class="hintMenu" role="dialog" aria-modal="true" aria-label="Choose a hint">
       <div class="hintMenuHead">
         <div class="hintMenuTitle">Choose a hint</div>
@@ -2341,8 +2346,10 @@ function render(stealFocus=true){
    ======================= */
 function closeHintMenu(){
   el.hintMenuBackdrop.hidden = true;
+  el.hintMenuBackdrop.style.display = "none";
   el.hintMenuBtns.innerHTML = "";
 }
+
 function openHintMenu(){
   if(state.finished) return;
   if(state.hintUsed >= MAX_HINTS) return;
@@ -2352,6 +2359,7 @@ function openHintMenu(){
   if(!state.hintChoice.tri1) avail.push({key:'tri1', label:'reveal word 1 trigram'});
   if(!state.hintChoice.tri2) avail.push({key:'tri2', label:'reveal word 2 trigram'});
   if(!state.hintChoice.assist) avail.push({key:'assist', label:'enable assist', sub:'unlocks clue tapping, cycling, drag & grid colours'});
+
   const canExtras = state.hintChoice.tri1 && state.hintChoice.tri2 && !state.hintChoice.extras;
   avail.push({key:'extras', label:'reveal extra letters', sub:'available after both trigrams', disabled: !canExtras});
 
@@ -2379,7 +2387,9 @@ function openHintMenu(){
   }
 
   el.hintMenuBackdrop.hidden = false;
+  el.hintMenuBackdrop.style.display = "flex";
 }
+
 function applyHintChoice(key){
   if(state.finished) return;
   if(state.hintUsed >= MAX_HINTS) return;
