@@ -42,7 +42,7 @@
     #hintTrack, #hintTrack *,
     #btnRow, #btnRow *,
     #kbHost, #kbHost *,
-    #hintModal, #hintModal *{
+    #helpModal, #helpModal *{
       -webkit-user-select:none;
       user-select:none;
       -webkit-touch-callout:none;
@@ -281,7 +281,7 @@
     }
     .cell input::selection{ background:transparent; color:inherit; }
 
-    /* Grid colouring (ONLY after Quick controls hint taken) */
+    /* Grid colouring (ONLY when Quick controls ON) */
     .cell.bg-w1{ background:var(--w1); }
     .cell.bg-w2{ background:var(--w2); }
     .cell.bg-ol{ background:var(--ol); }
@@ -477,7 +477,7 @@
       transform:translateY(1px);
       box-shadow: 0 6px 0 rgba(0,0,0,.16);
     }
-    .btn.hints{ background:#fff3bd; }
+    .btn.help{ background:#fff3bd; }
     .btn.check{ background:rgba(255,255,255,.25); opacity:.55; }
     .btn.check.ready{ opacity:1; background:var(--submit); }
     .btn:disabled{
@@ -604,7 +604,7 @@
       .kbKey{ height:46px; }
     }
 
-    /* ========= Hint modal ========= */
+    /* ========= Help modal ========= */
     .modalOverlay{
       position:fixed;
       inset:0;
@@ -731,6 +731,49 @@
       opacity:.92;
     }
 
+    /* Quick controls toggle styling */
+    .qcToggle{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+    }
+    .qcPill{
+      width: 64px;
+      height: 30px;
+      border-radius:999px;
+      border:2px solid rgba(0,0,0,.18);
+      background: rgba(255,255,255,.78);
+      position:relative;
+    }
+    .qcKnob{
+      position:absolute;
+      top:50%;
+      transform:translateY(-50%);
+      width: 26px;
+      height: 26px;
+      border-radius:999px;
+      border:2px solid rgba(0,0,0,.18);
+      background:#fff;
+      left: 2px;
+      transition: left .18s ease;
+    }
+    .qcPill.on{
+      background: rgba(0,0,0,.08);
+    }
+    .qcPill.on .qcKnob{
+      left: calc(100% - 28px);
+    }
+    .qcLabel{
+      font-weight:950;
+      font-size:12px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      min-width: 34px;
+      text-align:right;
+      opacity:.95;
+    }
+
     .hintDetails{
       margin-top: 10px;
       padding: 0 2px;
@@ -779,19 +822,19 @@
     </div>
 
     <div class="btnRow" id="btnRow">
-      <button class="btn hints" id="hintBtn" type="button">hints</button>
+      <button class="btn help" id="helpBtn" type="button">help</button>
       <button class="btn check" id="checkBtn" type="button">check</button>
     </div>
   </div>
 
-  <!-- Hint modal -->
-  <div class="modalOverlay" id="hintModal" aria-hidden="true">
-    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="hintModalTitle">
+  <!-- Help modal -->
+  <div class="modalOverlay" id="helpModal" aria-hidden="true">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
       <div class="modalHdr">
-        <div class="modalTitle" id="hintModalTitle">Choose a hint</div>
-        <button class="modalX" id="hintModalClose" type="button" aria-label="Close">×</button>
+        <div class="modalTitle" id="helpModalTitle">Help</div>
+        <button class="modalX" id="helpModalClose" type="button" aria-label="Close">×</button>
       </div>
-      <div class="modalBody" id="hintModalBody"></div>
+      <div class="modalBody" id="helpModalBody"></div>
     </div>
   </div>
 
@@ -810,7 +853,6 @@ const PUZZLES = [
   { clue:"Trusty boombox",    word1:"trusty",  word2:"boombox", answer:"combust",  tri1:"ust", tri2:"omb" },
   { clue:"Wholly muscle?",    word1:"wholly",  word2:"muscle",  answer:"mollusc",  tri1:"oll", tri2:"usc" },
   { clue:"Juicy muscles",     word1:"juicy",   word2:"muscles", answer:"bicycle",  tri1:"icy", tri2:"cle" },
-
   { clue:"Perform, monkey!",  word1:"perform", word2:"monkey",  answer:"hormones", tri1:"orm", tri2:"one" },
 ];
 
@@ -828,7 +870,7 @@ const el = {
   trackW2: document.getElementById('trackW2'),
   trackExtras: document.getElementById('trackExtras'),
 
-  hintBtn: document.getElementById('hintBtn'),
+  helpBtn: document.getElementById('helpBtn'),
   checkBtn: document.getElementById('checkBtn'),
 
   prevBtn: document.getElementById('prevBtn'),
@@ -837,19 +879,21 @@ const el = {
 
   kbHost: document.getElementById('kbHost'),
 
-  hintModal: document.getElementById('hintModal'),
-  hintModalTitle: document.getElementById('hintModalTitle'),
-  hintModalBody: document.getElementById('hintModalBody'),
-  hintModalClose: document.getElementById('hintModalClose'),
+  helpModal: document.getElementById('helpModal'),
+  helpModalTitle: document.getElementById('helpModalTitle'),
+  helpModalBody: document.getElementById('helpModalBody'),
+  helpModalClose: document.getElementById('helpModalClose'),
 };
+
+const QC_SESSION_KEY = "triDemoQuickControls_v1";
 
 const TWOTRI_TEXT  = "Two trigrams from same word";
 const OVERLAP_TEXT = "1-letter overlap allowed ✓";
 
 /* =======================
-   Hint system
+   Hint system (only 3 count as hints)
    ======================= */
-const HINT_IDS = { quick:'quick', w1:'w1', w2:'w2', extras:'extras' };
+const HINT_IDS = { w1:'w1', w2:'w2', extras:'extras' };
 
 /* =======================
    State
@@ -860,9 +904,9 @@ const state = {
   showedAnswer: false,
 
   hintCount: 0,
-  hintsUsed: { quick:false, w1:false, w2:false, extras:false },
+  hintsUsed: { w1:false, w2:false, extras:false },
 
-  assist: false,
+  assist: false, // quick controls on/off (session persisted)
 
   sel1: null,
   sel2: null,
@@ -958,10 +1002,44 @@ function shakeGrid(){
 /* prevent context menu on interactive surface */
 document.addEventListener('contextmenu', (e)=>{
   const t = e.target;
-  if(t && t.closest && t.closest('#clue, #gridWrap, #hintTrack, #btnRow, #kbHost, #hintModal')){
+  if(t && t.closest && t.closest('#clue, #gridWrap, #hintTrack, #btnRow, #kbHost, #helpModal')){
     e.preventDefault();
   }
 });
+
+/* =======================
+   Quick controls session persistence
+   ======================= */
+function loadQuickControlsFromSession(){
+  try{
+    const v = sessionStorage.getItem(QC_SESSION_KEY);
+    state.assist = (v === "1");
+  }catch{
+    state.assist = false;
+  }
+}
+function saveQuickControlsToSession(){
+  try{
+    sessionStorage.setItem(QC_SESSION_KEY, state.assist ? "1" : "0");
+  }catch{}
+}
+function setQuickControls(on, showMsg=true){
+  const next = !!on;
+  if(state.assist === next) return;
+  state.assist = next;
+  saveQuickControlsToSession();
+
+  // safer UX: kill any in-progress drag if turning off
+  if(!state.assist) abortDrag();
+
+  if(showMsg){
+    setTransientMsg(state.assist ? "Quick controls now active" : "Quick controls paused", 2200);
+  }
+
+  // keep help modal open, but re-render it so the toggle updates
+  if(state.modalOpen) renderHelpModal();
+  renderSmart();
+}
 
 /* =======================
    Keyboard detection / build
@@ -1354,7 +1432,7 @@ function deleteFromEnd(){
 }
 
 /* =======================
-   Typed trigram detection / promotion (assist only)
+   Typed trigram detection / promotion (quick controls only)
    ======================= */
 function allowedSet(group){
   const p = current();
@@ -1668,7 +1746,7 @@ function rebuildBank(){
 }
 
 /* =======================
-   Status messages (from the start)
+   Status messages (always on)
    ======================= */
 function updateStatusMessages(){
   if(state.finished) return;
@@ -1828,7 +1906,6 @@ function runHintFly(kind){
 
   if(!target || !chars.length) return false;
 
-  // hide the real target until animation lands
   target.style.opacity = "0";
 
   const overlay = document.createElement('div');
@@ -1838,7 +1915,6 @@ function runHintFly(kind){
   overlay.appendChild(spot);
   document.body.appendChild(overlay);
 
-  // measure
   const sr = spot.getBoundingClientRect();
   const tr = target.getBoundingClientRect();
 
@@ -1856,8 +1932,8 @@ function runHintFly(kind){
 
   const kf = [
     { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, offset: 0.00 },
-    { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, offset: 0.40 },     // hold
-    { transform: `translate(-50%,-50%) scale(1) rotate(4deg)`,  offset: 0.50 },     // jiggle
+    { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, offset: 0.40 },
+    { transform: `translate(-50%,-50%) scale(1) rotate(4deg)`,  offset: 0.50 },
     { transform: `translate(-50%,-50%) scale(1) rotate(-3deg)`, offset: 0.58 },
     { transform: `translate(-50%,-50%) scale(1) rotate(2deg)`,  offset: 0.64 },
     { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`,  offset: 0.70 },
@@ -1892,7 +1968,6 @@ function scheduleHintFly(kind){
     if(state.flyAttempts < 6){
       requestAnimationFrame(tryRun);
     }else{
-      // fallback: just reveal if something went weird
       const map = {w1:'trackBox-w1', w2:'trackBox-w2', extras:'trackBox-extras'};
       const t = document.getElementById(map[state.pendingFly]||"");
       if(t) t.style.opacity = "";
@@ -1917,7 +1992,6 @@ function makeTrigramBlock(tri, cls, labelText, onClickMaybe, id){
   box.setAttribute("aria-label", labelText);
   if(id) box.id = id;
 
-  // If this is the fly target, hide until fly lands
   if((state.pendingFly === 'w1' && id === 'trackBox-w1') ||
      (state.pendingFly === 'w2' && id === 'trackBox-w2')){
     box.style.opacity = "0";
@@ -2024,7 +2098,7 @@ function renderHintTrack(){
 }
 
 /* =======================
-   Placing / cycling (assist only)
+   Placing / cycling (quick controls only)
    ======================= */
 function placeTrigram(group, tri){
   if(!flags().allowClueTapPlace && !flags().allowHintTapPlace) return;
@@ -2561,26 +2635,34 @@ function renderGrid(stealFocus=true){
   }
 }
 
-function allHintsUsed(){
-  return !!(state.hintsUsed.quick && state.hintsUsed.w1 && state.hintsUsed.w2 && state.hintsUsed.extras);
+/* =======================
+   Help modal content
+   ======================= */
+function quickDetailsHTML(){
+  return `
+    <p>Add, move and cycle trigrams without typing!</p>
+    <ul>
+      <li><b>Tap a clue word</b> to place a trigram</li>
+      <li><b>Tap again</b> to cycle to the next trigram</li>
+      <li><b>Drag trigram blocks</b> to reposition</li>
+      <li><b>Auto-highlighting</b> of trigram blocks</li>
+    </ul>
+  `;
 }
 
-/* =======================
-   Hint modal (Quick details only when unused)
-   ======================= */
-function openHintModal(){
+function openHelpModal(){
   if(state.finished) return;
   state.modalOpen = true;
-  el.hintModal.classList.add('open');
-  el.hintModal.setAttribute('aria-hidden', 'false');
-  renderHintModal();
-  requestAnimationFrame(()=>{ try{ el.hintModalClose.focus({preventScroll:true}); }catch{} });
+  el.helpModal.classList.add('open');
+  el.helpModal.setAttribute('aria-hidden', 'false');
+  renderHelpModal();
+  requestAnimationFrame(()=>{ try{ el.helpModalClose.focus({preventScroll:true}); }catch{} });
 }
-function closeHintModal(){
+function closeHelpModal(){
   if(!state.modalOpen) return;
   state.modalOpen = false;
-  el.hintModal.classList.remove('open');
-  el.hintModal.setAttribute('aria-hidden', 'true');
+  el.helpModal.classList.remove('open');
+  el.helpModal.setAttribute('aria-hidden', 'true');
 
   requestAnimationFrame(()=>{
     if(!state.useCustomKB && !state.finished) focusCell(state.focusIdx ?? 0);
@@ -2596,16 +2678,58 @@ function hintStatus(id){
   return 'avail';
 }
 
-function quickDetailsHTML(){
-  return `
-    <p>Add, move and cycle trigrams without typing!</p>
-    <ul>
-      <li><b>Tap a clue word</b> to place a trigram</li>
-      <li><b>Tap again</b> to cycle to the next trigram</li>
-      <li><b>Drag trigram blocks</b> to reposition</li>
-      <li><b>Auto-highlighting</b> of trigram blocks</li>
-    </ul>
-  `;
+function makeQuickControlsCard(){
+  const card = document.createElement('div');
+  card.className = "hintCard opt-quick";
+
+  const top = document.createElement('div');
+  top.className = "hintTop";
+
+  const left = document.createElement('div');
+  left.className = "hintLeft";
+
+  const t = document.createElement('div');
+  t.className = "hintTitle";
+  t.textContent = "Quick controls";
+  left.appendChild(t);
+
+  const toggleBtn = document.createElement('button');
+  toggleBtn.type = "button";
+  toggleBtn.className = "hintAction qcToggle";
+  toggleBtn.setAttribute('aria-pressed', state.assist ? 'true' : 'false');
+  toggleBtn.style.textTransform = "none";
+  toggleBtn.style.letterSpacing = ".02em";
+  toggleBtn.style.fontSize = "12px";
+
+  const lab = document.createElement('span');
+  lab.className = "qcLabel";
+  lab.textContent = state.assist ? "ON" : "OFF";
+
+  const pill = document.createElement('span');
+  pill.className = "qcPill" + (state.assist ? " on" : "");
+  const knob = document.createElement('span');
+  knob.className = "qcKnob";
+  pill.appendChild(knob);
+
+  toggleBtn.appendChild(lab);
+  toggleBtn.appendChild(pill);
+
+  toggleBtn.addEventListener('click', (e)=>{
+    e.preventDefault(); e.stopPropagation();
+    setQuickControls(!state.assist, true);
+  });
+
+  top.appendChild(left);
+  top.appendChild(toggleBtn);
+
+  card.appendChild(top);
+
+  const details = document.createElement('div');
+  details.className = "hintDetails";
+  details.innerHTML = quickDetailsHTML();
+  card.appendChild(details);
+
+  return card;
 }
 
 function makeHintCardSimple({id, title, cls}){
@@ -2652,71 +2776,23 @@ function makeHintCardSimple({id, title, cls}){
   return card;
 }
 
-function makeHintCardQuick(){
-  const id = HINT_IDS.quick;
-  const status = hintStatus(id);
-  const dim = (status === 'used');
+function renderHelpModal(){
+  el.helpModalTitle.textContent = "Help";
+  el.helpModalBody.innerHTML = "";
 
-  const card = document.createElement('div');
-  card.className = `hintCard opt-quick ${dim ? "dim" : ""}`.trim();
-
-  const top = document.createElement('div');
-  top.className = "hintTop";
-
-  const left = document.createElement('div');
-  left.className = "hintLeft";
-
-  const t = document.createElement('div');
-  t.className = "hintTitle";
-  t.textContent = "Quick controls";
-  left.appendChild(t);
-
-  const action = document.createElement('button');
-  action.type = "button";
-  action.className = "hintAction";
-
-  if(status === 'avail'){
-    action.textContent = "SELECT";
-    action.addEventListener('click', (e)=>{
-      e.preventDefault(); e.stopPropagation();
-      applyHint(id);
-    });
-  }else{
-    action.textContent = "✓ USED";
-    action.disabled = true;
-  }
-
-  top.appendChild(left);
-  top.appendChild(action);
-  card.appendChild(top);
-
-  // Details only when not yet used
-  if(status === 'avail'){
-    const details = document.createElement('div');
-    details.className = "hintDetails";
-    details.innerHTML = quickDetailsHTML();
-    card.appendChild(details);
-  }
-
-  return card;
-}
-
-function renderHintModal(){
-  el.hintModalTitle.textContent = "Choose a hint";
-  el.hintModalBody.innerHTML = "";
-  el.hintModalBody.appendChild(makeHintCardQuick());
-  el.hintModalBody.appendChild(makeHintCardSimple({ id:HINT_IDS.w1,     title:"Word 1 trigram",  cls:"opt-w1" }));
-  el.hintModalBody.appendChild(makeHintCardSimple({ id:HINT_IDS.w2,     title:"Word 2 trigram",  cls:"opt-w2" }));
-  el.hintModalBody.appendChild(makeHintCardSimple({ id:HINT_IDS.extras, title:"Extra letters",   cls:"opt-extras" }));
+  el.helpModalBody.appendChild(makeQuickControlsCard());
+  el.helpModalBody.appendChild(makeHintCardSimple({ id:HINT_IDS.w1,     title:"Word 1 trigram",  cls:"opt-w1" }));
+  el.helpModalBody.appendChild(makeHintCardSimple({ id:HINT_IDS.w2,     title:"Word 2 trigram",  cls:"opt-w2" }));
+  el.helpModalBody.appendChild(makeHintCardSimple({ id:HINT_IDS.extras, title:"Extra letters",   cls:"opt-extras" }));
 }
 
 /* modal events */
-el.hintModalClose.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeHintModal(); });
-el.hintModal.addEventListener('pointerdown', (e)=>{
-  if(e.target === el.hintModal){
+el.helpModalClose.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeHelpModal(); });
+el.helpModal.addEventListener('pointerdown', (e)=>{
+  if(e.target === el.helpModal){
     e.preventDefault();
     e.stopPropagation();
-    closeHintModal();
+    closeHelpModal();
   }
 }, {passive:false});
 
@@ -2725,7 +2801,7 @@ document.addEventListener('keydown', (e)=>{
   if(!state.modalOpen) return;
   if(e.key === "Escape"){
     e.preventDefault();
-    closeHintModal();
+    closeHelpModal();
   }else{
     if(e.key && e.key.length === 1) e.preventDefault();
     if(e.key === "Backspace" || e.key === "Delete" || e.key === "Enter") e.preventDefault();
@@ -2733,28 +2809,14 @@ document.addEventListener('keydown', (e)=>{
 }, {capture:true});
 
 /* =======================
-   Hint application
+   Hint application (only 3 count)
    ======================= */
 function applyHint(id){
-  if(id === HINT_IDS.quick){
-    if(state.hintsUsed.quick) return;
-    state.hintsUsed.quick = true;
-    state.hintCount += 1;
-    state.assist = true;
-
-    closeHintModal();
-    clearTransientOnAnyChange();
-    setTransientMsg("Quick controls now active", 2600);
-
-    renderSmart();
-    return;
-  }
-
   if(id === HINT_IDS.w1){
     if(state.hintsUsed.w1) return;
     state.hintsUsed.w1 = true;
     state.hintCount += 1;
-    closeHintModal();
+    closeHelpModal();
     state.pendingFly = 'w1';
     renderSmart();
     scheduleHintFly('w1');
@@ -2765,7 +2827,7 @@ function applyHint(id){
     if(state.hintsUsed.w2) return;
     state.hintsUsed.w2 = true;
     state.hintCount += 1;
-    closeHintModal();
+    closeHelpModal();
     state.pendingFly = 'w2';
     renderSmart();
     scheduleHintFly('w2');
@@ -2778,7 +2840,7 @@ function applyHint(id){
     state.hintsUsed.extras = true;
     state.hintCount += 1;
     if(state.bank.length === 0) rebuildBank();
-    closeHintModal();
+    closeHelpModal();
     state.pendingFly = 'extras';
     renderSmart();
     scheduleHintFly('extras');
@@ -2809,42 +2871,17 @@ function bindFastTap(btn, fn){
   });
 }
 
-function showAnswerNow(){
-  if(state.finished) return;
-  clearTransientOnAnyChange();
-
-  const n = getN();
-  const ans = norm(current().answer);
-
-  state.placed = {w1:null, w2:null};
-  state.singles = [];
-  for(let i=0;i<n;i++) state.singles.push({id:uid(), ch: ans[i], idx:i});
-
-  state.finished = true;
-  state.showedAnswer = true;
-
-  setMsg(`Answer: ${ans}`, "result");
-  renderSmart();
-}
-
-function onHintButton(){
+bindFastTap(el.helpBtn, ()=>{
   if(state.finished) return;
   if(state.modalOpen) return;
-
-  if(allHintsUsed()){
-    showAnswerNow();
-    return;
-  }
-  openHintModal();
-}
-
-bindFastTap(el.hintBtn, onHintButton);
+  openHelpModal();
+});
 bindFastTap(el.checkBtn, onCheck);
 
 el.prevBtn.addEventListener('click', (e)=>{
   e.preventDefault();
   clearTransientOnAnyChange();
-  closeHintModal();
+  closeHelpModal();
   state.i=(state.i-1+PUZZLES.length)%PUZZLES.length;
   resetAllForPuzzle();
   renderSmart();
@@ -2852,14 +2889,14 @@ el.prevBtn.addEventListener('click', (e)=>{
 el.nextBtn.addEventListener('click', (e)=>{
   e.preventDefault();
   clearTransientOnAnyChange();
-  closeHintModal();
+  closeHelpModal();
   state.i=(state.i+1)%PUZZLES.length;
   resetAllForPuzzle();
   renderSmart();
 });
 
 /* =======================
-   Clue tap (assist only)
+   Clue tap (quick controls only)
    ======================= */
 function onClueWordActivate(group){
   if(state.finished) return;
@@ -2946,6 +2983,19 @@ document.addEventListener('keydown', (e)=>{
 /* =======================
    Render
    ======================= */
+function errorItemsForGroup(group){
+  if(state.badRuns[group] && state.badRuns[group].length){
+    return state.badRuns[group].map(s => ({sub:s, cls:"u-red"}));
+  }
+  if(state.twoTris[group] && state.twoTris[group].size){
+    return Array.from(state.twoTris[group]).map(t => ({sub:t, cls:"u-red"}));
+  }
+  if(state.exclTris[group] && state.exclTris[group].size){
+    return Array.from(state.exclTris[group]).map(t => ({sub:t, cls:"u-red"}));
+  }
+  return [];
+}
+
 function render(stealFocus=true){
   const p = current();
   ensurePuzzleDerived(p);
@@ -2954,8 +3004,6 @@ function render(stealFocus=true){
   el.count.textContent = `${state.i+1}/${PUZZLES.length}`;
   el.wrap.classList.toggle('solved', state.finished);
   el.wrap.classList.toggle('no-assist', !state.assist);
-
-  el.hintBtn.textContent = allHintsUsed() ? "give up" : "hints";
 
   renderGrid(stealFocus);
 
@@ -2987,7 +3035,7 @@ function render(stealFocus=true){
   renderHintTrack();
 
   el.checkBtn.classList.toggle('ready', canEnableCheckNow());
-  el.hintBtn.disabled = state.finished;
+  el.helpBtn.disabled = state.finished;
   el.checkBtn.disabled = state.finished;
 
   updateStatusMessages();
@@ -3012,14 +3060,15 @@ function resetAllForPuzzle(){
   state.finished = false;
   state.showedAnswer = false;
 
+  // hints reset per puzzle
   state.hintCount = 0;
-  state.hintsUsed = { quick:false, w1:false, w2:false, extras:false };
-  state.assist = false;
+  state.hintsUsed = { w1:false, w2:false, extras:false };
 
   state.bank = [];
   state.pendingFly = null;
   state.flyAttempts = 0;
 
+  // NOTE: quick controls is NOT reset — it persists via sessionStorage
   resetMainGridOnly();
 }
 
@@ -3031,6 +3080,7 @@ window.addEventListener('resize', ()=>{
 });
 
 /* init */
+loadQuickControlsFromSession();
 setCustomKBEnabled(shouldUseCustomKB());
 resetAllForPuzzle();
 renderSmart();
