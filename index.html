@@ -22,10 +22,6 @@
 
       /* caret */
       --caret: rgba(0,0,0,.18);
-
-      /* hint button + modal */
-      --hintButtonBg: #fff3bd;  /* keep yellow hint button */
-      --hintPanelBg: #ffffff;   /* modal panel background MUST be white */
     }
 
     *{ box-sizing:border-box; }
@@ -142,7 +138,7 @@
       font-variant-ligatures: none;
       font-feature-settings: "kern" 0, "liga" 0, "clig" 0;
     }
-    .wrap.is-hard .clueWord{ cursor:default; }
+    .wrap.no-assist .clueWord{ cursor:default; }
 
     .u-w1, .u-w2, .u-red{
       text-decoration: underline;
@@ -291,7 +287,7 @@
     }
     .cell input::selection{ background:transparent; color:inherit; }
 
-    /* Grid colouring */
+    /* Grid colouring (ONLY after Quick controls hint taken) */
     .cell.bg-w1{ background:var(--w1); }
     .cell.bg-w2{ background:var(--w2); }
     .cell.bg-ol{ background:var(--ol); }
@@ -330,39 +326,10 @@
       white-space:normal;
       line-height:1.15;
       text-align:center;
-      color:var(--ink);
     }
     .msg.show{ opacity:.92; }
     .msg.warn{ opacity:.92; font-size:20px; }
     .msg.result{ top:22px; }
-
-    /* ===== Assist toast (ONLY for assist) ===== */
-    .assistToast{
-      position:fixed;
-      left:50%;
-      transform:translateX(-50%);
-      top: 58px;
-      z-index: 10002;
-      background: rgba(255,255,255,.92);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border:2px solid rgba(0,0,0,.16);
-      border-radius:999px;
-      padding:10px 14px;
-      font-weight:900;
-      font-style:italic;
-      font-size:15px;
-      line-height:1.15;
-      box-shadow:0 10px 18px rgba(0,0,0,.12);
-      opacity:0;
-      pointer-events:none;
-      transition: opacity .18s ease, transform .18s ease;
-      color:var(--ink);
-    }
-    .assistToast.show{
-      opacity:1;
-      transform:translateX(-50%) translateY(2px);
-    }
 
     /* ===== Hint tracker ===== */
     .hintTrack{
@@ -392,7 +359,7 @@
       min-width:0;
     }
 
-    /* ===== Hint mini-grids (square tiles) ===== */
+    /* ===== Hint mini-grids (square tiles, no capsule) ===== */
     .letters{
       display:inline-flex;
       border:none;
@@ -420,9 +387,8 @@
       transition:opacity .15s ease, background .15s ease, transform .08s ease;
       border:1px solid rgba(0,0,0,.22);
       border-radius:0;
-      color:var(--ink);
     }
-    .letter + .letter{ margin-left:-1px; }
+    .letter + .letter{ margin-left:-1px; } /* keep single-thickness seams */
     .letter.sel-w1{ background:var(--w1); }
     .letter.sel-w2{ background:var(--w2); }
 
@@ -489,7 +455,7 @@
       transform:translateY(1px);
       box-shadow: 0 6px 0 rgba(0,0,0,.16);
     }
-    .btn.hints{ background: var(--hintButtonBg); }
+    .btn.hints{ background:#fff3bd; }
     .btn.check{ background:rgba(255,255,255,.25); opacity:.55; }
     .btn.check.ready{ opacity:1; background:var(--submit); }
     .btn:disabled{
@@ -516,7 +482,6 @@
       transform: translate(-50%, -50%);
       filter: drop-shadow(0 14px 16px rgba(0,0,0,.22));
       opacity:.95;
-      color:var(--ink);
     }
 
     /* ========= Custom On-screen Keyboard ========= */
@@ -568,8 +533,6 @@
       user-select:none;
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
-      appearance:none;
-      -webkit-appearance:none;
     }
     .kbKey:active{ transform:translateY(1px); }
 
@@ -580,8 +543,13 @@
       letter-spacing: .08em;
       padding: 0;
     }
-    .kbKey.enter{ font-size: 11px; letter-spacing: .02em; }
-    .kbKey.enter:not(.is-disabled){ background: rgba(0,0,0,.07); }
+    .kbKey.enter{
+      font-size: 11px;
+      letter-spacing: .02em;
+    }
+    .kbKey.enter:not(.is-disabled){
+      background: rgba(0,0,0,.07);
+    }
     .kbKey.delete{
       font-size: 16.3px;
       letter-spacing: 0.03em;
@@ -607,185 +575,151 @@
         width: min(calc(var(--n) * var(--cell) + (var(--n) - 1) * var(--gap)), 94vw);
       }
       .cell input{ font-size:clamp(24px,6.05vw,36px); }
+
       .letter{ width:28px; height:28px; font-size:19px; }
+
       .msgSlot{ height:74px; }
       .msg{ font-size:20px; top:12px; }
       .msg.warn{ font-size:19px; }
+
       .btn{ font-size:19px; padding:9px 15px; min-width:98px; }
       .kbKey{ height:46px; }
-      .assistToast{ top: 54px; font-size:14px; padding:9px 12px; }
     }
 
-    /* =======================
-       Hint Panel Modal
-       ======================= */
-    .hintModal{
+    /* ========= Hint modal ========= */
+    .modalOverlay{
       position:fixed;
       inset:0;
+      background: rgba(0,0,0,.26);
       display:none;
-      z-index:10001; /* above everything including ghost */
-      align-items:flex-start;
+      align-items:center;
       justify-content:center;
-      padding: min(12vh, 92px) 14px 14px;
+      z-index:10000;
+      padding: 14px;
     }
-    .hintModal.open{ display:flex; }
+    .modalOverlay.open{ display:flex; }
 
-    .hintBackdrop{
-      position:absolute;
-      inset:0;
-      background: rgba(0,0,0,.22);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
-
-    .hintPanel{
-      position:relative;
-      width:min(560px, 92vw);
-      border:4px solid var(--ink);
+    .modalCard{
+      width: min(520px, 94vw);
+      background:#fff;
       border-radius:18px;
-      background: var(--hintPanelBg);    /* WHITE */
-      box-shadow: 0 18px 34px rgba(0,0,0,.20);
+      border:2px solid rgba(0,0,0,.15);
+      box-shadow: 0 10px 26px rgba(0,0,0,.18);
       overflow:hidden;
       text-align:left;
-      color: var(--ink);
     }
-
-    .hintHead{
+    .modalHdr{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
-      padding:12px 14px;
-      border-bottom:2px solid rgba(0,0,0,.12);
-      background: #fff;
+      padding: 14px 14px 12px;
+      border-bottom:1px solid rgba(0,0,0,.08);
     }
-    .hintTitle{
-      font-weight:900;
-      font-style:italic;
-      font-size:18px;
-      letter-spacing:.01em;
-      color:var(--ink);
+    .modalTitle{
+      font-weight: 950;
+      font-size: 18px;
+      letter-spacing: .01em;
     }
-    .hintClose{
-      width:34px;
-      height:34px;
-      display:inline-flex;
+    .modalX{
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      border: 2px solid rgba(0,0,0,.14);
+      background: rgba(255,255,255,.55);
+      font-size: 22px;
+      line-height: 1;
+      cursor:pointer;
+      display:flex;
       align-items:center;
       justify-content:center;
-      border:2px solid rgba(0,0,0,.16);
-      border-radius:999px;
-      background: rgba(255,255,255,.95);
-      cursor:pointer;
-      -webkit-tap-highlight-color: transparent;
-      appearance:none;
-      -webkit-appearance:none;
-      font:inherit;
-      color:var(--ink);
-      line-height:1;
+      padding:0;
     }
-    .hintClose span{
-      font-size:22px;
-      font-weight:900;
-      transform: translateY(-1px);
-    }
-    .hintClose:active{ transform:translateY(1px); }
+    .modalX:active{ transform: translateY(1px); }
 
-    .hintList{
-      padding:12px 12px 14px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-
-    /* IMPORTANT: explicitly force black text (iOS button default is blue) */
-    .hintOpt, .hintOpt *{
-      color: var(--ink) !important;
-      text-decoration:none !important;
+    .modalBody{
+      padding: 12px 14px 14px;
     }
 
     .hintOpt{
       width:100%;
-      border:2px solid rgba(0,0,0,.18);
-      border-radius:16px;
-      padding:12px 12px;
-      background: rgba(255,255,255,.70);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
+      border:2px solid rgba(0,0,0,.16);
+      border-radius: 14px;
+      padding: 12px 12px;
       cursor:pointer;
-      text-align:left;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-      /* no shadows on hint options */
-      box-shadow:none !important;
+      background:#fff;
+      color: var(--ink);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 10px;
+      margin: 10px 0;
+      box-shadow:none; /* per request */
+      text-decoration:none;
       appearance:none;
       -webkit-appearance:none;
-      font:inherit;
+      font: inherit;
     }
-    .hintOpt:active{ transform:translateY(1px); }
+    .hintOpt:active{ transform: translateY(1px); }
+    .hintOpt.used,
+    .hintOpt.locked{
+      opacity:.46;
+      cursor: default;
+      transform:none !important;
+    }
+    .hintOpt.used:active,
+    .hintOpt.locked:active{ transform:none; }
 
-    .hintOpt .left{
+    .hintOptMain{
       display:flex;
       flex-direction:column;
       gap:4px;
       min-width:0;
     }
-    .hintOpt .title{
-      font-weight:900;
-      font-style:italic;
-      font-size:18px;
-      line-height:1.05;
-      color:var(--ink);
-    }
-    .hintOpt .byline{
-      font-size:13px;
-      font-weight:800;
-      opacity:.80;
+    .hintOptTitle{
+      font-weight: 950;
+      font-size: 16px;
       line-height:1.15;
-      font-style:normal;
-      color:var(--ink);
+      color: var(--ink);
+    }
+    .hintOptSub{
+      font-size: 13px;
+      opacity:.78;
+      line-height:1.25;
     }
 
-    .hintOpt .tag{
+    .badge{
       flex:0 0 auto;
-      border-radius:999px;
-      padding:6px 9px;
-      font-size:12px;
-      font-weight:950;
-      letter-spacing:.04em;
-      text-transform:uppercase;
-      border:2px solid rgba(0,0,0,.14);
-      background: rgba(255,255,255,.65);
-      opacity:.94;
-      white-space:nowrap;
-      color:var(--ink);
-    }
-    .tag.used{ background: rgba(200,247,210,.78); }
-    .tag.lock{ background: rgba(0,0,0,.06); opacity:.70; }
-    .tag.avail{ background: rgba(255,255,255,.70); }
-
-    /* USED: clearly greyed-out + non-selectable */
-    .hintOpt.is-used{
-      opacity:.55;
-      filter: grayscale(1) saturate(.1);
-      background: rgba(0,0,0,.04) !important;
-      border-color: rgba(0,0,0,.12);
-      cursor:default;
-    }
-    .hintOpt.is-locked{
-      opacity:.50;
-      cursor:default;
-      border-style:dashed;
-      filter: grayscale(.25) saturate(.65);
-      background: rgba(0,0,0,.02) !important;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 950;
+      letter-spacing: .06em;
+      border: 2px solid rgba(0,0,0,.14);
+      background: rgba(255,255,255,.62);
     }
 
-    /* per-option backgrounds (keep colors per option) */
-    .hintOpt.opt-assist{ background: rgba(244,210,253,.90); }
-    .hintOpt.opt-w1{ background: rgba(255,243,179,.98); }
-    .hintOpt.opt-w2{ background: rgba(207,232,255,.98); }
-    .hintOpt.opt-extra{ background: rgba(255,255,255,.95); }
+    .opt-quick{ background: #fff3bd; }
+    .opt-w1{ background: var(--w1); }
+    .opt-w2{ background: var(--w2); }
+    .opt-extras{ background: rgba(255,255,255,.95); }
+
+    .qcHelp p{
+      margin: 10px 0;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+    .qcHelp ul{
+      margin: 8px 0 0 18px;
+      padding: 0;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+    .qcHelp li{ margin: 8px 0; }
+    .qcHelp .note{
+      margin-top: 12px;
+      font-size: 13px;
+      opacity:.75;
+    }
   </style>
 </head>
 
@@ -823,38 +757,37 @@
     </div>
   </div>
 
-  <div class="kbHost" id="kbHost" aria-label="On-screen keyboard"></div>
-
-  <!-- Assist-only toast -->
-  <div class="assistToast" id="assistToast" aria-live="polite"></div>
-
-  <!-- Hint panel modal -->
-  <div class="hintModal" id="hintModal" aria-hidden="true">
-    <div class="hintBackdrop" id="hintBackdrop"></div>
-    <div class="hintPanel" role="dialog" aria-modal="true" aria-labelledby="hintTitle">
-      <div class="hintHead">
-        <div class="hintTitle" id="hintTitle">Choose a hint</div>
-        <button class="hintClose" id="hintClose" type="button" aria-label="Close hints"><span>×</span></button>
+  <!-- Hint modal -->
+  <div class="modalOverlay" id="hintModal" aria-hidden="true">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="hintModalTitle">
+      <div class="modalHdr">
+        <div class="modalTitle" id="hintModalTitle">Choose a hint</div>
+        <button class="modalX" id="hintModalClose" type="button" aria-label="Close">×</button>
       </div>
-      <div class="hintList" id="hintList"></div>
+      <div class="modalBody" id="hintModalBody"></div>
     </div>
   </div>
+
+  <div class="kbHost" id="kbHost" aria-label="On-screen keyboard"></div>
 
 <script>
 /* =======================
    Puzzles
    ======================= */
 const PUZZLES = [
-  { clue:"Beachy sights",     word1:"beachy",  word2:"sights",  answer:"yachts",   tri1:"ach", tri2:"hts" },
-  { clue:"Believe oracle?",   word1:"believe", word2:"oracle",  answer:"clever",   tri1:"eve", tri2:"cle" },
+  // 6-letter tests
+  { clue:"Beachy sights",     word1:"beachy",  word2:"sights",  answer:"yachts",  tri1:"ach", tri2:"hts" },
+  { clue:"Believe oracle?",   word1:"believe", word2:"oracle",  answer:"clever",  tri1:"eve", tri2:"cle" },
 
-  { clue:"Raccoon scuffle!",  word1:"raccoon", word2:"scuffle", answer:"buffoon",  tri1:"oon", tri2:"uff" },
-  { clue:"Tidal tiptoes",     word1:"tidal",   word2:"tiptoes", answer:"riptide",  tri1:"tid", tri2:"ipt" },
-  { clue:"Trusty boombox",    word1:"trusty",  word2:"boombox", answer:"combust",  tri1:"ust", tri2:"omb" },
-  { clue:"Wholly muscle?",    word1:"wholly",  word2:"muscle",  answer:"mollusc",  tri1:"oll", tri2:"usc" },
-  { clue:"Juicy muscles",     word1:"juicy",   word2:"muscles", answer:"bicycle",  tri1:"icy", tri2:"cle" },
+  // 7-letter
+  { clue:"Raccoon scuffle!",  word1:"raccoon", word2:"scuffle", answer:"buffoon", tri1:"oon", tri2:"uff" },
+  { clue:"Tidal tiptoes",     word1:"tidal",   word2:"tiptoes", answer:"riptide", tri1:"tid", tri2:"ipt" },
+  { clue:"Trusty boombox",    word1:"trusty",  word2:"boombox", answer:"combust", tri1:"ust", tri2:"omb" },
+  { clue:"Wholly muscle?",    word1:"wholly",  word2:"muscle",  answer:"mollusc", tri1:"oll", tri2:"usc" },
+  { clue:"Juicy muscles",     word1:"juicy",   word2:"muscles", answer:"bicycle", tri1:"icy", tri2:"cle" },
 
-  { clue:"Perform, monkey!",  word1:"perform", word2:"monkey",  answer:"hormones", tri1:"orm", tri2:"mon" },
+  // 8-letter test
+  { clue:"Perform, monkey!",  word1:"perform", word2:"monkey",  answer:"hormones", tri1:"orm", tri2:"one" },
 ];
 
 const TR = 3;
@@ -880,56 +813,24 @@ const el = {
 
   kbHost: document.getElementById('kbHost'),
 
-  assistToast: document.getElementById('assistToast'),
-
   hintModal: document.getElementById('hintModal'),
-  hintBackdrop: document.getElementById('hintBackdrop'),
-  hintPanel: document.querySelector('.hintPanel'),
-  hintList: document.getElementById('hintList'),
-  hintClose: document.getElementById('hintClose'),
+  hintModalTitle: document.getElementById('hintModalTitle'),
+  hintModalBody: document.getElementById('hintModalBody'),
+  hintModalClose: document.getElementById('hintModalClose'),
 };
 
 const TWOTRI_TEXT  = "Two trigrams from same word";
 const OVERLAP_TEXT = "1-letter overlap allowed ✓";
 
 /* =======================
-   Modes
-   hard = no assist
-   easy = assist enabled (counts as a hint)
-
-   IMPORTANT CHANGE:
-   - In HARD (assist not taken): NO colored backgrounds in main grid.
+   Hint system (Choose a hint)
    ======================= */
-const MODES = {
-  easy: {
-    allowClueTapPlace: true,
-    allowClueTapCycle: true,
-    allowHintTapPlace: true,
-    allowHint3TapInsert: true,
-    allowDragTrigrams: true,
-    allowAutoPromote: true,
-    showGridColors: true,
-    showStatusMessages: true,
-    showBadCellColor: true,
-    checkFeedback: "detailed",
-  },
-  hard: {
-    allowClueTapPlace: false,
-    allowClueTapCycle: false,
-    allowHintTapPlace: false,
-    allowHint3TapInsert: true,  // extra letters are a hint, not "assist"
-    allowDragTrigrams: false,
-    allowAutoPromote: false,
-    showGridColors: false,      // <- no yellow/blue/green backgrounds
-    showStatusMessages: true,
-    showBadCellColor: false,    // <- no pink backgrounds either
-    checkFeedback: "detailed",
-  },
+const HINT_IDS = {
+  quick: 'quick',
+  w1: 'w1',
+  w2: 'w2',
+  extras: 'extras'
 };
-
-function modeFlags(){
-  return MODES[state.mode] || MODES.hard;
-}
 
 /* =======================
    State
@@ -937,22 +838,33 @@ function modeFlags(){
 const state = {
   i: 0,
   finished: false,
-  revealedAnswer: false,
+  showedAnswer: false,
 
-  // HINTS:
+  // counts ONLY chosen hints (Quick / W1 / W2 / Extras). Show answer is not a hint.
   hintCount: 0,
-  hintsUsed: { assist:false, w1:false, w2:false, extra:false },
 
+  hintsUsed: {
+    quick: false,
+    w1: false,
+    w2: false,
+    extras: false,
+  },
+
+  // “assist features” are unlocked by Quick controls
+  assist: false,
+
+  // selection pos for cycling (assist only)
   sel1: null,
   sel2: null,
 
-  placed: { w1: null, w2: null },
-  singles: [],
+  placed: { w1: null, w2: null }, // assist only (trigram “blocks”)
+  singles: [],                    // typed letters
 
   bank: [],
   focusIdx: 0,
 
   drag: null,
+  lastDragEndedAt: 0,
 
   msgTimer: null,
   msgTransient: false,
@@ -972,13 +884,43 @@ const state = {
 
   useCustomKB: false,
 
-  mode: "hard",
-
-  hintPanelOpen: false,
-  savedFocusForPanel: 0,
-
-  toastTimer: null,
+  // modal view state: 'list' | 'quickHelp'
+  modalOpen: false,
+  modalView: 'list',
 };
+
+/* =======================
+   Assist flags (locked until Quick controls chosen)
+   ======================= */
+function flags(){
+  if(state.assist){
+    return {
+      allowClueTapPlace: true,
+      allowClueTapCycle: true,
+      allowHintTapPlace: true,
+      allowHint3TapInsert: true,
+      allowDragTrigrams: true,
+      allowAutoPromote: true,
+      showGridColors: true,
+      showStatusMessages: true,   // overlap + red status banners
+      showBadCellColor: true,     // red bg cells
+      checkFeedback: "detailed",
+    };
+  }
+  // No assist:
+  return {
+    allowClueTapPlace: false,
+    allowClueTapCycle: false,
+    allowHintTapPlace: false,
+    allowHint3TapInsert: false,
+    allowDragTrigrams: false,
+    allowAutoPromote: false,
+    showGridColors: false,
+    showStatusMessages: false,
+    showBadCellColor: false,
+    checkFeedback: "minimal",
+  };
+}
 
 /* =======================
    Helpers
@@ -1014,245 +956,6 @@ document.addEventListener('contextmenu', (e)=>{
 });
 
 /* =======================
-   Assist toast (ONLY when assist is chosen as a hint)
-   ======================= */
-function showAssistToast(text, ms=2200){
-  if(state.toastTimer){ clearTimeout(state.toastTimer); state.toastTimer=null; }
-  el.assistToast.textContent = text || "";
-  el.assistToast.classList.remove('show');
-  if(!text) return;
-  void el.assistToast.offsetWidth;
-  el.assistToast.classList.add('show');
-  state.toastTimer = setTimeout(()=>{
-    el.assistToast.classList.remove('show');
-    state.toastTimer = null;
-  }, ms);
-}
-
-/* =======================
-   Messages
-   ======================= */
-function clearMsgTimer(){
-  if(state.msgTimer){ clearTimeout(state.msgTimer); state.msgTimer=null; }
-  state.msgTransient = false;
-}
-function setMsg(text, kind){
-  clearMsgTimer();
-  el.msg.classList.remove('show','warn','result');
-  el.msg.textContent = text || "";
-  if(!text) return;
-  void el.msg.offsetWidth;
-  el.msg.classList.add('show');
-  if(kind === 'warn') el.msg.classList.add('warn');
-  if(kind === 'result') el.msg.classList.add('result');
-}
-function setTransientMsg(text, ms=2200){
-  setMsg(text);
-  state.msgTransient = true;
-  state.msgTimer = setTimeout(()=>{
-    el.msg.classList.remove('show','warn','result');
-    el.msg.textContent = "";
-    state.msgTimer = null;
-    state.msgTransient = false;
-  }, ms);
-}
-function clearTransientOnAnyChange(){
-  if(state.lockMsg){
-    state.lockMsg = false;
-    setMsg("");
-  }
-  if(state.msgTransient){
-    el.msg.classList.remove('show','warn','result');
-    el.msg.textContent = "";
-    clearMsgTimer();
-  }
-}
-function excludedMsgText(){
-  const n = (state.exclTris?.w1?.size || 0) + (state.exclTris?.w2?.size || 0);
-  return (n >= 2) ? "Your hints excluded these trigrams" : "Your hint excluded this trigram";
-}
-
-/* =======================
-   Hint handling (Choose a hint)
-   ======================= */
-function canUseExtraHint(){
-  return state.hintsUsed.w1 && state.hintsUsed.w2 && !state.hintsUsed.extra;
-}
-function canUseGiveUp(){
-  return state.hintsUsed.extra && !state.finished;
-}
-
-function applyHint(kind){
-  if(state.finished) return;
-  if(state.hintsUsed[kind]) return;
-
-  if(kind === 'extra' && !(state.hintsUsed.w1 && state.hintsUsed.w2)) return;
-
-  clearTransientOnAnyChange();
-
-  state.hintsUsed[kind] = true;
-  state.hintCount++;
-
-  if(kind === 'assist'){
-    state.mode = "easy";
-    el.wrap.classList.remove('is-hard');
-    showAssistToast("Assist mode on — move & cycle trigrams without typing", 2200);
-  }
-
-  if(kind === 'extra'){
-    if(state.bank.length === 0) rebuildBank();
-  }
-
-  renderSmart();
-}
-
-/* =======================
-   Hint panel modal
-   ======================= */
-function openHintPanel(){
-  if(state.finished) return;
-  state.hintPanelOpen = true;
-  state.savedFocusForPanel = clamp(state.focusIdx ?? 0, 0, getN()-1);
-  el.hintModal.classList.add('open');
-  el.hintModal.setAttribute('aria-hidden','false');
-  renderHintPanel();
-}
-function closeHintPanel(){
-  state.hintPanelOpen = false;
-  el.hintModal.classList.remove('open');
-  el.hintModal.setAttribute('aria-hidden','true');
-
-  if(!state.finished && !state.useCustomKB){
-    const idx = clamp(state.savedFocusForPanel ?? state.focusIdx ?? 0, 0, getN()-1);
-    requestAnimationFrame(()=> focusCell(idx));
-  }
-}
-
-function makeHintOption({title, byline, optClass, status, onClick}){
-  const btn = document.createElement('button');
-  btn.type = "button";
-  btn.className = `hintOpt ${optClass||""}`.trim();
-
-  const tag = document.createElement('div');
-  tag.className = "tag";
-
-  if(status === "used"){
-    btn.classList.add('is-used');
-    btn.disabled = true;
-    btn.setAttribute('aria-disabled','true');
-    tag.classList.add('used');
-    tag.textContent = "✓ USED";
-  }else if(status === "locked"){
-    btn.classList.add('is-locked');
-    btn.disabled = true;
-    btn.setAttribute('aria-disabled','true');
-    tag.classList.add('lock');
-    tag.textContent = "LOCKED";
-  }else{
-    tag.classList.add('avail');
-    tag.textContent = "AVAILABLE";
-  }
-
-  const left = document.createElement('div');
-  left.className = "left";
-
-  const t = document.createElement('div');
-  t.className = "title";
-  t.textContent = title;
-  left.appendChild(t);
-
-  if(byline){
-    const b = document.createElement('div');
-    b.className = "byline";
-    b.textContent = byline;
-    left.appendChild(b);
-  }
-
-  btn.appendChild(left);
-  btn.appendChild(tag);
-
-  if(status === "avail"){
-    btn.addEventListener('pointerdown', (e)=>{
-      e.preventDefault();
-      e.stopPropagation();
-    }, {passive:false});
-
-    btn.addEventListener('click', (e)=>{
-      e.preventDefault();
-      e.stopPropagation();
-      onClick && onClick();
-    });
-  }
-
-  return btn;
-}
-
-function renderHintPanel(){
-  el.hintList.innerHTML = "";
-
-  const assistStatus = state.hintsUsed.assist ? "used" : "avail";
-  const w1Status     = state.hintsUsed.w1 ? "used" : "avail";
-  const w2Status     = state.hintsUsed.w2 ? "used" : "avail";
-  const extraStatus  = state.hintsUsed.extra ? "used" : ((state.hintsUsed.w1 && state.hintsUsed.w2) ? "avail" : "locked");
-
-  el.hintList.appendChild(makeHintOption({
-    title: "Enable assist mode",
-    byline: "Move and cycle trigrams without typing",
-    optClass: "opt-assist",
-    status: assistStatus,
-    onClick: ()=>{
-      closeHintPanel();
-      applyHint('assist');
-    }
-  }));
-
-  el.hintList.appendChild(makeHintOption({
-    title: "Show word 1 trigram",
-    byline: null,
-    optClass: "opt-w1",
-    status: w1Status,
-    onClick: ()=>{
-      closeHintPanel();
-      applyHint('w1');
-    }
-  }));
-
-  el.hintList.appendChild(makeHintOption({
-    title: "Show word 2 trigram",
-    byline: null,
-    optClass: "opt-w2",
-    status: w2Status,
-    onClick: ()=>{
-      closeHintPanel();
-      applyHint('w2');
-    }
-  }));
-
-  el.hintList.appendChild(makeHintOption({
-    title: "Show extra letters",
-    byline: null,
-    optClass: "opt-extra",
-    status: extraStatus,
-    onClick: ()=>{
-      closeHintPanel();
-      applyHint('extra');
-    }
-  }));
-}
-
-el.hintBackdrop.addEventListener('pointerdown', (e)=>{
-  e.preventDefault(); e.stopPropagation();
-  closeHintPanel();
-}, {passive:false});
-
-el.hintClose.addEventListener('pointerdown', (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
-el.hintClose.addEventListener('click', (e)=>{
-  e.preventDefault(); e.stopPropagation();
-  closeHintPanel();
-});
-el.hintPanel.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); });
-
-/* =======================
    Keyboard detection / build
    ======================= */
 function shouldUseCustomKB(){
@@ -1276,7 +979,7 @@ function updateKeyboardHeightVar(){
 
 function pressKeyAction(kind, val){
   if(state.finished) return;
-  if(state.hintPanelOpen) return;
+  if(state.modalOpen) return;
   if(kind === 'letter'){
     typeLetterIntoGrid(val);
   }else if(kind === 'delete'){
@@ -1339,9 +1042,9 @@ function buildKeyboard(){
 
   el.kbHost.appendChild(kb);
 
+  // generous near-miss taps
   el.kbHost.onpointerdown = (e)=>{
-    if(!state.useCustomKB || state.finished) return;
-    if(state.hintPanelOpen) return;
+    if(!state.useCustomKB || state.finished || state.modalOpen) return;
     if(e.target && e.target.closest && e.target.closest('.kbKey')) return;
 
     const keys = Array.from(el.kbHost.querySelectorAll('.kbKey'));
@@ -1375,10 +1078,53 @@ function updateKeyboardState(){
   if(!state.useCustomKB) return;
   const enter = el.kbHost.querySelector('.kbKey.enter');
   if(enter){
-    const ok = canEnableCheckNow() && !state.finished;
+    const ok = canEnableCheckNow() && !state.finished && !state.modalOpen;
     enter.classList.toggle('is-disabled', !ok);
     enter.setAttribute('aria-disabled', ok ? 'false' : 'true');
   }
+}
+
+/* =======================
+   Messages
+   ======================= */
+function clearMsgTimer(){
+  if(state.msgTimer){ clearTimeout(state.msgTimer); state.msgTimer=null; }
+  state.msgTransient = false;
+}
+function setMsg(text, kind){
+  clearMsgTimer();
+  el.msg.classList.remove('show','warn','result');
+  el.msg.textContent = text || "";
+  if(!text) return;
+  void el.msg.offsetWidth;
+  el.msg.classList.add('show');
+  if(kind === 'warn') el.msg.classList.add('warn');
+  if(kind === 'result') el.msg.classList.add('result');
+}
+function setTransientMsg(text, ms=2200){
+  setMsg(text);
+  state.msgTransient = true;
+  state.msgTimer = setTimeout(()=>{
+    el.msg.classList.remove('show','warn','result');
+    el.msg.textContent = "";
+    state.msgTimer = null;
+    state.msgTransient = false;
+  }, ms);
+}
+function clearTransientOnAnyChange(){
+  if(state.lockMsg){
+    state.lockMsg = false;
+    setMsg("");
+  }
+  if(state.msgTransient){
+    el.msg.classList.remove('show','warn','result');
+    el.msg.textContent = "";
+    clearMsgTimer();
+  }
+}
+function excludedMsgText(){
+  const n = (state.exclTris?.w1?.size || 0) + (state.exclTris?.w2?.size || 0);
+  return (n >= 2) ? "Your hints excluded these trigrams" : "Your hint excluded this trigram";
 }
 
 /* =======================
@@ -1543,7 +1289,8 @@ function typeLetterAtIndex(idx, ch){
 }
 function typeLetterIntoGrid(letter){
   if(state.finished) return false;
-  if(state.hintPanelOpen) return false;
+  if(state.modalOpen) return false;
+
   const ch = String(letter || "").slice(0,1);
   if(!isAlpha(ch)) return false;
 
@@ -1567,7 +1314,7 @@ function typeLetterIntoGrid(letter){
    ======================= */
 function kbBackspace(){
   if(state.finished) return;
-  if(state.hintPanelOpen) return;
+  if(state.modalOpen) return;
   clearTransientOnAnyChange();
 
   const n = getN();
@@ -1711,8 +1458,8 @@ function promoteTypedCandidate(group, cand){
   return true;
 }
 function autoPromoteTypedTrigrams(){
-  if(state.finished || state.revealedAnswer) return false;
-  if(!modeFlags().allowAutoPromote) return false;
+  if(state.finished || state.showedAnswer) return false;
+  if(!flags().allowAutoPromote) return false;
 
   let changed = false;
 
@@ -1773,6 +1520,7 @@ function computeOverlapIdxSet(){
    Dynamic puzzle derivation (tri positions)
    ======================= */
 function ensurePuzzleDerived(p){
+  // If tri1/tri2 given but positions not, derive from answer (best-effort).
   const ans = norm(p.answer);
   p.tri1 = norm(p.tri1 || "");
   p.tri2 = norm(p.tri2 || "");
@@ -1793,7 +1541,7 @@ function ensurePuzzleDerived(p){
 }
 
 /* =======================
-   Invalid / excluded detection
+   Invalid / excluded detection (for red underlines + assist warnings)
    ======================= */
 function compressMaximalStrings(arr){
   const uniq = Array.from(new Set(arr.filter(Boolean)));
@@ -1904,7 +1652,7 @@ function computeHintExcludedTrigrams(){
 }
 
 /* =======================
-   Hint 3 letters
+   Hint extras letters
    ======================= */
 function computeHint3Letters(){
   const n = getN();
@@ -1930,11 +1678,8 @@ function rebuildBank(){
    Placing / cycling (assist only)
    ======================= */
 function placeTrigram(group, tri){
-  const flags = modeFlags();
+  if(!flags().allowClueTapPlace && !flags().allowHintTapPlace) return;
   if(state.finished) return;
-  if(!flags.allowClueTapPlace && !flags.allowHintTapPlace) return;
-  if(state.hintPanelOpen) return;
-
   clearTransientOnAnyChange();
 
   const n = getN();
@@ -1998,10 +1743,8 @@ function placeTrigram(group, tri){
 }
 
 function cyclePlacedTrigram(group){
-  const flags = modeFlags();
+  if(!flags().allowClueTapCycle) return;
   if(state.finished) return;
-  if(!flags.allowClueTapCycle) return;
-  if(state.hintPanelOpen) return;
 
   const pl = state.placed[group];
   if(!pl) return;
@@ -2038,12 +1781,17 @@ function firstTrigramOfWord(group){
 }
 
 /* =======================
-   Status message logic
+   Status message logic (ONLY after Quick controls)
    ======================= */
 function updateStatusMessages(){
-  const flags = modeFlags();
   if(state.finished) return;
   if(state.lockMsg) return;
+
+  if(!flags().showStatusMessages){
+    if(!el.msg.classList.contains('result')) setMsg("");
+    state.overlapMsgOn = false;
+    return;
+  }
 
   const hasMax3 = state.badSet && state.badSet.size > 0;
   const hasTwo  = state.twoSet && state.twoSet.size > 0;
@@ -2093,7 +1841,7 @@ function hintPhraseText(h){
 
 function onCheck(){
   if(state.finished) return;
-  if(state.hintPanelOpen) return;
+  if(state.modalOpen) return;
   clearTransientOnAnyChange();
 
   const n = getN();
@@ -2113,28 +1861,22 @@ function onCheck(){
   if(attempt === ans){
     setMsg(`Correct — ${hintPhraseText(state.hintCount)}!`, 'result');
     state.finished = true;
-    state.revealedAnswer = false;
+    state.showedAnswer = false;
     renderSmart();
     return;
   }
 
   shakeGrid();
 
-  if(state.badSet.size){
-    setMsg("Max 3 contiguous letters allowed", "warn");
+  if(flags().checkFeedback === "minimal"){
+    setTransientMsg("Not quite", 1400);
     renderSmart();
     return;
   }
-  if(state.twoSet.size){
-    setMsg(TWOTRI_TEXT, "warn");
-    renderSmart();
-    return;
-  }
-  if(state.exclSet.size){
-    setMsg(excludedMsgText(), "warn");
-    renderSmart();
-    return;
-  }
+
+  if(state.badSet.size){ setMsg("Max 3 contiguous letters allowed", "warn"); renderSmart(); return; }
+  if(state.twoSet.size){ setMsg(TWOTRI_TEXT, "warn"); renderSmart(); return; }
+  if(state.exclSet.size){ setMsg(excludedMsgText(), "warn"); renderSmart(); return; }
 
   const w1Hits = countTrigramsInWord(attempt, p.word1);
   const w2Hits = countTrigramsInWord(attempt, p.word2);
@@ -2161,10 +1903,10 @@ function onCheck(){
 }
 
 /* =======================
-   Hint track UI
+   Hint track UI (shows ONLY chosen hint content)
    ======================= */
 function makeTrigramBlock(tri, cls, labelText, onClickMaybe){
-  const flags = modeFlags();
+  const canClick = !!flags().allowHintTapPlace && typeof onClickMaybe === "function";
 
   const block = document.createElement('div');
   block.className = "trackBlock";
@@ -2175,14 +1917,12 @@ function makeTrigramBlock(tri, cls, labelText, onClickMaybe){
   block.appendChild(lblTop);
 
   const box = document.createElement('div');
-  const canClick = !!flags.allowHintTapPlace && typeof onClickMaybe === "function";
   box.className = "letters " + (canClick ? "clickable" : "is-disabled");
+  box.setAttribute("aria-label", labelText);
+
   if(canClick){
     box.setAttribute("role","button");
-    box.setAttribute("aria-label", labelText);
     box.addEventListener('click', onClickMaybe);
-  }else{
-    box.setAttribute("aria-label", labelText);
   }
 
   for(let i=0;i<tri.length;i++){
@@ -2198,7 +1938,6 @@ function makeTrigramBlock(tri, cls, labelText, onClickMaybe){
 
 function renderHintTrack(){
   const p = current();
-  const flags = modeFlags();
 
   el.trackW1.innerHTML = "";
   el.trackW2.innerHTML = "";
@@ -2228,23 +1967,18 @@ function renderHintTrack(){
     el.trackW2.style.display = "";
   }
 
-  if(state.hintsUsed.extra){
+  if(state.hintsUsed.extras){
     if(state.bank.length === 0) rebuildBank();
 
     const block = document.createElement('div');
     block.className = "trackBlock";
-
-    const lbl = document.createElement('div');
-    lbl.className = "tinyLbl";
-    lbl.textContent = "extra letters";
-    block.appendChild(lbl);
 
     const row = document.createElement('div');
     row.className = "extrasRow";
 
     for(const tile of state.bank){
       const box = document.createElement('div');
-      const canInsert = !!flags.allowHint3TapInsert;
+      const canInsert = !!flags().allowHint3TapInsert;
       box.className = "letters " + (canInsert ? "" : "is-disabled");
 
       const d = document.createElement('div');
@@ -2254,7 +1988,7 @@ function renderHintTrack(){
       if(canInsert){
         d.addEventListener('click', ()=>{
           if(state.finished) return;
-          if(state.hintPanelOpen) return;
+          if(state.modalOpen) return;
           clearTransientOnAnyChange();
 
           const n = getN();
@@ -2508,10 +2242,9 @@ function onDragEnd(e){
 
 /* =======================
    Underline logic
-   IMPORTANT CHANGE:
-   - Do NOT underline just because a hint was taken.
-   - Underline only when a (unique) trigram from that word is present in the MAIN GRID
-     OR when that trigram is explicitly placed (assist mode).
+   - red underlines: always based on rule violations / exclusions
+   - yellow/blue underlines: ONLY when the trigram exists in the MAIN GRID
+     (never because a hint was shown in mini-grid)
    ======================= */
 function errorItemsForGroup(group){
   if(state.badRuns[group] && state.badRuns[group].length){
@@ -2525,6 +2258,7 @@ function errorItemsForGroup(group){
   }
   return [];
 }
+
 function inferredSingleTrigram(group){
   const n = getN();
   const p = current();
@@ -2539,6 +2273,7 @@ function inferredSingleTrigram(group){
     if(w.includes(tri)) found.push(tri);
   }
 
+  // unique-in-order
   const uniq = [];
   const seen = new Set();
   for(const t of found){
@@ -2547,24 +2282,28 @@ function inferredSingleTrigram(group){
     uniq.push(t);
   }
 
+  // only underline if it’s unambiguous
   return (uniq.length === 1) ? uniq[0] : null;
 }
+
 function triForClue(group){
+  // If a block is placed, underline that, otherwise infer a unique trigram from grid
   const pl = state.placed[group];
-  if(pl) return pl.tri;                // definitely in the main grid
-  return inferredSingleTrigram(group); // only underline if present in main grid (uniquely)
+  if(pl && pl.tri) return pl.tri;
+  return inferredSingleTrigram(group);
 }
 
 /* =======================
    Render grid
    ======================= */
 function renderGrid(stealFocus=true){
-  const flags = modeFlags();
   const n = getN();
+  const f = flags();
 
   el.grid.style.setProperty('--n', String(n));
 
-  if(flags.allowAutoPromote){
+  // auto-promote in assist only
+  if(f.allowAutoPromote){
     for(let k=0;k<2;k++){
       if(!autoPromoteTypedTrigrams()) break;
     }
@@ -2574,7 +2313,7 @@ function renderGrid(stealFocus=true){
   computeTwoTrigramsInvalid();
   computeHintExcludedTrigrams();
 
-  const overlapSet = flags.showGridColors ? computeOverlapIdxSet() : new Set();
+  const overlapSet = f.showGridColors ? computeOverlapIdxSet() : new Set();
 
   el.grid.innerHTML = "";
 
@@ -2589,15 +2328,16 @@ function renderGrid(stealFocus=true){
 
     const tri = trigramAtIndex(i);
 
-    if(flags.showGridColors && tri){
+    // Colouring only after Quick controls
+    if(f.showGridColors && tri){
       if(overlapSet.has(i)) cell.classList.add('bg-ol');
       else cell.classList.add(tri.group==='w1' ? 'bg-w1' : 'bg-w2');
     }
-    if(flags.showBadCellColor && (state.badSet.has(i) || state.twoSet.has(i) || state.exclSet.has(i))){
+    if(f.showBadCellColor && (state.badSet.has(i) || state.twoSet.has(i) || state.exclSet.has(i))){
       cell.classList.add('bg-bad');
     }
 
-    if(flags.allowDragTrigrams && tri){
+    if(f.allowDragTrigrams && tri){
       cell.classList.add('grabbable');
     }
 
@@ -2614,7 +2354,7 @@ function renderGrid(stealFocus=true){
     input.name = "x-"+i;
     input.enterKeyHint = "done";
 
-    const ro = (!!tri && flags.allowAutoPromote) || state.finished || state.useCustomKB;
+    const ro = (!!tri && f.allowAutoPromote) || state.finished || state.useCustomKB;
     input.readOnly = ro;
     input.tabIndex = state.useCustomKB ? -1 : 0;
 
@@ -2622,7 +2362,7 @@ function renderGrid(stealFocus=true){
 
     input.addEventListener('keydown', (e)=>{
       if(state.finished) return;
-      if(state.hintPanelOpen){ e.preventDefault(); return; }
+      if(state.modalOpen){ e.preventDefault(); return; }
 
       if(e.key === " " || e.code === "Space" || e.key === "Spacebar"){
         e.preventDefault(); e.stopPropagation();
@@ -2676,7 +2416,7 @@ function renderGrid(stealFocus=true){
 
     if(!input.readOnly){
       input.addEventListener('input', ()=>{
-        if(state.hintPanelOpen) return;
+        if(state.modalOpen) return;
         clearTransientOnAnyChange();
         const v = input.value || "";
         const ch = v.slice(-1);
@@ -2689,7 +2429,7 @@ function renderGrid(stealFocus=true){
 
     cell.addEventListener('pointerdown', (e)=>{
       if(state.finished) return;
-      if(state.hintPanelOpen) return;
+      if(state.modalOpen) return;
 
       state.focusIdx = i;
 
@@ -2697,7 +2437,8 @@ function renderGrid(stealFocus=true){
         requestAnimationFrame(()=> focusCell(i));
       }
 
-      if(flags.allowDragTrigrams){
+      // Drag trigrams only after Quick controls
+      if(f.allowDragTrigrams){
         const t = trigramAtIndex(i);
         if(t){
           clearTransientOnAnyChange();
@@ -2712,7 +2453,7 @@ function renderGrid(stealFocus=true){
     el.grid.appendChild(cell);
   }
 
-  if(stealFocus && !state.finished && !state.useCustomKB){
+  if(stealFocus && !state.finished && !state.useCustomKB && !state.modalOpen){
     requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
   }
 }
@@ -2725,11 +2466,17 @@ function render(stealFocus=true){
   el.count.textContent = `${state.i+1}/${PUZZLES.length}`;
   el.wrap.classList.toggle('solved', state.finished);
 
-  if(canUseGiveUp()){
-    el.hintBtn.textContent = "give up";
-  }else{
-    el.hintBtn.textContent = `hint ${state.hintCount + 1}`;
-  }
+  // no-assist cue for clue cursor
+  el.wrap.classList.toggle('no-assist', !state.assist);
+
+  // hint button copy: still shows hint number; after all hints -> show answer
+  const anyLeft =
+    (!state.hintsUsed.quick) ||
+    (!state.hintsUsed.w1) ||
+    (!state.hintsUsed.w2) ||
+    (!state.hintsUsed.extras);
+
+  el.hintBtn.textContent = anyLeft ? `hint ${state.hintCount + 1}` : "show answer";
 
   renderGrid(stealFocus);
 
@@ -2771,27 +2518,232 @@ function render(stealFocus=true){
 }
 
 /* =======================
-   Hint button behavior
+   Hint modal (Choose a hint)
    ======================= */
-function showAnswerNow(){
+function openHintModal(view='list'){
   if(state.finished) return;
-  if(!state.hintsUsed.extra) return;
+  state.modalOpen = true;
+  state.modalView = view;
 
-  clearTransientOnAnyChange();
+  el.hintModal.classList.add('open');
+  el.hintModal.setAttribute('aria-hidden', 'false');
 
-  const n = getN();
-  const ans = norm(current().answer);
-  state.placed = {w1:null, w2:null};
-  state.singles = [];
-  for(let i=0;i<n;i++) state.singles.push({id:uid(), ch: ans[i], idx:i});
+  renderHintModal();
 
-  state.finished = true;
-  state.revealedAnswer = true;
-
-  setMsg(`Answer: ${ans}`, "result");
-  renderSmart();
+  // move focus safely away from grid (prevents accidental typing into grid while modal open)
+  requestAnimationFrame(()=>{
+    try{ el.hintModalClose.focus({preventScroll:true}); }catch{}
+  });
 }
 
+function closeHintModal(){
+  if(!state.modalOpen) return;
+  state.modalOpen = false;
+  state.modalView = 'list';
+  el.hintModal.classList.remove('open');
+  el.hintModal.setAttribute('aria-hidden', 'true');
+
+  // restore focus to grid
+  requestAnimationFrame(()=>{
+    if(!state.useCustomKB && !state.finished) focusCell(state.focusIdx ?? 0);
+  });
+}
+
+function extrasUnlocked(){
+  return state.hintsUsed.w1 && state.hintsUsed.w2;
+}
+
+function makeOpt({id, title, sub, cls, status, disabled, onPick}){
+  const b = document.createElement('button');
+  b.type = "button";
+  b.className = `hintOpt ${cls||""} ${status||""}`.trim();
+  b.disabled = !!disabled;
+
+  const main = document.createElement('div');
+  main.className = "hintOptMain";
+
+  const t = document.createElement('div');
+  t.className = "hintOptTitle";
+  t.textContent = title;
+  main.appendChild(t);
+
+  if(sub){
+    const s = document.createElement('div');
+    s.className = "hintOptSub";
+    s.textContent = sub;
+    main.appendChild(s);
+  }
+
+  b.appendChild(main);
+
+  if(status === "used"){
+    const badge = document.createElement('div');
+    badge.className = "badge";
+    badge.textContent = "USED";
+    b.appendChild(badge);
+  }else if(status === "locked"){
+    const badge = document.createElement('div');
+    badge.className = "badge";
+    badge.textContent = "LOCKED";
+    b.appendChild(badge);
+  }
+
+  if(!disabled){
+    b.addEventListener('pointerdown', (e)=>{ e.preventDefault(); e.stopPropagation(); });
+    b.addEventListener('click', (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      onPick && onPick();
+    });
+  }
+
+  return b;
+}
+
+function renderHintModal(){
+  el.hintModalBody.innerHTML = "";
+
+  if(state.modalView === 'quickHelp'){
+    el.hintModalTitle.textContent = "Quick controls";
+
+    const wrap = document.createElement('div');
+    wrap.className = "qcHelp";
+    wrap.innerHTML = `
+      <p><b>Quick controls</b> lets you move fast without typing everything.</p>
+      <ul>
+        <li><b>Tap a clue word</b> to place a trigram near the cursor.</li>
+        <li><b>Tap that clue word again</b> to cycle to the next trigram in that word.</li>
+        <li><b>Drag a trigram block</b> in the grid to reposition it.</li>
+        <li>If the two trigrams overlap by 1 letter, the overlap is allowed when the letter matches.</li>
+        <li>Hint mini-grids (and extra letters) become tappable once Quick controls is used.</li>
+      </ul>
+      <p class="note">Tap outside this panel when you’re ready.</p>
+    `;
+    el.hintModalBody.appendChild(wrap);
+    return;
+  }
+
+  // list view
+  el.hintModalTitle.textContent = "Choose a hint";
+
+  const list = document.createElement('div');
+
+  // Quick controls
+  list.appendChild(
+    makeOpt({
+      id: HINT_IDS.quick,
+      title: "Quick controls",
+      sub: "Move and cycle trigrams without typing",
+      cls: "opt-quick",
+      status: state.hintsUsed.quick ? "used" : "",
+      disabled: state.hintsUsed.quick,
+      onPick: ()=>{
+        if(state.hintsUsed.quick) return;
+        state.hintsUsed.quick = true;
+        state.hintCount += 1;
+        state.assist = true; // unlock
+        clearTransientOnAnyChange();
+        renderSmart();
+        // stay open + swap view
+        state.modalView = 'quickHelp';
+        renderHintModal();
+      }
+    })
+  );
+
+  // Show word 1 trigram
+  list.appendChild(
+    makeOpt({
+      id: HINT_IDS.w1,
+      title: "Show word 1 trigram",
+      sub: null,
+      cls: "opt-w1",
+      status: state.hintsUsed.w1 ? "used" : "",
+      disabled: state.hintsUsed.w1,
+      onPick: ()=>{
+        if(state.hintsUsed.w1) return;
+        state.hintsUsed.w1 = true;
+        state.hintCount += 1;
+        clearTransientOnAnyChange();
+        renderSmart();
+        closeHintModal();
+      }
+    })
+  );
+
+  // Show word 2 trigram
+  list.appendChild(
+    makeOpt({
+      id: HINT_IDS.w2,
+      title: "Show word 2 trigram",
+      sub: null,
+      cls: "opt-w2",
+      status: state.hintsUsed.w2 ? "used" : "",
+      disabled: state.hintsUsed.w2,
+      onPick: ()=>{
+        if(state.hintsUsed.w2) return;
+        state.hintsUsed.w2 = true;
+        state.hintCount += 1;
+        clearTransientOnAnyChange();
+        renderSmart();
+        closeHintModal();
+      }
+    })
+  );
+
+  // Show extra letters (locked until w1+w2 taken)
+  const locked = !extrasUnlocked();
+  list.appendChild(
+    makeOpt({
+      id: HINT_IDS.extras,
+      title: "Show extra letters",
+      sub: null,
+      cls: "opt-extras",
+      status: state.hintsUsed.extras ? "used" : (locked ? "locked" : ""),
+      disabled: state.hintsUsed.extras || locked,
+      onPick: ()=>{
+        if(state.hintsUsed.extras) return;
+        if(!extrasUnlocked()) return;
+        state.hintsUsed.extras = true;
+        state.hintCount += 1;
+        if(state.bank.length === 0) rebuildBank();
+        clearTransientOnAnyChange();
+        renderSmart();
+        closeHintModal();
+      }
+    })
+  );
+
+  el.hintModalBody.appendChild(list);
+}
+
+/* modal events */
+el.hintModalClose.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeHintModal(); });
+el.hintModal.addEventListener('pointerdown', (e)=>{
+  // tap backdrop (not card) closes
+  if(e.target === el.hintModal){
+    e.preventDefault();
+    e.stopPropagation();
+    closeHintModal();
+  }
+}, {passive:false});
+
+/* Esc closes modal */
+document.addEventListener('keydown', (e)=>{
+  if(!state.modalOpen) return;
+  if(e.key === "Escape"){
+    e.preventDefault();
+    closeHintModal();
+  }else{
+    // prevent accidental typing into the main grid underneath
+    if(e.key && e.key.length === 1) e.preventDefault();
+    if(e.key === "Backspace" || e.key === "Delete" || e.key === "Enter") e.preventDefault();
+  }
+}, {capture:true});
+
+/* =======================
+   Hint button / nav
+   ======================= */
 function bindFastTap(btn, fn){
   let last = 0;
   const run = (e)=>{
@@ -2812,45 +2764,70 @@ function bindFastTap(btn, fn){
   });
 }
 
-bindFastTap(el.hintBtn, ()=>{
+function showAnswerNow(){
   if(state.finished) return;
-  if(canUseGiveUp()){
-    showAnswerNow();
-  }else{
-    openHintPanel();
-  }
-});
+  clearTransientOnAnyChange();
 
+  const n = getN();
+  const ans = norm(current().answer);
+
+  state.placed = {w1:null, w2:null};
+  state.singles = [];
+  for(let i=0;i<n;i++) state.singles.push({id:uid(), ch: ans[i], idx:i});
+
+  state.finished = true;
+  state.showedAnswer = true;
+
+  setMsg(`Answer: ${ans}`, "result");
+  renderSmart();
+}
+
+function onHintButton(){
+  if(state.finished) return;
+  if(state.modalOpen) return;
+
+  const anyLeft =
+    (!state.hintsUsed.quick) ||
+    (!state.hintsUsed.w1) ||
+    (!state.hintsUsed.w2) ||
+    (!state.hintsUsed.extras);
+
+  if(!anyLeft){
+    showAnswerNow();
+    return;
+  }
+
+  openHintModal('list');
+}
+
+bindFastTap(el.hintBtn, onHintButton);
 bindFastTap(el.checkBtn, onCheck);
 
-/* =======================
-   Nav
-   ======================= */
 el.prevBtn.addEventListener('click', (e)=>{
   e.preventDefault();
-  if(state.hintPanelOpen) closeHintPanel();
   clearTransientOnAnyChange();
+  closeHintModal();
   state.i=(state.i-1+PUZZLES.length)%PUZZLES.length;
   resetAllForPuzzle();
   renderSmart();
 });
 el.nextBtn.addEventListener('click', (e)=>{
   e.preventDefault();
-  if(state.hintPanelOpen) closeHintPanel();
   clearTransientOnAnyChange();
+  closeHintModal();
   state.i=(state.i+1)%PUZZLES.length;
   resetAllForPuzzle();
   renderSmart();
 });
 
 /* =======================
-   Clue click (assist only)
+   Clue tap (assist only)
    ======================= */
 function onClueWordActivate(group){
   if(state.finished) return;
-  if(state.hintPanelOpen) return;
-  const flags = modeFlags();
-  if(!flags.allowClueTapPlace && !flags.allowClueTapCycle) return;
+  if(state.modalOpen) return;
+  const f = flags();
+  if(!f.allowClueTapPlace && !f.allowClueTapCycle) return;
 
   clearTransientOnAnyChange();
 
@@ -2859,7 +2836,11 @@ function onClueWordActivate(group){
   if(state.placed[group]){
     cyclePlacedTrigram(group);
   }else{
-    const tri = firstTrigramOfWord(group);
+    let tri = null;
+    // if trigram hint has been taken for that word, use the correct tri; else default to first trigram of word
+    if(group === 'w1' && state.hintsUsed.w1) tri = norm(current().tri1);
+    if(group === 'w2' && state.hintsUsed.w2) tri = norm(current().tri2);
+    if(!tri) tri = firstTrigramOfWord(group);
     if(tri) placeTrigram(group, tri);
   }
 
@@ -2870,10 +2851,9 @@ function onClueWordActivate(group){
   let last = 0;
 
   el.clue.addEventListener('pointerdown', (e)=>{
-    if(state.finished) return;
-    if(state.hintPanelOpen) return;
-    const flags = modeFlags();
-    if(!flags.allowClueTapPlace && !flags.allowClueTapCycle) return;
+    if(state.finished || state.modalOpen) return;
+    const f = flags();
+    if(!f.allowClueTapPlace && !f.allowClueTapCycle) return;
 
     const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
     if(!w) return;
@@ -2886,9 +2866,9 @@ function onClueWordActivate(group){
   }, { passive:false });
 
   el.clue.addEventListener('click', (e)=>{
-    if(state.hintPanelOpen) return;
-    const flags = modeFlags();
-    if(!flags.allowClueTapPlace && !flags.allowClueTapCycle) return;
+    if(state.modalOpen) return;
+    const f = flags();
+    if(!f.allowClueTapPlace && !f.allowClueTapCycle) return;
 
     const now = Date.now();
     if(now - last < 400){ e.preventDefault(); return; }
@@ -2899,19 +2879,10 @@ function onClueWordActivate(group){
   });
 })();
 
-/* =======================
-   Always-active typing outside grid
-   ======================= */
+/* Always-active typing outside grid */
 document.addEventListener('keydown', (e)=>{
   if(state.finished) return;
-
-  if(state.hintPanelOpen){
-    if(e.key === "Escape"){
-      e.preventDefault();
-      closeHintPanel();
-    }
-    return;
-  }
+  if(state.modalOpen) return;
 
   const target = e.target;
   const inGrid = target && target.closest && target.closest('#gridWrap');
@@ -2936,7 +2907,7 @@ document.addEventListener('keydown', (e)=>{
 });
 
 /* =======================
-   Reset + init
+   Resets + init
    ======================= */
 function resetMainGridOnly(){
   state.placed = {w1:null, w2:null};
@@ -2949,16 +2920,13 @@ function resetMainGridOnly(){
   state.lockMsg = false;
   abortDrag();
 }
-
 function resetAllForPuzzle(){
   state.finished = false;
-  state.revealedAnswer = false;
+  state.showedAnswer = false;
 
   state.hintCount = 0;
-  state.hintsUsed = { assist:false, w1:false, w2:false, extra:false };
-
-  state.mode = "hard";
-  el.wrap.classList.add('is-hard');
+  state.hintsUsed = { quick:false, w1:false, w2:false, extras:false };
+  state.assist = false;
 
   state.bank = [];
   resetMainGridOnly();
