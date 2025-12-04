@@ -45,7 +45,9 @@
     #hintTrack, #hintTrack *,
     #btnRow, #btnRow *,
     #kbHost, #kbHost *,
-    #modeBtn{
+    #modeBtn,
+    #hintMenu, #hintMenu *,
+    #toast, #toast *{
       -webkit-user-select:none;
       user-select:none;
       -webkit-touch-callout:none;
@@ -443,6 +445,7 @@
       flex-wrap:wrap;
       flex:0 0 auto;
       padding-bottom: 2px;
+      position:relative;
     }
     .btn{
       border:4px solid var(--ink);
@@ -485,6 +488,91 @@
       z-index:9997;
     }
     html.has-kb .btn{ border-width:3px; }
+
+    /* ===== Hint chooser popover ===== */
+    .hintMenu{
+      position:fixed;
+      z-index:9998;
+      background:rgba(255,255,255,.96);
+      border:2px solid rgba(0,0,0,.16);
+      border-radius:18px;
+      box-shadow:0 14px 28px rgba(0,0,0,.14);
+      padding:10px 10px 10px;
+      width:min(320px, 92vw);
+      transform: translate3d(-50%, 0, 0);
+      left:50%;
+      top:50%;
+      display:none;
+      text-align:left;
+    }
+    .hintMenu.show{ display:block; }
+    .hintMenuTitle{
+      font-weight:900;
+      font-style:italic;
+      font-size:16px;
+      margin:2px 6px 8px;
+      opacity:.92;
+      text-transform:lowercase;
+    }
+    .hintOpt{
+      width:100%;
+      text-align:left;
+      border:2px solid rgba(0,0,0,.14);
+      background:rgba(255,255,255,.55);
+      border-radius:14px;
+      padding:10px 12px;
+      margin:8px 0;
+      cursor:pointer;
+      font-weight:900;
+      font-style:italic;
+      font-size:16px;
+      color:var(--ink);
+      appearance:none;
+      -webkit-appearance:none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .hintOpt:active{ transform:translateY(1px); }
+    .hintOpt small{
+      display:block;
+      font-style:normal;
+      font-weight:800;
+      opacity:.70;
+      margin-top:2px;
+      line-height:1.2;
+      text-transform:none;
+    }
+    .hintOpt:disabled{
+      opacity:.38;
+      cursor:default;
+      transform:none !important;
+    }
+
+    /* ===== Toast (assist only) ===== */
+    .toast{
+      position:fixed;
+      left:50%;
+      transform:translate3d(-50%, 6px, 0);
+      bottom: calc(env(safe-area-inset-bottom) + 14px);
+      z-index:9999;
+      background: rgba(0,0,0,.72);
+      color:#fff;
+      padding:10px 14px;
+      border-radius:999px;
+      font-weight:900;
+      font-style:italic;
+      font-size:14px;
+      max-width:min(92vw, 760px);
+      line-height:1.2;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .18s ease, transform .18s ease;
+      text-align:center;
+    }
+    .toast.show{
+      opacity:1;
+      transform:translate3d(-50%, 0, 0);
+    }
 
     /* ===== Ghost (drag overlay) ===== */
     .ghost{
@@ -636,6 +724,12 @@
     </div>
   </div>
 
+  <!-- Hint chooser (non-modal, no overlay) -->
+  <div id="hintMenu" class="hintMenu" aria-label="Hint chooser"></div>
+
+  <!-- Assist-only toast -->
+  <div id="toast" class="toast" aria-live="polite"></div>
+
   <div class="kbHost" id="kbHost" aria-label="On-screen keyboard"></div>
 
 <script>
@@ -645,7 +739,7 @@
 const PUZZLES = [
   // 6-letter tests
   { clue:"Beachy sights",     word1:"beachy",  word2:"sights",  answer:"yachts",  tri1:"ach", tri2:"hts" },
-  { clue:"Believe oracle?",   word1:"believe", word2:"oracle",  answer:"clever",  tri1:"eve", tri2:"cle" },
+  { clue:"Believe oracle?",   word1:"believe",  word2:"oracle",  answer:"clever",  tri1:"eve", tri2:"cle" },
 
   // 7-letter
   { clue:"Raccoon scuffle!",  word1:"raccoon", word2:"scuffle", answer:"buffoon", tri1:"oon", tri2:"uff" },
@@ -660,7 +754,11 @@ const PUZZLES = [
 
 const TR = 3;
 const STORAGE_MODE_KEY = 'tc:mode';
+const MAX_HINTS = 4; // tri1, tri2, extras, assist (any order)
 
+/* =======================
+   Elements
+   ======================= */
 const el = {
   wrap: document.getElementById('wrap'),
   clue: document.getElementById('clue'),
@@ -682,6 +780,9 @@ const el = {
 
   kbHost: document.getElementById('kbHost'),
   modeBtn: document.getElementById('modeBtn'),
+
+  hintMenu: document.getElementById('hintMenu'),
+  toast: document.getElementById('toast')
 };
 
 const TWOTRI_TEXT  = "Two trigrams from same word";
@@ -699,9 +800,9 @@ const MODES = {
     allowDragTrigrams: true,
     allowAutoPromote: true,
     showGridColors: true,
-    showStatusMessages: true,   // overlap + red status banners
-    showBadCellColor: true,     // red bg cells
-    checkFeedback: "detailed",  // detailed incorrect feedback
+    showStatusMessages: true,
+    showBadCellColor: true,
+    checkFeedback: "detailed",
   },
   hard: {
     allowClueTapPlace: false,
@@ -713,10 +814,9 @@ const MODES = {
     showGridColors: false,
     showStatusMessages: false,
     showBadCellColor: false,
-    checkFeedback: "minimal",   // only "Not quite" on wrong checks
+    checkFeedback: "minimal",
   },
 };
-
 function modeFlags(){
   return MODES[state.mode] || MODES.easy;
 }
@@ -726,22 +826,30 @@ function modeFlags(){
    ======================= */
 const state = {
   i: 0,
+
+  // number of hint tokens spent (0..MAX_HINTS)
   hint: 0,
+
+  // which hint types have been taken (order-independent)
+  hintsTaken: { tri1:false, tri2:false, extras:false, assist:false },
+  // what hint number each type was taken on (for track labels)
+  hintOrder: { tri1:null, tri2:null, extras:null, assist:null },
+
+  hintMenuOpen: false,
+
   finished: false,
   revealedAnswer: false,
 
-  // selection pos for cycling (easy mode only)
   sel1: null,
   sel2: null,
 
-  placed: { w1: null, w2: null }, // easy mode only (trigram “blocks”)
-  singles: [],                    // typed letters
+  placed: { w1: null, w2: null },
+  singles: [],
 
   bank: [],
   focusIdx: 0,
 
   drag: null,
-  lastDragEndedAt: 0,
 
   msgTimer: null,
   msgTransient: false,
@@ -762,6 +870,8 @@ const state = {
   useCustomKB: false,
 
   mode: "easy",
+
+  toastTimer: null,
 };
 
 /* =======================
@@ -792,10 +902,25 @@ function shakeGrid(){
 /* prevent context menu on interactive surface */
 document.addEventListener('contextmenu', (e)=>{
   const t = e.target;
-  if(t && t.closest && t.closest('#clue, #gridWrap, #hintTrack, #btnRow, #kbHost, #modeBtn')){
+  if(t && t.closest && t.closest('#clue, #gridWrap, #hintTrack, #btnRow, #kbHost, #modeBtn, #hintMenu')){
     e.preventDefault();
   }
 });
+
+/* =======================
+   Toast (assist only)
+   ======================= */
+function showToast(text, ms=2600){
+  if(state.toastTimer){ clearTimeout(state.toastTimer); state.toastTimer=null; }
+  el.toast.textContent = text || "";
+  if(!text) return;
+  el.toast.classList.add('show');
+  state.toastTimer = setTimeout(()=>{
+    el.toast.classList.remove('show');
+    el.toast.textContent = "";
+    state.toastTimer = null;
+  }, ms);
+}
 
 /* =======================
    Mode switching
@@ -827,7 +952,6 @@ function setMode(mode){
   el.modeBtn.textContent = mode;
   el.modeBtn.setAttribute('aria-pressed', mode === "hard" ? "true" : "false");
 
-  // entering hard mode: remove any “placed blocks” so the grid is purely typed
   if(mode === "hard"){
     flattenPlacedToSingles();
     state.sel1 = null;
@@ -1013,6 +1137,138 @@ function excludedMsgText(){
   const n = (state.exclTris?.w1?.size || 0) + (state.exclTris?.w2?.size || 0);
   return (n >= 2) ? "Your hints excluded these trigrams" : "Your hint excluded this trigram";
 }
+
+/* =======================
+   Hint chooser (non-modal)
+   ======================= */
+function closeHintMenu(){
+  if(!state.hintMenuOpen) return;
+  state.hintMenuOpen = false;
+  el.hintMenu.classList.remove('show');
+  el.hintMenu.innerHTML = "";
+}
+
+function positionHintMenu(){
+  if(!state.hintMenuOpen) return;
+
+  const b = el.hintBtn.getBoundingClientRect();
+  const menu = el.hintMenu;
+
+  // start centered on hint button
+  const cx = b.left + b.width/2;
+  menu.style.left = cx + "px";
+
+  // try above the button row
+  const pad = 10;
+  const mH = menu.getBoundingClientRect().height || 200;
+  let top = b.top - mH - pad;
+
+  // if too high, put below
+  if(top < 10) top = b.bottom + pad;
+
+  // make sure it doesn't run off bottom
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  if(top + mH > vh - 10) top = Math.max(10, vh - mH - 10);
+
+  menu.style.top = top + "px";
+}
+
+function canTakeExtras(){
+  return state.hintsTaken.tri1 && state.hintsTaken.tri2 && !state.hintsTaken.extras;
+}
+
+function takeHint(kind){
+  if(state.finished) return;
+  if(state.hint >= MAX_HINTS) return;
+
+  const num = state.hint + 1;
+  closeHintMenu();
+
+  // mark usage + order
+  state.hint = Math.min(MAX_HINTS, state.hint + 1);
+  state.hintsTaken[kind] = true;
+  state.hintOrder[kind] = num;
+
+  if(kind === "extras"){
+    if(state.bank.length === 0) rebuildBank();
+  }
+
+  if(kind === "assist"){
+    // If already easy, it's still "taken" but doesn't need to do anything else.
+    if(state.mode !== "easy"){
+      setMode("easy"); // renders
+      showToast("Assist enabled — clue taps, cycling, dragging, colours, and hint-tile insertion are now available.", 2800);
+      return;
+    }
+    showToast("Assist enabled.", 1600);
+  }
+
+  renderSmart();
+}
+
+function openHintMenu(){
+  if(state.hintMenuOpen) return;
+  state.hintMenuOpen = true;
+
+  const tri1Disabled = state.hintsTaken.tri1;
+  const tri2Disabled = state.hintsTaken.tri2;
+  const assistDisabled = state.hintsTaken.assist || (state.mode === "easy");
+  const extrasDisabled = !canTakeExtras();
+
+  el.hintMenu.innerHTML = `
+    <div class="hintMenuTitle">choose a hint</div>
+
+    <button class="hintOpt" type="button" data-kind="tri1" ${tri1Disabled ? "disabled" : ""}>
+      reveal word 1 trigram
+      <small>${tri1Disabled ? "already revealed" : "adds the yellow trigram to the hint track"}</small>
+    </button>
+
+    <button class="hintOpt" type="button" data-kind="tri2" ${tri2Disabled ? "disabled" : ""}>
+      reveal word 2 trigram
+      <small>${tri2Disabled ? "already revealed" : "adds the blue trigram to the hint track"}</small>
+    </button>
+
+    <button class="hintOpt" type="button" data-kind="assist" ${assistDisabled ? "disabled" : ""}>
+      enable assist mode
+      <small>${assistDisabled ? "already enabled" : "turns on grid help (tap/cycle/drag/colours)"}</small>
+    </button>
+
+    <button class="hintOpt" type="button" data-kind="extras" ${extrasDisabled ? "disabled" : ""}>
+      reveal extra letters
+      <small>${extrasDisabled ? "available after both trigrams are revealed" : "adds the leftover letters to the hint track"}</small>
+    </button>
+  `;
+
+  el.hintMenu.classList.add('show');
+
+  // bind without stealing focus / affecting grid
+  el.hintMenu.querySelectorAll('.hintOpt').forEach(btn=>{
+    btn.addEventListener('pointerdown', (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      if(btn.disabled) return;
+      takeHint(btn.dataset.kind);
+    }, {passive:false});
+    btn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      if(btn.disabled) return;
+      takeHint(btn.dataset.kind);
+    });
+  });
+
+  requestAnimationFrame(positionHintMenu);
+}
+
+// close chooser when clicking anywhere else (do NOT prevent default; don’t interfere with grid taps)
+document.addEventListener('pointerdown', (e)=>{
+  if(!state.hintMenuOpen) return;
+  const t = e.target;
+  if(t === el.hintBtn || (t && t.closest && (t.closest('#hintMenu') || t.closest('#hintBtn')))) return;
+  closeHintMenu();
+}, {capture:true});
+
+window.addEventListener('resize', ()=>{ if(state.hintMenuOpen) positionHintMenu(); });
 
 /* =======================
    Clue helpers
@@ -1404,7 +1660,6 @@ function computeOverlapIdxSet(){
    Dynamic puzzle derivation (tri positions)
    ======================= */
 function ensurePuzzleDerived(p){
-  // If tri1/tri2 given but positions not, derive from answer (best-effort).
   const ans = norm(p.answer);
   p.tri1 = norm(p.tri1 || "");
   p.tri2 = norm(p.tri2 || "");
@@ -1413,7 +1668,6 @@ function ensurePuzzleDerived(p){
     p.tri1_pos = (p.tri1 && ans.includes(p.tri1)) ? ans.indexOf(p.tri1) : 0;
   }
   if(typeof p.tri2_pos !== "number"){
-    // if tri2 matches at same pos as tri1 and there's another occurrence, try next
     if(p.tri2 && ans.includes(p.tri2)){
       const first = ans.indexOf(p.tri2);
       const second = ans.indexOf(p.tri2, first + 1);
@@ -1426,7 +1680,7 @@ function ensurePuzzleDerived(p){
 }
 
 /* =======================
-   Invalid / excluded detection (for red underlines + easy warnings)
+   Invalid / excluded detection
    ======================= */
 function compressMaximalStrings(arr){
   const uniq = Array.from(new Set(arr.filter(Boolean)));
@@ -1532,8 +1786,8 @@ function computeHintExcludedTrigrams(){
     }
   }
 
-  if(state.hint >= 1) scan('w1', p.word1, norm(p.tri1));
-  if(state.hint >= 2) scan('w2', p.word2, norm(p.tri2));
+  if(state.hintsTaken.tri1) scan('w1', p.word1, norm(p.tri1));
+  if(state.hintsTaken.tri2) scan('w2', p.word2, norm(p.tri2));
 }
 
 /* =======================
@@ -1565,7 +1819,7 @@ function rebuildBank(){
 function placeTrigram(group, tri){
   const flags = modeFlags();
   if(state.finished) return;
-  if(!flags.allowClueTapPlace && !flags.allowHintTapPlace) return; // hard mode: no placement
+  if(!flags.allowClueTapPlace && !flags.allowHintTapPlace) return;
   clearTransientOnAnyChange();
 
   const n = getN();
@@ -1668,7 +1922,7 @@ function firstTrigramOfWord(group){
 }
 
 /* =======================
-   Status message logic (suppressed in hard mode)
+   Status message logic
    ======================= */
 function updateStatusMessages(){
   const flags = modeFlags();
@@ -1676,7 +1930,6 @@ function updateStatusMessages(){
   if(state.lockMsg) return;
 
   if(!flags.showStatusMessages){
-    // keep the message area quiet during play in hard mode
     if(!el.msg.classList.contains('result')) setMsg("");
     state.overlapMsgOn = false;
     return;
@@ -1758,41 +2011,23 @@ function onCheck(){
 
   const flags = modeFlags();
   if(flags.checkFeedback === "minimal"){
-    // No rule/help messaging in hard mode (only underlines + hints)
     setTransientMsg("Not quite", 1400);
     renderSmart();
     return;
   }
 
-  if(state.badSet.size){
-    setMsg("Max 3 contiguous letters allowed", "warn");
-    renderSmart();
-    return;
-  }
-  if(state.twoSet.size){
-    setMsg(TWOTRI_TEXT, "warn");
-    renderSmart();
-    return;
-  }
-  if(state.exclSet.size){
-    setMsg(excludedMsgText(), "warn");
-    renderSmart();
-    return;
-  }
+  if(state.badSet.size){ setMsg("Max 3 contiguous letters allowed", "warn"); renderSmart(); return; }
+  if(state.twoSet.size){ setMsg(TWOTRI_TEXT, "warn"); renderSmart(); return; }
+  if(state.exclSet.size){ setMsg(excludedMsgText(), "warn"); renderSmart(); return; }
 
   const w1Hits = countTrigramsInWord(attempt, p.word1);
   const w2Hits = countTrigramsInWord(attempt, p.word2);
 
   let msg = "";
-  if(w1Hits.length === 0 && w2Hits.length === 0){
-    msg = "You didn’t use any trigrams";
-  }else if(w1Hits.length === 0){
-    msg = "No trigram from word 1";
-  }else if(w2Hits.length === 0){
-    msg = "No trigram from word 2";
-  }else if(w1Hits.length > 1 || w2Hits.length > 1){
-    msg = TWOTRI_TEXT;
-  }
+  if(w1Hits.length === 0 && w2Hits.length === 0) msg = "You didn’t use any trigrams";
+  else if(w1Hits.length === 0) msg = "No trigram from word 1";
+  else if(w2Hits.length === 0) msg = "No trigram from word 2";
+  else if(w1Hits.length > 1 || w2Hits.length > 1) msg = TWOTRI_TEXT;
 
   if(msg){
     state.lockMsg = true;
@@ -1807,6 +2042,10 @@ function onCheck(){
 /* =======================
    Hint track UI
    ======================= */
+function hintLabelFor(kind){
+  const n = state.hintOrder[kind];
+  return n ? `hint ${n}` : "hint";
+}
 function makeTrigramBlock(tri, cls, labelText, onClickMaybe){
   const flags = modeFlags();
 
@@ -1852,9 +2091,9 @@ function renderHintTrack(){
   el.trackW2.style.display = "none";
   el.trackExtras.style.display = "none";
 
-  if(state.hint >= 1){
+  if(state.hintsTaken.tri1){
     el.trackW1.appendChild(
-      makeTrigramBlock(norm(p.tri1), "sel-w1", "hint 1", ()=>{
+      makeTrigramBlock(norm(p.tri1), "sel-w1", hintLabelFor("tri1"), ()=>{
         placeTrigram('w1', norm(p.tri1));
         renderSmart();
       })
@@ -1862,9 +2101,9 @@ function renderHintTrack(){
     el.trackW1.style.display = "";
   }
 
-  if(state.hint >= 2){
+  if(state.hintsTaken.tri2){
     el.trackW2.appendChild(
-      makeTrigramBlock(norm(p.tri2), "sel-w2", "hint 2", ()=>{
+      makeTrigramBlock(norm(p.tri2), "sel-w2", hintLabelFor("tri2"), ()=>{
         placeTrigram('w2', norm(p.tri2));
         renderSmart();
       })
@@ -1872,7 +2111,7 @@ function renderHintTrack(){
     el.trackW2.style.display = "";
   }
 
-  if(state.hint >= 3){
+  if(state.hintsTaken.extras){
     if(state.bank.length === 0) rebuildBank();
 
     const block = document.createElement('div');
@@ -1880,7 +2119,7 @@ function renderHintTrack(){
 
     const lbl = document.createElement('div');
     lbl.className = "tinyLbl";
-    lbl.textContent = "hint 3";
+    lbl.textContent = hintLabelFor("extras");
     block.appendChild(lbl);
 
     const row = document.createElement('div');
@@ -1924,8 +2163,14 @@ function renderHintTrack(){
 }
 
 /* =======================
-   Drag ghost (easy mode only)
+   Drag logic etc...
    ======================= */
+/* ---- (UNCHANGED FROM YOUR VERSION BELOW THIS POINT, except:
+        - hint system references were updated above
+        - render() hint button text updated below
+        - onHintButton uses chooser (below)
+   ---- */
+
 function trigramIsRedAtStart(start){
   computeMax3Invalid();
   computeTwoTrigramsInvalid();
@@ -2150,7 +2395,7 @@ function onDragEnd(e){
 }
 
 /* =======================
-   Underline logic (easy uses placed; hard infers from grid)
+   Underline logic (unchanged)
    ======================= */
 function errorItemsForGroup(group){
   if(state.badRuns[group] && state.badRuns[group].length){
@@ -2179,7 +2424,6 @@ function inferredSingleTrigram(group){
     if(w.includes(tri)) found.push(tri);
   }
 
-  // unique-in-order
   const uniq = [];
   const seen = new Set();
   for(const t of found){
@@ -2197,7 +2441,6 @@ function triForClue(group){
     const pl = state.placed[group];
     return pl ? pl.tri : null;
   }
-  // hard mode: infer exactly-one trigram from the current grid
   return inferredSingleTrigram(group);
 }
 
@@ -2210,7 +2453,6 @@ function renderGrid(stealFocus=true){
 
   el.grid.style.setProperty('--n', String(n));
 
-  // auto-promote in easy mode only
   if(flags.allowAutoPromote){
     for(let k=0;k<2;k++){
       if(!autoPromoteTypedTrigrams()) break;
@@ -2236,7 +2478,6 @@ function renderGrid(stealFocus=true){
 
     const tri = trigramAtIndex(i);
 
-    // Easy-mode colouring + drag affordance
     if(flags.showGridColors && tri){
       if(overlapSet.has(i)) cell.classList.add('bg-ol');
       else cell.classList.add(tri.group==='w1' ? 'bg-w1' : 'bg-w2');
@@ -2263,7 +2504,6 @@ function renderGrid(stealFocus=true){
     input.enterKeyHint = "done";
 
     const ro = (!!tri && flags.allowAutoPromote) || state.finished || state.useCustomKB;
-    // NOTE: in hard mode we never auto-promote, so “tri” should be null anyway.
     input.readOnly = ro;
     input.tabIndex = state.useCustomKB ? -1 : 0;
 
@@ -2343,7 +2583,6 @@ function renderGrid(stealFocus=true){
         requestAnimationFrame(()=> focusCell(i));
       }
 
-      // Easy mode only: drag trigrams
       if(flags.allowDragTrigrams){
         const t = trigramAtIndex(i);
         if(t){
@@ -2372,11 +2611,7 @@ function render(stealFocus=true){
   el.count.textContent = `${state.i+1}/${PUZZLES.length}`;
   el.wrap.classList.toggle('solved', state.finished);
 
-  el.hintBtn.textContent =
-    (state.hint === 0) ? "hint 1" :
-    (state.hint === 1) ? "hint 2" :
-    (state.hint === 2) ? "hint 3" :
-    "give up";
+  el.hintBtn.textContent = (state.hint < MAX_HINTS) ? `hint ${state.hint + 1}` : "give up";
 
   renderGrid(stealFocus);
 
@@ -2440,29 +2675,35 @@ function bindFastTap(btn, fn){
   });
 }
 
+function giveUp(){
+  const n = getN();
+  const ans = norm(current().answer);
+  state.placed = {w1:null, w2:null};
+  state.singles = [];
+  for(let i=0;i<n;i++) state.singles.push({id:uid(), ch: ans[i], idx:i});
+
+  state.finished = true;
+  state.revealedAnswer = true;
+
+  setMsg(`Answer: ${ans}`, "result");
+  renderSmart();
+}
+
 function onHintButton(){
   if(state.finished) return;
   clearTransientOnAnyChange();
 
-  const n = getN();
-
-  if(state.hint >= 3){
-    const ans = norm(current().answer);
-    state.placed = {w1:null, w2:null};
-    state.singles = [];
-    for(let i=0;i<n;i++) state.singles.push({id:uid(), ch: ans[i], idx:i});
-
-    state.finished = true;
-    state.revealedAnswer = true;
-
-    setMsg(`Answer: ${ans}`, "result");
-    renderSmart();
+  if(state.hint >= MAX_HINTS){
+    giveUp();
     return;
   }
 
-  state.hint = Math.min(3, state.hint + 1);
-  if(state.hint >= 3 && state.bank.length === 0) rebuildBank();
-  renderSmart();
+  if(state.hintMenuOpen){
+    closeHintMenu();
+    return;
+  }
+
+  openHintMenu();
 }
 
 bindFastTap(el.hintBtn, onHintButton);
@@ -2471,6 +2712,7 @@ bindFastTap(el.checkBtn, onCheck);
 el.prevBtn.addEventListener('click', (e)=>{
   e.preventDefault();
   clearTransientOnAnyChange();
+  closeHintMenu();
   state.i=(state.i-1+PUZZLES.length)%PUZZLES.length;
   resetAllForPuzzle();
   renderSmart();
@@ -2478,6 +2720,7 @@ el.prevBtn.addEventListener('click', (e)=>{
 el.nextBtn.addEventListener('click', (e)=>{
   e.preventDefault();
   clearTransientOnAnyChange();
+  closeHintMenu();
   state.i=(state.i+1)%PUZZLES.length;
   resetAllForPuzzle();
   renderSmart();
@@ -2500,8 +2743,8 @@ function onClueWordActivate(group){
     cyclePlacedTrigram(group);
   }else{
     let tri = null;
-    if(group === 'w1' && state.hint >= 1) tri = norm(current().tri1);
-    if(group === 'w2' && state.hint >= 2) tri = norm(current().tri2);
+    if(group === 'w1' && state.hintsTaken.tri1) tri = norm(current().tri1);
+    if(group === 'w2' && state.hintsTaken.tri2) tri = norm(current().tri2);
     if(!tri) tri = firstTrigramOfWord(group);
     if(tri) placeTrigram(group, tri);
   }
@@ -2564,6 +2807,10 @@ document.addEventListener('keydown', (e)=>{
       return;
     }
   }
+
+  if(e.key === "Escape"){
+    closeHintMenu();
+  }
 });
 
 /* =======================
@@ -2582,9 +2829,12 @@ function resetMainGridOnly(){
 }
 function resetAllForPuzzle(){
   state.hint = 0;
+  state.hintsTaken = { tri1:false, tri2:false, extras:false, assist:false };
+  state.hintOrder = { tri1:null, tri2:null, extras:null, assist:null };
   state.finished = false;
   state.revealedAnswer = false;
   state.bank = [];
+  closeHintMenu();
   resetMainGridOnly();
 }
 
@@ -2593,6 +2843,7 @@ window.addEventListener('resize', ()=>{
   if(next !== state.useCustomKB) setCustomKBEnabled(next);
   updateKeyboardHeightVar();
   updateKeyboardState();
+  if(state.hintMenuOpen) positionHintMenu();
 });
 
 /* init */
