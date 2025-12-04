@@ -13,7 +13,7 @@
 
       --w1:#fff3b3;   /* yellow */
       --w2:#cfe8ff;   /* blue */
-      --ol:#c9f3d6;   /* green */
+      --ol:#c9f3d6;   /* green overlap */
       --bad:#ffc9d2;  /* red/pink warning */
       --submit:#F4D2FD;
 
@@ -42,7 +42,8 @@
     #hintTrack, #hintTrack *,
     #btnRow, #btnRow *,
     #kbHost, #kbHost *,
-    #helpModal, #helpModal *{
+    #hintsModal, #hintsModal *,
+    #turboModal, #turboModal *{
       -webkit-user-select:none;
       user-select:none;
       -webkit-touch-callout:none;
@@ -170,7 +171,8 @@
 
     .gridWrap.shake{ animation:shake .16s linear 0s 2; }
 
-    .wrap.solved .gridWrap{
+    /* Correct solve glow (NOT on give up) */
+    .wrap.solved:not(.gaveup) .gridWrap{
       pointer-events:none;
       transform: translate3d(0,18px,0) scale(1.01);
       box-shadow:
@@ -181,6 +183,15 @@
         solvedPop .46s ease-out both,
         glowPulse 1.15s ease-in-out 0s 2;
     }
+    .wrap.gaveup .gridWrap{
+      pointer-events:none;
+      transform: translate3d(0,12px,0) scale(1.005);
+      box-shadow:
+        0 0 0 6px rgba(0,0,0,.10),
+        0 16px 28px rgba(0,0,0,.14);
+      animation: none;
+    }
+
     .wrap.solved .cell{ background:#fff !important; }
     .wrap.solved .hintTrack{ opacity:0.35; }
     .wrap.solved .btnRow{ opacity:0.55; pointer-events:none; }
@@ -281,7 +292,7 @@
     }
     .cell input::selection{ background:transparent; color:inherit; }
 
-    /* Grid colouring (ONLY when Quick controls ON) */
+    /* Grid colouring (ONLY when turbo ON) */
     .cell.bg-w1{ background:var(--w1); }
     .cell.bg-w2{ background:var(--w2); }
     .cell.bg-ol{ background:var(--ol); }
@@ -477,7 +488,8 @@
       transform:translateY(1px);
       box-shadow: 0 6px 0 rgba(0,0,0,.16);
     }
-    .btn.help{ background:#fff3bd; }
+    .btn.hints{ background:#fff3bd; }
+    .btn.turbo{ background:rgba(255,255,255,.28); }
     .btn.check{ background:rgba(255,255,255,.25); opacity:.55; }
     .btn.check.ready{ opacity:1; background:var(--submit); }
     .btn:disabled{
@@ -604,7 +616,7 @@
       .kbKey{ height:46px; }
     }
 
-    /* ========= Help modal ========= */
+    /* ========= Modals ========= */
     .modalOverlay{
       position:fixed;
       inset:0;
@@ -668,6 +680,7 @@
       padding: 12px 14px 14px;
     }
 
+    /* Cards inside modals */
     .hintCard{
       width:100%;
       border:2px solid rgba(0,0,0,.16);
@@ -676,27 +689,22 @@
       margin: 10px 0;
       box-shadow:none;
       background:#fff;
+      transition: transform .08s ease, filter .12s ease;
     }
-    .hintCard.dim{ opacity:.46; }
+    .hintCard.tap{ cursor:pointer; }
+    .hintCard.tap:active{ transform: translateY(1px); }
+    .hintCard.dim{ opacity:.46; cursor:default; }
 
-    .hintCard.opt-quick{ background: var(--submit); }
     .hintCard.opt-w1{ background: var(--w1); }
     .hintCard.opt-w2{ background: var(--w2); }
     .hintCard.opt-extras{ background: rgba(255,255,255,.95); }
+    .hintCard.opt-turbo{ background: var(--submit); }
 
     .hintTop{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap: 12px;
-    }
-
-    .hintLeft{
-      display:flex;
-      align-items:center;
-      min-width:0;
-      gap: 6px;
-      flex:1 1 auto;
     }
 
     .hintTitle{
@@ -710,33 +718,66 @@
       text-overflow:ellipsis;
     }
 
-    .hintAction{
+    .statusPill{
       flex:0 0 auto;
-      min-width: 134px;
-      height: 40px;
+      min-width: 116px;
+      height: 36px;
       border-radius: 999px;
       border:2px solid rgba(0,0,0,.14);
-      background: rgba(255,255,255,.75);
+      background: rgba(255,255,255,.72);
       font-weight: 950;
-      font-size: 13px;
+      font-size: 12px;
       letter-spacing: .08em;
       text-transform: uppercase;
       color: var(--ink);
-      cursor:pointer;
-      -webkit-tap-highlight-color: transparent;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 0 12px;
     }
-    .hintAction:active{ transform: translateY(1px); }
-    .hintAction[disabled]{
-      cursor:default;
-      opacity:.92;
+    .statusPill.empty{
+      border-color: transparent;
+      background: transparent;
+      min-width: 116px;
     }
+    .statusPill.locked{ background: rgba(255,255,255,.70); }
+    .statusPill.used{ background: rgba(255,255,255,.78); }
 
-    /* Quick controls toggle styling */
-    .qcToggle{
+    /* Turbo toggle */
+    .qcToggleRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .qcSwitchBtn{
+      border:2px solid rgba(0,0,0,.14);
+      background: rgba(255,255,255,.75);
+      border-radius: 999px;
+      height: 40px;
+      min-width: 170px;
       display:inline-flex;
       align-items:center;
       justify-content:center;
       gap:10px;
+      cursor:pointer;
+      padding: 0 14px;
+      -webkit-tap-highlight-color: transparent;
+      appearance:none;
+      -webkit-appearance:none;
+      font:inherit;
+    }
+    .qcSwitchBtn:active{ transform: translateY(1px); }
+
+    .qcLabel{
+      font-weight:950;
+      font-size:12px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      min-width: 34px;
+      text-align:right;
+      opacity:.95;
     }
     .qcPill{
       width: 64px;
@@ -764,19 +805,10 @@
     .qcPill.on .qcKnob{
       left: calc(100% - 28px);
     }
-    .qcLabel{
-      font-weight:950;
-      font-size:12px;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      min-width: 34px;
-      text-align:right;
-      opacity:.95;
-    }
 
     .hintDetails{
       margin-top: 10px;
-      padding: 0 2px;
+      padding: 2px 2px 0;
     }
     .hintDetails p{
       margin: 8px 0;
@@ -822,19 +854,31 @@
     </div>
 
     <div class="btnRow" id="btnRow">
-      <button class="btn help" id="helpBtn" type="button">help</button>
+      <button class="btn hints" id="hintsBtn" type="button">hints</button>
+      <button class="btn turbo" id="turboBtn" type="button">turbo</button>
       <button class="btn check" id="checkBtn" type="button">check</button>
     </div>
   </div>
 
-  <!-- Help modal -->
-  <div class="modalOverlay" id="helpModal" aria-hidden="true">
-    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
+  <!-- Hints modal -->
+  <div class="modalOverlay" id="hintsModal" aria-hidden="true">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="hintsModalTitle">
       <div class="modalHdr">
-        <div class="modalTitle" id="helpModalTitle">Help</div>
-        <button class="modalX" id="helpModalClose" type="button" aria-label="Close">×</button>
+        <div class="modalTitle" id="hintsModalTitle">Choose a hint</div>
+        <button class="modalX" id="hintsModalClose" type="button" aria-label="Close">×</button>
       </div>
-      <div class="modalBody" id="helpModalBody"></div>
+      <div class="modalBody" id="hintsModalBody"></div>
+    </div>
+  </div>
+
+  <!-- Turbo modal -->
+  <div class="modalOverlay" id="turboModal" aria-hidden="true">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="turboModalTitle">
+      <div class="modalHdr">
+        <div class="modalTitle" id="turboModalTitle">Turbo control</div>
+        <button class="modalX" id="turboModalClose" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="modalBody" id="turboModalBody"></div>
     </div>
   </div>
 
@@ -851,9 +895,9 @@ const PUZZLES = [
   { clue:"Raccoon scuffle!",  word1:"raccoon", word2:"scuffle", answer:"buffoon",  tri1:"oon", tri2:"uff" },
   { clue:"Tidal tiptoes",     word1:"tidal",   word2:"tiptoes", answer:"riptide",  tri1:"tid", tri2:"ipt" },
   { clue:"Trusty boombox",    word1:"trusty",  word2:"boombox", answer:"combust",  tri1:"ust", tri2:"omb" },
-  { clue:"Wholly muscle?",    word1:"wholly",  word2:"muscle",  answer:"mollusc",  tri1:"oll", tri2:"usc" },
+  { clue:"Wholly muscle?",    word1:"wholly",  word2:"muscle", answer:"mollusc",  tri1:"oll", tri2:"usc" },
   { clue:"Juicy muscles",     word1:"juicy",   word2:"muscles", answer:"bicycle",  tri1:"icy", tri2:"cle" },
-  { clue:"Perform, monkey!",  word1:"perform", word2:"monkey",  answer:"hormones", tri1:"orm", tri2:"one" },
+  { clue:"Perform, monkey!",  word1:"perform", word2:"monkey", answer:"hormones", tri1:"orm", tri2:"one" },
 ];
 
 const TR = 3;
@@ -870,7 +914,8 @@ const el = {
   trackW2: document.getElementById('trackW2'),
   trackExtras: document.getElementById('trackExtras'),
 
-  helpBtn: document.getElementById('helpBtn'),
+  hintsBtn: document.getElementById('hintsBtn'),
+  turboBtn: document.getElementById('turboBtn'),
   checkBtn: document.getElementById('checkBtn'),
 
   prevBtn: document.getElementById('prevBtn'),
@@ -879,20 +924,20 @@ const el = {
 
   kbHost: document.getElementById('kbHost'),
 
-  helpModal: document.getElementById('helpModal'),
-  helpModalTitle: document.getElementById('helpModalTitle'),
-  helpModalBody: document.getElementById('helpModalBody'),
-  helpModalClose: document.getElementById('helpModalClose'),
+  hintsModal: document.getElementById('hintsModal'),
+  hintsModalBody: document.getElementById('hintsModalBody'),
+  hintsModalClose: document.getElementById('hintsModalClose'),
+
+  turboModal: document.getElementById('turboModal'),
+  turboModalBody: document.getElementById('turboModalBody'),
+  turboModalClose: document.getElementById('turboModalClose'),
 };
 
-const QC_SESSION_KEY = "triDemoQuickControls_v1";
+const TURBO_SESSION_KEY = "triDemoTurbo_v1";
 
 const TWOTRI_TEXT  = "Two trigrams from same word";
 const OVERLAP_TEXT = "1-letter overlap allowed ✓";
 
-/* =======================
-   Hint system (only 3 count as hints)
-   ======================= */
 const HINT_IDS = { w1:'w1', w2:'w2', extras:'extras' };
 
 /* =======================
@@ -901,12 +946,12 @@ const HINT_IDS = { w1:'w1', w2:'w2', extras:'extras' };
 const state = {
   i: 0,
   finished: false,
-  showedAnswer: false,
+  gaveUp: false,
 
   hintCount: 0,
   hintsUsed: { w1:false, w2:false, extras:false },
 
-  assist: false, // quick controls on/off (session persisted)
+  assist: false, // turbo on/off (session persisted)
 
   sel1: null,
   sel2: null,
@@ -938,13 +983,14 @@ const state = {
   useCustomKB: false,
 
   modalOpen: false,
+  modalType: null, // 'hints' | 'turbo' | null
 
   pendingFly: null,     // 'w1'|'w2'|'extras'|null
   flyAttempts: 0,
 };
 
 /* =======================
-   Assist flags
+   Turbo flags
    ======================= */
 function flags(){
   if(state.assist){
@@ -1002,42 +1048,40 @@ function shakeGrid(){
 /* prevent context menu on interactive surface */
 document.addEventListener('contextmenu', (e)=>{
   const t = e.target;
-  if(t && t.closest && t.closest('#clue, #gridWrap, #hintTrack, #btnRow, #kbHost, #helpModal')){
+  if(t && t.closest && t.closest('#clue, #gridWrap, #hintTrack, #btnRow, #kbHost, #hintsModal, #turboModal')){
     e.preventDefault();
   }
 });
 
 /* =======================
-   Quick controls session persistence
+   Turbo persistence
    ======================= */
-function loadQuickControlsFromSession(){
+function loadTurboFromSession(){
   try{
-    const v = sessionStorage.getItem(QC_SESSION_KEY);
+    const v = sessionStorage.getItem(TURBO_SESSION_KEY);
     state.assist = (v === "1");
   }catch{
     state.assist = false;
   }
 }
-function saveQuickControlsToSession(){
+function saveTurboToSession(){
   try{
-    sessionStorage.setItem(QC_SESSION_KEY, state.assist ? "1" : "0");
+    sessionStorage.setItem(TURBO_SESSION_KEY, state.assist ? "1" : "0");
   }catch{}
 }
-function setQuickControls(on, showMsg=true){
+function setTurbo(on, showMsg=true){
   const next = !!on;
   if(state.assist === next) return;
   state.assist = next;
-  saveQuickControlsToSession();
+  saveTurboToSession();
 
-  // safer UX: kill any in-progress drag if turning off
+  // if turning off, abort any drag and cancel ghost
   if(!state.assist) abortDrag();
 
   if(showMsg){
-    setTransientMsg(state.assist ? "Quick controls now active" : "Quick controls paused", 2200);
+    setTransientMsg(state.assist ? "Turbo now active" : "Turbo paused", 1800);
   }
 
-  // keep help modal open, but re-render it so the toggle updates
-  if(state.modalOpen) renderHelpModal();
   renderSmart();
 }
 
@@ -1176,8 +1220,8 @@ function setMsg(text, kind){
   if(kind === 'warn') el.msg.classList.add('warn');
   if(kind === 'result') el.msg.classList.add('result');
 }
-function setTransientMsg(text, ms=2400){
-  setMsg(text);
+function setTransientMsg(text, ms=2400, kind=null){
+  setMsg(text, kind);
   state.msgTransient = true;
   state.msgTimer = setTimeout(()=>{
     el.msg.classList.remove('show','warn','result');
@@ -1201,6 +1245,65 @@ function excludedMsgText(){
   const n = (state.exclTris?.w1?.size || 0) + (state.exclTris?.w2?.size || 0);
   return (n >= 2) ? "Your hints excluded these trigrams" : "Your hint excluded this trigram";
 }
+
+/* =======================
+   Modal control
+   ======================= */
+function openModal(type){
+  if(state.finished) return;
+  state.modalOpen = true;
+  state.modalType = type;
+
+  if(type === 'hints'){
+    el.hintsModal.classList.add('open');
+    el.hintsModal.setAttribute('aria-hidden', 'false');
+    renderHintsModal();
+    requestAnimationFrame(()=>{ try{ el.hintsModalClose.focus({preventScroll:true}); }catch{} });
+  }else if(type === 'turbo'){
+    el.turboModal.classList.add('open');
+    el.turboModal.setAttribute('aria-hidden', 'false');
+    renderTurboModal();
+    requestAnimationFrame(()=>{ try{ el.turboModalClose.focus({preventScroll:true}); }catch{} });
+  }
+}
+function closeModal(){
+  if(!state.modalOpen) return;
+
+  el.hintsModal.classList.remove('open');
+  el.hintsModal.setAttribute('aria-hidden', 'true');
+  el.turboModal.classList.remove('open');
+  el.turboModal.setAttribute('aria-hidden', 'true');
+
+  state.modalOpen = false;
+  state.modalType = null;
+
+  requestAnimationFrame(()=>{
+    if(!state.useCustomKB && !state.finished) focusCell(state.focusIdx ?? 0);
+  });
+}
+
+/* Backdrop click closes */
+el.hintsModal.addEventListener('pointerdown', (e)=>{
+  if(e.target === el.hintsModal){ e.preventDefault(); e.stopPropagation(); closeModal(); }
+},{passive:false});
+el.turboModal.addEventListener('pointerdown', (e)=>{
+  if(e.target === el.turboModal){ e.preventDefault(); e.stopPropagation(); closeModal(); }
+},{passive:false});
+
+el.hintsModalClose.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeModal(); });
+el.turboModalClose.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeModal(); });
+
+/* Esc closes modal + suppress typing while open */
+document.addEventListener('keydown', (e)=>{
+  if(!state.modalOpen) return;
+  if(e.key === "Escape"){
+    e.preventDefault();
+    closeModal();
+  }else{
+    if(e.key && e.key.length === 1) e.preventDefault();
+    if(e.key === "Backspace" || e.key === "Delete" || e.key === "Enter") e.preventDefault();
+  }
+}, {capture:true});
 
 /* =======================
    Clue helpers
@@ -1432,7 +1535,7 @@ function deleteFromEnd(){
 }
 
 /* =======================
-   Typed trigram detection / promotion (quick controls only)
+   Typed trigram detection / promotion (turbo only)
    ======================= */
 function allowedSet(group){
   const p = current();
@@ -1530,7 +1633,7 @@ function promoteTypedCandidate(group, cand){
   return true;
 }
 function autoPromoteTypedTrigrams(){
-  if(state.finished || state.showedAnswer) return false;
+  if(state.finished) return false;
   if(!flags().allowAutoPromote) return false;
 
   let changed = false;
@@ -1752,6 +1855,9 @@ function updateStatusMessages(){
   if(state.finished) return;
   if(state.lockMsg) return;
 
+  // transient messages (e.g. locked reason, turbo active) win; don't override
+  if(state.msgTransient) return;
+
   computeMax3Invalid();
   computeTwoTrigramsInvalid();
   computeHintExcludedTrigrams();
@@ -1765,7 +1871,7 @@ function updateStatusMessages(){
   if(hasTwo){  setMsg(TWOTRI_TEXT, 'warn'); state.overlapMsgOn=false; return; }
   if(hasExcluded){ setMsg(excludedMsgText(), 'warn'); state.overlapMsgOn=false; return; }
 
-  if(el.msg.classList.contains('warn') && !state.msgTransient) setMsg("");
+  if(el.msg.classList.contains('warn')) setMsg("");
   if(state.msgTransient) return;
 
   if(hasOverlap){
@@ -1808,7 +1914,7 @@ function onCheck(){
 
   const n = getN();
   if(!canEnableCheckNow()){
-    setTransientMsg(`Fill all ${n}`);
+    setTransientMsg(`Fill all ${n}`, 1400);
     return;
   }
 
@@ -1823,7 +1929,7 @@ function onCheck(){
   if(attempt === ans){
     setMsg(`Correct — ${hintPhraseText(state.hintCount)}!`, 'result');
     state.finished = true;
-    state.showedAnswer = false;
+    state.gaveUp = false;
     renderSmart();
     return;
   }
@@ -1831,7 +1937,7 @@ function onCheck(){
   shakeGrid();
 
   if(flags().checkFeedback === "minimal"){
-    setTransientMsg("Not quite", 1400);
+    setTransientMsg("Not quite", 1300);
     renderSmart();
     return;
   }
@@ -1861,6 +1967,32 @@ function onCheck(){
     setMsg("");
   }
 
+  renderSmart();
+}
+
+/* =======================
+   Give up
+   ======================= */
+function allHintsUsed(){
+  return !!(state.hintsUsed.w1 && state.hintsUsed.w2 && state.hintsUsed.extras);
+}
+function revealAnswerGiveUp(){
+  if(state.finished) return;
+  const p = current();
+  const ans = norm(p.answer);
+  const n = getN();
+
+  abortDrag();
+  state.placed = {w1:null, w2:null};
+  state.singles = [];
+  for(let i=0;i<n;i++){
+    state.singles.push({id: uid(), ch: ans[i] || "", idx:i});
+  }
+  state.focusIdx = 0;
+  state.finished = true;
+  state.gaveUp = true;
+
+  setMsg(`Answer — ${ans}`, 'result');
   renderSmart();
 }
 
@@ -1992,11 +2124,6 @@ function makeTrigramBlock(tri, cls, labelText, onClickMaybe, id){
   box.setAttribute("aria-label", labelText);
   if(id) box.id = id;
 
-  if((state.pendingFly === 'w1' && id === 'trackBox-w1') ||
-     (state.pendingFly === 'w2' && id === 'trackBox-w2')){
-    box.style.opacity = "0";
-  }
-
   if(canClick){
     box.setAttribute("role","button");
     box.addEventListener('click', onClickMaybe);
@@ -2054,10 +2181,6 @@ function renderHintTrack(){
     row.className = "extrasRow";
     row.id = "trackBox-extras";
 
-    if(state.pendingFly === 'extras'){
-      row.style.opacity = "0";
-    }
-
     for(const tile of state.bank){
       const box = document.createElement('div');
       const canInsert = !!flags().allowHint3TapInsert;
@@ -2098,7 +2221,7 @@ function renderHintTrack(){
 }
 
 /* =======================
-   Placing / cycling (quick controls only)
+   Placing / cycling (turbo only)
    ======================= */
 function placeTrigram(group, tri){
   if(!flags().allowClueTapPlace && !flags().allowHintTapPlace) return;
@@ -2636,8 +2759,77 @@ function renderGrid(stealFocus=true){
 }
 
 /* =======================
-   Help modal content
+   Hints + turbo modals
    ======================= */
+function extrasUnlocked(){
+  return state.hintsUsed.w1 && state.hintsUsed.w2;
+}
+function hintStatus(id){
+  if(id === HINT_IDS.extras && !state.hintsUsed.extras && !extrasUnlocked()) return 'locked';
+  if(state.hintsUsed[id]) return 'used';
+  return 'avail';
+}
+function lockedReasonFor(id){
+  if(id === HINT_IDS.extras){
+    return "Extra letters unlock after using Word 1 and Word 2.";
+  }
+  return "That hint isn’t available yet.";
+}
+
+function makeHintCardTile({id, title, cls}){
+  const status = hintStatus(id);
+  const dim = (status === 'used' || status === 'locked');
+
+  const card = document.createElement('div');
+  card.className = `hintCard ${cls} ${dim ? "dim" : "tap"}`.trim();
+
+  const top = document.createElement('div');
+  top.className = "hintTop";
+
+  const t = document.createElement('div');
+  t.className = "hintTitle";
+  t.textContent = title;
+
+  const pill = document.createElement('div');
+  if(status === 'used'){
+    pill.className = "statusPill used";
+    pill.textContent = "✓ USED";
+  }else if(status === 'locked'){
+    pill.className = "statusPill locked";
+    pill.textContent = "LOCKED";
+  }else{
+    pill.className = "statusPill empty";
+    pill.textContent = "";
+  }
+
+  top.appendChild(t);
+  top.appendChild(pill);
+  card.appendChild(top);
+
+  card.addEventListener('click', ()=>{
+    if(state.finished) return;
+    if(status === 'avail'){
+      applyHint(id);
+      return;
+    }
+    if(status === 'locked'){
+      // flash explanation
+      closeModal();
+      setTransientMsg(lockedReasonFor(id), 2200, 'warn');
+      return;
+    }
+  });
+
+  return card;
+}
+
+function renderHintsModal(){
+  el.hintsModalBody.innerHTML = "";
+  el.hintsModalBody.appendChild(makeHintCardTile({ id:HINT_IDS.w1,     title:"Word 1 trigram", cls:"opt-w1" }));
+  el.hintsModalBody.appendChild(makeHintCardTile({ id:HINT_IDS.w2,     title:"Word 2 trigram", cls:"opt-w2" }));
+  el.hintsModalBody.appendChild(makeHintCardTile({ id:HINT_IDS.extras, title:"Extra letters",  cls:"opt-extras" }));
+}
+
 function quickDetailsHTML(){
   return `
     <p>Add, move and cycle trigrams without typing!</p>
@@ -2650,56 +2842,23 @@ function quickDetailsHTML(){
   `;
 }
 
-function openHelpModal(){
-  if(state.finished) return;
-  state.modalOpen = true;
-  el.helpModal.classList.add('open');
-  el.helpModal.setAttribute('aria-hidden', 'false');
-  renderHelpModal();
-  requestAnimationFrame(()=>{ try{ el.helpModalClose.focus({preventScroll:true}); }catch{} });
-}
-function closeHelpModal(){
-  if(!state.modalOpen) return;
-  state.modalOpen = false;
-  el.helpModal.classList.remove('open');
-  el.helpModal.setAttribute('aria-hidden', 'true');
+function renderTurboModal(){
+  el.turboModalBody.innerHTML = "";
 
-  requestAnimationFrame(()=>{
-    if(!state.useCustomKB && !state.finished) focusCell(state.focusIdx ?? 0);
-  });
-}
-
-function extrasUnlocked(){
-  return state.hintsUsed.w1 && state.hintsUsed.w2;
-}
-function hintStatus(id){
-  if(id === HINT_IDS.extras && !state.hintsUsed.extras && !extrasUnlocked()) return 'locked';
-  if(state.hintsUsed[id]) return 'used';
-  return 'avail';
-}
-
-function makeQuickControlsCard(){
   const card = document.createElement('div');
-  card.className = "hintCard opt-quick";
+  card.className = "hintCard opt-turbo";
 
   const top = document.createElement('div');
   top.className = "hintTop";
 
-  const left = document.createElement('div');
-  left.className = "hintLeft";
-
   const t = document.createElement('div');
   t.className = "hintTitle";
-  t.textContent = "Quick controls";
-  left.appendChild(t);
+  t.textContent = "Turbo";
 
-  const toggleBtn = document.createElement('button');
-  toggleBtn.type = "button";
-  toggleBtn.className = "hintAction qcToggle";
-  toggleBtn.setAttribute('aria-pressed', state.assist ? 'true' : 'false');
-  toggleBtn.style.textTransform = "none";
-  toggleBtn.style.letterSpacing = ".02em";
-  toggleBtn.style.fontSize = "12px";
+  const switchBtn = document.createElement('button');
+  switchBtn.type = "button";
+  switchBtn.className = "qcSwitchBtn";
+  switchBtn.setAttribute('aria-pressed', state.assist ? 'true' : 'false');
 
   const lab = document.createElement('span');
   lab.className = "qcLabel";
@@ -2711,16 +2870,18 @@ function makeQuickControlsCard(){
   knob.className = "qcKnob";
   pill.appendChild(knob);
 
-  toggleBtn.appendChild(lab);
-  toggleBtn.appendChild(pill);
+  switchBtn.appendChild(lab);
+  switchBtn.appendChild(pill);
 
-  toggleBtn.addEventListener('click', (e)=>{
+  switchBtn.addEventListener('click', (e)=>{
     e.preventDefault(); e.stopPropagation();
-    setQuickControls(!state.assist, true);
+    const next = !state.assist;
+    closeModal();               // MUST close immediately on change
+    setTurbo(next, true);       // persists + message
   });
 
-  top.appendChild(left);
-  top.appendChild(toggleBtn);
+  top.appendChild(t);
+  top.appendChild(switchBtn);
 
   card.appendChild(top);
 
@@ -2729,84 +2890,8 @@ function makeQuickControlsCard(){
   details.innerHTML = quickDetailsHTML();
   card.appendChild(details);
 
-  return card;
+  el.turboModalBody.appendChild(card);
 }
-
-function makeHintCardSimple({id, title, cls}){
-  const status = hintStatus(id);
-  const dim = (status === 'used' || status === 'locked');
-
-  const card = document.createElement('div');
-  card.className = `hintCard ${cls} ${dim ? "dim" : ""}`.trim();
-
-  const top = document.createElement('div');
-  top.className = "hintTop";
-
-  const left = document.createElement('div');
-  left.className = "hintLeft";
-
-  const t = document.createElement('div');
-  t.className = "hintTitle";
-  t.textContent = title;
-
-  left.appendChild(t);
-
-  const action = document.createElement('button');
-  action.type = "button";
-  action.className = "hintAction";
-
-  if(status === 'avail'){
-    action.textContent = "SELECT";
-    action.addEventListener('click', (e)=>{
-      e.preventDefault(); e.stopPropagation();
-      applyHint(id);
-    });
-  }else if(status === 'used'){
-    action.textContent = "✓ USED";
-    action.disabled = true;
-  }else{
-    action.textContent = "LOCKED";
-    action.disabled = true;
-  }
-
-  top.appendChild(left);
-  top.appendChild(action);
-
-  card.appendChild(top);
-  return card;
-}
-
-function renderHelpModal(){
-  el.helpModalTitle.textContent = "Help";
-  el.helpModalBody.innerHTML = "";
-
-  el.helpModalBody.appendChild(makeQuickControlsCard());
-  el.helpModalBody.appendChild(makeHintCardSimple({ id:HINT_IDS.w1,     title:"Word 1 trigram",  cls:"opt-w1" }));
-  el.helpModalBody.appendChild(makeHintCardSimple({ id:HINT_IDS.w2,     title:"Word 2 trigram",  cls:"opt-w2" }));
-  el.helpModalBody.appendChild(makeHintCardSimple({ id:HINT_IDS.extras, title:"Extra letters",   cls:"opt-extras" }));
-}
-
-/* modal events */
-el.helpModalClose.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeHelpModal(); });
-el.helpModal.addEventListener('pointerdown', (e)=>{
-  if(e.target === el.helpModal){
-    e.preventDefault();
-    e.stopPropagation();
-    closeHelpModal();
-  }
-}, {passive:false});
-
-/* Esc closes modal */
-document.addEventListener('keydown', (e)=>{
-  if(!state.modalOpen) return;
-  if(e.key === "Escape"){
-    e.preventDefault();
-    closeHelpModal();
-  }else{
-    if(e.key && e.key.length === 1) e.preventDefault();
-    if(e.key === "Backspace" || e.key === "Delete" || e.key === "Enter") e.preventDefault();
-  }
-}, {capture:true});
 
 /* =======================
    Hint application (only 3 count)
@@ -2816,8 +2901,7 @@ function applyHint(id){
     if(state.hintsUsed.w1) return;
     state.hintsUsed.w1 = true;
     state.hintCount += 1;
-    closeHelpModal();
-    state.pendingFly = 'w1';
+    closeModal();
     renderSmart();
     scheduleHintFly('w1');
     return;
@@ -2827,8 +2911,7 @@ function applyHint(id){
     if(state.hintsUsed.w2) return;
     state.hintsUsed.w2 = true;
     state.hintCount += 1;
-    closeHelpModal();
-    state.pendingFly = 'w2';
+    closeModal();
     renderSmart();
     scheduleHintFly('w2');
     return;
@@ -2836,12 +2919,15 @@ function applyHint(id){
 
   if(id === HINT_IDS.extras){
     if(state.hintsUsed.extras) return;
-    if(!extrasUnlocked()) return;
+    if(!extrasUnlocked()){
+      closeModal();
+      setTransientMsg(lockedReasonFor(id), 2200, 'warn');
+      return;
+    }
     state.hintsUsed.extras = true;
     state.hintCount += 1;
     if(state.bank.length === 0) rebuildBank();
-    closeHelpModal();
-    state.pendingFly = 'extras';
+    closeModal();
     renderSmart();
     scheduleHintFly('extras');
     return;
@@ -2871,17 +2957,28 @@ function bindFastTap(btn, fn){
   });
 }
 
-bindFastTap(el.helpBtn, ()=>{
+bindFastTap(el.hintsBtn, ()=>{
   if(state.finished) return;
   if(state.modalOpen) return;
-  openHelpModal();
+  if(allHintsUsed()){
+    revealAnswerGiveUp();
+    return;
+  }
+  openModal('hints');
 });
+
+bindFastTap(el.turboBtn, ()=>{
+  if(state.finished) return;
+  if(state.modalOpen) return;
+  openModal('turbo');
+});
+
 bindFastTap(el.checkBtn, onCheck);
 
 el.prevBtn.addEventListener('click', (e)=>{
   e.preventDefault();
   clearTransientOnAnyChange();
-  closeHelpModal();
+  closeModal();
   state.i=(state.i-1+PUZZLES.length)%PUZZLES.length;
   resetAllForPuzzle();
   renderSmart();
@@ -2889,14 +2986,14 @@ el.prevBtn.addEventListener('click', (e)=>{
 el.nextBtn.addEventListener('click', (e)=>{
   e.preventDefault();
   clearTransientOnAnyChange();
-  closeHelpModal();
+  closeModal();
   state.i=(state.i+1)%PUZZLES.length;
   resetAllForPuzzle();
   renderSmart();
 });
 
 /* =======================
-   Clue tap (quick controls only)
+   Clue tap (turbo only)
    ======================= */
 function onClueWordActivate(group){
   if(state.finished) return;
@@ -2983,26 +3080,15 @@ document.addEventListener('keydown', (e)=>{
 /* =======================
    Render
    ======================= */
-function errorItemsForGroup(group){
-  if(state.badRuns[group] && state.badRuns[group].length){
-    return state.badRuns[group].map(s => ({sub:s, cls:"u-red"}));
-  }
-  if(state.twoTris[group] && state.twoTris[group].size){
-    return Array.from(state.twoTris[group]).map(t => ({sub:t, cls:"u-red"}));
-  }
-  if(state.exclTris[group] && state.exclTris[group].size){
-    return Array.from(state.exclTris[group]).map(t => ({sub:t, cls:"u-red"}));
-  }
-  return [];
-}
-
 function render(stealFocus=true){
   const p = current();
   ensurePuzzleDerived(p);
 
   const n = getN();
   el.count.textContent = `${state.i+1}/${PUZZLES.length}`;
+
   el.wrap.classList.toggle('solved', state.finished);
+  el.wrap.classList.toggle('gaveup', state.gaveUp);
   el.wrap.classList.toggle('no-assist', !state.assist);
 
   renderGrid(stealFocus);
@@ -3035,8 +3121,12 @@ function render(stealFocus=true){
   renderHintTrack();
 
   el.checkBtn.classList.toggle('ready', canEnableCheckNow());
-  el.helpBtn.disabled = state.finished;
   el.checkBtn.disabled = state.finished;
+  el.turboBtn.disabled = state.finished;
+
+  // hints button label: hints -> give up once all hints used
+  el.hintsBtn.textContent = allHintsUsed() ? "give up" : "hints";
+  el.hintsBtn.disabled = state.finished;
 
   updateStatusMessages();
   updateKeyboardState();
@@ -3058,7 +3148,7 @@ function resetMainGridOnly(){
 }
 function resetAllForPuzzle(){
   state.finished = false;
-  state.showedAnswer = false;
+  state.gaveUp = false;
 
   // hints reset per puzzle
   state.hintCount = 0;
@@ -3068,7 +3158,6 @@ function resetAllForPuzzle(){
   state.pendingFly = null;
   state.flyAttempts = 0;
 
-  // NOTE: quick controls is NOT reset — it persists via sessionStorage
   resetMainGridOnly();
 }
 
@@ -3080,7 +3169,7 @@ window.addEventListener('resize', ()=>{
 });
 
 /* init */
-loadQuickControlsFromSession();
+loadTurboFromSession();
 setCustomKBEnabled(shouldUseCustomKB());
 resetAllForPuzzle();
 renderSmart();
