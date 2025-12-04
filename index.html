@@ -404,29 +404,44 @@
       flex-wrap:nowrap;
     }
 
-    /* ===== Bigger, longer hint appearance animation ===== */
-    @keyframes hintPop {
-      0%   { transform: scale(2.75) rotate(-4deg); filter: drop-shadow(0 18px 16px rgba(0,0,0,.18)); }
-      34%  { transform: scale(1.42) rotate(3.5deg);  }
-      56%  { transform: scale(1.16) rotate(-2.5deg); }
-      74%  { transform: scale(1.06) rotate(1.3deg);  }
-      88%  { transform: scale(1.02) rotate(-0.6deg); }
-      100% { transform: scale(1.00) rotate(0deg); filter: drop-shadow(0 10px 12px rgba(0,0,0,.10)); }
+    /* ===== Spotlight hint animation (center -> fly to tracker) ===== */
+    .hintSpotOverlay{
+      position:fixed;
+      inset:0;
+      z-index:12000;
+      pointer-events:none;
+      display:block;
     }
-    .letters.hint-pop{
-      animation: hintPop 860ms cubic-bezier(.12,.86,.22,1.08) both;
+    .hintSpot{
+      position:fixed;
+      left:50%;
+      top:42%;
+      transform: translate(-50%,-50%);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      filter: drop-shadow(0 18px 18px rgba(0,0,0,.24));
+      will-change: transform;
     }
-
-    @keyframes tilePop {
-      0%   { transform: scale(3.0) rotate(-5deg); filter: drop-shadow(0 18px 16px rgba(0,0,0,.18)); }
-      38%  { transform: scale(1.46) rotate(4deg); }
-      60%  { transform: scale(1.18) rotate(-2.6deg); }
-      78%  { transform: scale(1.06) rotate(1.4deg); }
-      90%  { transform: scale(1.02) rotate(-0.6deg); }
-      100% { transform: scale(1.00) rotate(0deg); filter: drop-shadow(0 10px 12px rgba(0,0,0,.10)); }
+    .hintSpot .letter{
+      width:58px;
+      height:58px;
+      font-size:36px;
+      border-width:2px;
+      border-color: rgba(0,0,0,.22);
+      background: #fff;
     }
-    .letter.pop-tile{
-      animation: tilePop 920ms cubic-bezier(.12,.86,.22,1.08) both;
+    .hintSpot.h1 .letter{ background: var(--w1); }
+    .hintSpot.h2 .letter{ background: var(--w2); }
+    .hintSpot.hex .letter{ background: rgba(255,255,255,.97); }
+    .hintSpot .letter + .letter{ margin-left:-2px; }
+    @media (max-width:520px){
+      .hintSpot{ top:40%; }
+      .hintSpot .letter{
+        width:54px;
+        height:54px;
+        font-size:34px;
+      }
     }
 
     /* ===== Buttons ===== */
@@ -623,6 +638,8 @@
       font-size: 18px;
       letter-spacing: .01em;
     }
+
+    /* subtle X, no iOS blue focus square */
     .modalX{
       border:0;
       background:transparent;
@@ -633,8 +650,19 @@
       cursor:pointer;
       padding: 2px 6px;
       opacity:.9;
+      outline:none !important;
+      box-shadow:none !important;
+      -webkit-tap-highlight-color: transparent;
+      appearance:none;
+      -webkit-appearance:none;
     }
-    .modalX:active{ transform: translateY(1px); }
+    .modalX:focus,
+    .modalX:focus-visible{
+      outline:none !important;
+      box-shadow:none !important;
+    }
+    .modalX::-moz-focus-inner{ border:0; }
+    .modalX:active{ transform: translateY(1px); background:transparent; }
 
     .modalBody{
       padding: 12px 14px 14px;
@@ -682,30 +710,6 @@
       text-overflow:ellipsis;
     }
 
-    /* Quick controls title + caret (not a button look) */
-    .hintToggle{
-      display:inline-flex;
-      align-items:center;
-      gap:7px;
-      cursor:pointer;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-    }
-    .hintCard.dim .hintToggle{ cursor:pointer; } /* still allow open */
-    .caretGlyph{
-      display:inline-block;
-      font-size: 14px;
-      font-weight: 900;
-      line-height:1;
-      color:#000;
-      opacity:.85;
-      transform: rotate(0deg);
-      transition: transform .18s ease;
-      position:relative;
-      top:1px;
-    }
-    .hintCard.open .caretGlyph{ transform: rotate(180deg); }
-
     .hintAction{
       flex:0 0 auto;
       min-width: 134px;
@@ -727,20 +731,9 @@
       opacity:.92;
     }
 
-    /* Quick controls details only */
     .hintDetails{
-      overflow:hidden;
-      max-height: 0px;
-      opacity: 0;
-      transform: translateY(-4px);
-      transition: max-height .22s ease, opacity .18s ease, transform .18s ease;
-      padding: 0 2px;
-    }
-    .hintCard.open .hintDetails{
-      max-height: 240px;
-      opacity: 1;
-      transform: translateY(0);
       margin-top: 10px;
+      padding: 0 2px;
     }
     .hintDetails p{
       margin: 8px 0;
@@ -868,7 +861,6 @@ const state = {
 
   hintCount: 0,
   hintsUsed: { quick:false, w1:false, w2:false, extras:false },
-  hintOpen: { quick:false },
 
   assist: false,
 
@@ -903,7 +895,8 @@ const state = {
 
   modalOpen: false,
 
-  popNext: { w1:false, w2:false, extras:false },
+  pendingFly: null,     // 'w1'|'w2'|'extras'|null
+  flyAttempts: 0,
 };
 
 /* =======================
@@ -932,7 +925,7 @@ function flags(){
     allowDragTrigrams: false,
     allowAutoPromote: false,
     showGridColors: false,
-    showStatusMessages: true,   // from the start
+    showStatusMessages: true,
     showBadCellColor: false,
     checkFeedback: "minimal",
   };
@@ -1675,112 +1668,6 @@ function rebuildBank(){
 }
 
 /* =======================
-   Placing / cycling (assist only)
-   ======================= */
-function placeTrigram(group, tri){
-  if(!flags().allowClueTapPlace && !flags().allowHintTapPlace) return;
-  if(state.finished) return;
-  clearTransientOnAnyChange();
-
-  const n = getN();
-  const t = norm(tri);
-  if(!t || t.length !== TR) return;
-
-  const otherGroup = group === 'w1' ? 'w2' : 'w1';
-  const other = state.placed[otherGroup];
-
-  let start = (state.placed[group] ? state.placed[group].start : null);
-  const focus = clamp(state.focusIdx ?? 0, 0, n-1);
-  const prefStart = clamp(focus, 0, startMax());
-
-  function tryStartsInOrder(){
-    const order = [];
-    order.push(prefStart);
-    for(let d=1; d<=startMax(); d++){
-      if(prefStart-d >= 0) order.push(prefStart-d);
-      if(prefStart+d <= startMax()) order.push(prefStart+d);
-    }
-    return order;
-  }
-
-  if(start == null){
-    start = null;
-    for(const s of tryStartsInOrder()){
-      if(other){
-        const ol = overlapCount(s, other.start);
-        if(ol > 1) continue;
-        if(ol === 1 && !overlapIsValid(s, t, other.start, other.tri)) continue;
-      }
-      start = s; break;
-    }
-    if(start == null){
-      setTransientMsg("can’t place", 1800);
-      return;
-    }
-  } else {
-    if(other){
-      const ol = overlapCount(start, other.start);
-      const ok = (ol <= 1) && (ol !== 1 || overlapIsValid(start, t, other.start, other.tri));
-      if(!ok){
-        start = null;
-        for(const s of tryStartsInOrder()){
-          const ol2 = overlapCount(s, other.start);
-          if(ol2 > 1) continue;
-          if(ol2 === 1 && !overlapIsValid(s, t, other.start, other.tri)) continue;
-          start = s; break;
-        }
-        if(start == null){
-          setTransientMsg("can’t place", 1800);
-          return;
-        }
-      }
-    }
-  }
-
-  state.placed[group] = {start, tri:t};
-  removeSinglesInCells(trigramCells(start));
-  setMiniHighlightToTri(group, t);
-}
-
-function cyclePlacedTrigram(group){
-  if(!flags().allowClueTapCycle) return;
-  if(state.finished) return;
-
-  const pl = state.placed[group];
-  if(!pl) return;
-
-  const p = current();
-  const w = norm(group === 'w1' ? p.word1 : p.word2);
-  const maxStart = Math.max(0, w.length - TR);
-  if(maxStart === 0) return;
-
-  const curTri = norm(pl.tri);
-  const curPos = w.indexOf(curTri);
-  if(curPos >= 0){
-    if(group === 'w1') state.sel1 = clamp(curPos, 0, maxStart);
-    else state.sel2 = clamp(curPos, 0, maxStart);
-  }else{
-    if(group === 'w1') state.sel1 = 0;
-    else state.sel2 = 0;
-  }
-
-  let s = (group === 'w1' ? state.sel1 : state.sel2);
-  if(s == null) s = 0;
-  s = (s + 1) % (maxStart + 1);
-  if(group === 'w1') state.sel1 = s; else state.sel2 = s;
-
-  const tri = w.slice(s, s+TR);
-  placeTrigram(group, tri);
-}
-
-function firstTrigramOfWord(group){
-  const p = current();
-  const w = norm(group === 'w1' ? p.word1 : p.word2);
-  if(w.length < TR) return null;
-  return w.slice(0, TR);
-}
-
-/* =======================
    Status messages (from the start)
    ======================= */
 function updateStatusMessages(){
@@ -1900,9 +1787,126 @@ function onCheck(){
 }
 
 /* =======================
-   Hint track UI (+ pop animation)
+   Spotlight fly animation
    ======================= */
-function makeTrigramBlock(tri, cls, labelText, onClickMaybe, popIt){
+function makeSpotLettersHTML(chars, mode){
+  const spot = document.createElement('div');
+  spot.className = `hintSpot ${mode}`;
+  const wrap = document.createElement('div');
+  wrap.className = "letters";
+  for(const ch of chars){
+    const d = document.createElement('div');
+    d.className = "letter";
+    d.textContent = ch;
+    wrap.appendChild(d);
+  }
+  spot.appendChild(wrap);
+  return spot;
+}
+
+function runHintFly(kind){
+  let target = null;
+  let mode = 'hex';
+  let chars = [];
+
+  const p = current();
+
+  if(kind === 'w1'){
+    target = document.getElementById('trackBox-w1');
+    mode = 'h1';
+    chars = Array.from(norm(p.tri1));
+  }else if(kind === 'w2'){
+    target = document.getElementById('trackBox-w2');
+    mode = 'h2';
+    chars = Array.from(norm(p.tri2));
+  }else if(kind === 'extras'){
+    target = document.getElementById('trackBox-extras');
+    mode = 'hex';
+    if(state.bank.length === 0) rebuildBank();
+    chars = state.bank.map(t=>t.ch);
+  }
+
+  if(!target || !chars.length) return false;
+
+  // hide the real target until animation lands
+  target.style.opacity = "0";
+
+  const overlay = document.createElement('div');
+  overlay.className = "hintSpotOverlay";
+
+  const spot = makeSpotLettersHTML(chars, mode);
+  overlay.appendChild(spot);
+  document.body.appendChild(overlay);
+
+  // measure
+  const sr = spot.getBoundingClientRect();
+  const tr = target.getBoundingClientRect();
+
+  const scx = sr.left + sr.width/2;
+  const scy = sr.top + sr.height/2;
+  const tcx = tr.left + tr.width/2;
+  const tcy = tr.top + tr.height/2;
+
+  const dx = tcx - scx;
+  const dy = tcy - scy;
+
+  const sx = tr.width / sr.width;
+  const sy = tr.height / sr.height;
+  const scale = clamp(Math.min(sx, sy), 0.20, 0.95);
+
+  const kf = [
+    { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, offset: 0.00 },
+    { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, offset: 0.40 },     // hold
+    { transform: `translate(-50%,-50%) scale(1) rotate(4deg)`,  offset: 0.50 },     // jiggle
+    { transform: `translate(-50%,-50%) scale(1) rotate(-3deg)`, offset: 0.58 },
+    { transform: `translate(-50%,-50%) scale(1) rotate(2deg)`,  offset: 0.64 },
+    { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`,  offset: 0.70 },
+    { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scale}) rotate(0deg)`, offset: 1.00 }
+  ];
+
+  const anim = spot.animate(kf, {
+    duration: 820,
+    easing: 'cubic-bezier(.16,.88,.22,1)',
+    fill: 'forwards'
+  });
+
+  anim.onfinish = ()=>{
+    try{ overlay.remove(); }catch{}
+    target.style.opacity = "";
+  };
+
+  return true;
+}
+
+function scheduleHintFly(kind){
+  state.pendingFly = kind;
+  state.flyAttempts = 0;
+  const tryRun = ()=>{
+    if(!state.pendingFly) return;
+    state.flyAttempts++;
+    if(runHintFly(state.pendingFly)){
+      state.pendingFly = null;
+      state.flyAttempts = 0;
+      return;
+    }
+    if(state.flyAttempts < 6){
+      requestAnimationFrame(tryRun);
+    }else{
+      // fallback: just reveal if something went weird
+      const map = {w1:'trackBox-w1', w2:'trackBox-w2', extras:'trackBox-extras'};
+      const t = document.getElementById(map[state.pendingFly]||"");
+      if(t) t.style.opacity = "";
+      state.pendingFly = null;
+      state.flyAttempts = 0;
+    }
+  };
+  requestAnimationFrame(tryRun);
+}
+
+/* =======================
+   Hint track UI
+   ======================= */
+function makeTrigramBlock(tri, cls, labelText, onClickMaybe, id){
   const canClick = !!flags().allowHintTapPlace && typeof onClickMaybe === "function";
 
   const block = document.createElement('div');
@@ -1910,8 +1914,14 @@ function makeTrigramBlock(tri, cls, labelText, onClickMaybe, popIt){
 
   const box = document.createElement('div');
   box.className = "letters " + (canClick ? "clickable" : "is-disabled");
-  if(popIt) box.classList.add('hint-pop');
   box.setAttribute("aria-label", labelText);
+  if(id) box.id = id;
+
+  // If this is the fly target, hide until fly lands
+  if((state.pendingFly === 'w1' && id === 'trackBox-w1') ||
+     (state.pendingFly === 'w2' && id === 'trackBox-w2')){
+    box.style.opacity = "0";
+  }
 
   if(canClick){
     box.setAttribute("role","button");
@@ -1941,27 +1951,21 @@ function renderHintTrack(){
   el.trackExtras.style.display = "none";
 
   if(state.hintsUsed.w1){
-    const pop = !!state.popNext.w1;
-    state.popNext.w1 = false;
-
     el.trackW1.appendChild(
       makeTrigramBlock(norm(p.tri1), "sel-w1", "word 1 trigram", ()=>{
         placeTrigram('w1', norm(p.tri1));
         renderSmart();
-      }, pop)
+      }, "trackBox-w1")
     );
     el.trackW1.style.display = "";
   }
 
   if(state.hintsUsed.w2){
-    const pop = !!state.popNext.w2;
-    state.popNext.w2 = false;
-
     el.trackW2.appendChild(
       makeTrigramBlock(norm(p.tri2), "sel-w2", "word 2 trigram", ()=>{
         placeTrigram('w2', norm(p.tri2));
         renderSmart();
-      }, pop)
+      }, "trackBox-w2")
     );
     el.trackW2.style.display = "";
   }
@@ -1969,16 +1973,17 @@ function renderHintTrack(){
   if(state.hintsUsed.extras){
     if(state.bank.length === 0) rebuildBank();
 
-    const popExtras = !!state.popNext.extras;
-    state.popNext.extras = false;
-
     const block = document.createElement('div');
     block.className = "trackBlock";
 
     const row = document.createElement('div');
     row.className = "extrasRow";
+    row.id = "trackBox-extras";
 
-    let idx = 0;
+    if(state.pendingFly === 'extras'){
+      row.style.opacity = "0";
+    }
+
     for(const tile of state.bank){
       const box = document.createElement('div');
       const canInsert = !!flags().allowHint3TapInsert;
@@ -1987,12 +1992,6 @@ function renderHintTrack(){
       const d = document.createElement('div');
       d.className = "letter extra";
       d.textContent = tile.ch;
-
-      if(popExtras){
-        d.classList.add('pop-tile');
-        d.style.animationDelay = `${idx * 80}ms`;
-      }
-      idx++;
 
       if(canInsert){
         d.addEventListener('click', ()=>{
@@ -2022,6 +2021,112 @@ function renderHintTrack(){
     el.trackExtras.appendChild(block);
     el.trackExtras.style.display = "";
   }
+}
+
+/* =======================
+   Placing / cycling (assist only)
+   ======================= */
+function placeTrigram(group, tri){
+  if(!flags().allowClueTapPlace && !flags().allowHintTapPlace) return;
+  if(state.finished) return;
+  clearTransientOnAnyChange();
+
+  const n = getN();
+  const t = norm(tri);
+  if(!t || t.length !== TR) return;
+
+  const otherGroup = group === 'w1' ? 'w2' : 'w1';
+  const other = state.placed[otherGroup];
+
+  let start = (state.placed[group] ? state.placed[group].start : null);
+  const focus = clamp(state.focusIdx ?? 0, 0, n-1);
+  const prefStart = clamp(focus, 0, startMax());
+
+  function tryStartsInOrder(){
+    const order = [];
+    order.push(prefStart);
+    for(let d=1; d<=startMax(); d++){
+      if(prefStart-d >= 0) order.push(prefStart-d);
+      if(prefStart+d <= startMax()) order.push(prefStart+d);
+    }
+    return order;
+  }
+
+  if(start == null){
+    start = null;
+    for(const s of tryStartsInOrder()){
+      if(other){
+        const ol = overlapCount(s, other.start);
+        if(ol > 1) continue;
+        if(ol === 1 && !overlapIsValid(s, t, other.start, other.tri)) continue;
+      }
+      start = s; break;
+    }
+    if(start == null){
+      setTransientMsg("can’t place", 1800);
+      return;
+    }
+  } else {
+    if(other){
+      const ol = overlapCount(start, other.start);
+      const ok = (ol <= 1) && (ol !== 1 || overlapIsValid(start, t, other.start, other.tri));
+      if(!ok){
+        start = null;
+        for(const s of tryStartsInOrder()){
+          const ol2 = overlapCount(s, other.start);
+          if(ol2 > 1) continue;
+          if(ol2 === 1 && !overlapIsValid(s, t, other.start, other.tri)) continue;
+          start = s; break;
+        }
+        if(start == null){
+          setTransientMsg("can’t place", 1800);
+          return;
+        }
+      }
+    }
+  }
+
+  state.placed[group] = {start, tri:t};
+  removeSinglesInCells(trigramCells(start));
+  setMiniHighlightToTri(group, t);
+}
+
+function cyclePlacedTrigram(group){
+  if(!flags().allowClueTapCycle) return;
+  if(state.finished) return;
+
+  const pl = state.placed[group];
+  if(!pl) return;
+
+  const p = current();
+  const w = norm(group === 'w1' ? p.word1 : p.word2);
+  const maxStart = Math.max(0, w.length - TR);
+  if(maxStart === 0) return;
+
+  const curTri = norm(pl.tri);
+  const curPos = w.indexOf(curTri);
+  if(curPos >= 0){
+    if(group === 'w1') state.sel1 = clamp(curPos, 0, maxStart);
+    else state.sel2 = clamp(curPos, 0, maxStart);
+  }else{
+    if(group === 'w1') state.sel1 = 0;
+    else state.sel2 = 0;
+  }
+
+  let s = (group === 'w1' ? state.sel1 : state.sel2);
+  if(s == null) s = 0;
+  s = (s + 1) % (maxStart + 1);
+  if(group === 'w1') state.sel1 = s; else state.sel2 = s;
+
+  const tri = w.slice(s, s+TR);
+  placeTrigram(group, tri);
+}
+
+function firstTrigramOfWord(group){
+  const p = current();
+  const w = norm(group === 'w1' ? p.word1 : p.word2);
+  if(w.length < TR) return null;
+  return w.slice(0, TR);
 }
 
 /* =======================
@@ -2302,8 +2407,6 @@ function renderGrid(stealFocus=true){
   const n = getN();
   const f = flags();
 
-  el.grid.style.setProperty('--n', String(n));
-
   if(f.allowAutoPromote){
     for(let k=0;k<2;k++){
       if(!autoPromoteTypedTrigrams()) break;
@@ -2316,6 +2419,7 @@ function renderGrid(stealFocus=true){
 
   const overlapSet = f.showGridColors ? computeOverlapIdxSet() : new Set();
 
+  el.grid.style.setProperty('--n', String(n));
   el.grid.innerHTML = "";
 
   for(let i=0;i<n;i++){
@@ -2461,64 +2565,12 @@ function allHintsUsed(){
   return !!(state.hintsUsed.quick && state.hintsUsed.w1 && state.hintsUsed.w2 && state.hintsUsed.extras);
 }
 
-function render(stealFocus=true){
-  const p = current();
-  ensurePuzzleDerived(p);
-
-  const n = getN();
-  el.count.textContent = `${state.i+1}/${PUZZLES.length}`;
-  el.wrap.classList.toggle('solved', state.finished);
-  el.wrap.classList.toggle('no-assist', !state.assist);
-
-  el.hintBtn.textContent = allHintsUsed() ? "give up" : "hints";
-
-  renderGrid(stealFocus);
-
-  const [t1, t2] = splitClueTwoWords(p.clue);
-
-  const err1 = errorItemsForGroup('w1');
-  const err2 = errorItemsForGroup('w2');
-
-  let a = escapeHtml(t1);
-  let b = escapeHtml(t2);
-
-  if(err1.length) a = underlineBySubstrings(t1, err1);
-  else{
-    const tri1 = triForClue('w1');
-    if(tri1) a = underlineBySubstrings(t1, [{sub:tri1, cls:"u-w1"}]);
-  }
-
-  if(err2.length) b = underlineBySubstrings(t2, err2);
-  else{
-    const tri2 = triForClue('w2');
-    if(tri2) b = underlineBySubstrings(t2, [{sub:tri2, cls:"u-w2"}]);
-  }
-
-  el.clue.innerHTML =
-    `<span class="clueWord" data-group="w1">${a}</span> ` +
-    `<span class="clueWord" data-group="w2">${b}</span>` +
-    `<span class="len">(${n})</span>`;
-
-  renderHintTrack();
-
-  el.checkBtn.classList.toggle('ready', canEnableCheckNow());
-  el.hintBtn.disabled = state.finished;
-  el.checkBtn.disabled = state.finished;
-
-  updateStatusMessages();
-  updateKeyboardState();
-}
-
 /* =======================
-   Hint modal (Quick only accordion)
+   Hint modal (Quick details only when unused)
    ======================= */
 function openHintModal(){
   if(state.finished) return;
   state.modalOpen = true;
-
-  // Default quick accordion state based on whether quick controls already enabled
-  state.hintOpen.quick = !state.hintsUsed.quick;
-
   el.hintModal.classList.add('open');
   el.hintModal.setAttribute('aria-hidden', 'false');
   renderHintModal();
@@ -2542,57 +2594,6 @@ function hintStatus(id){
   if(id === HINT_IDS.extras && !state.hintsUsed.extras && !extrasUnlocked()) return 'locked';
   if(state.hintsUsed[id]) return 'used';
   return 'avail';
-}
-
-function applyHint(id){
-  if(id === HINT_IDS.quick){
-    if(state.hintsUsed.quick) return;
-    state.hintsUsed.quick = true;
-    state.hintCount += 1;
-    state.assist = true;
-
-    closeHintModal();
-    clearTransientOnAnyChange();
-    setTransientMsg("Quick controls now active", 2600);
-
-    renderSmart();
-    return;
-  }
-
-  if(id === HINT_IDS.w1){
-    if(state.hintsUsed.w1) return;
-    state.hintsUsed.w1 = true;
-    state.hintCount += 1;
-    state.popNext.w1 = true;
-    clearTransientOnAnyChange();
-    closeHintModal();
-    renderSmart();
-    return;
-  }
-
-  if(id === HINT_IDS.w2){
-    if(state.hintsUsed.w2) return;
-    state.hintsUsed.w2 = true;
-    state.hintCount += 1;
-    state.popNext.w2 = true;
-    clearTransientOnAnyChange();
-    closeHintModal();
-    renderSmart();
-    return;
-  }
-
-  if(id === HINT_IDS.extras){
-    if(state.hintsUsed.extras) return;
-    if(!extrasUnlocked()) return;
-    state.hintsUsed.extras = true;
-    state.hintCount += 1;
-    if(state.bank.length === 0) rebuildBank();
-    state.popNext.extras = true;
-    clearTransientOnAnyChange();
-    closeHintModal();
-    renderSmart();
-    return;
-  }
 }
 
 function quickDetailsHTML(){
@@ -2654,15 +2655,11 @@ function makeHintCardSimple({id, title, cls}){
 
 function makeHintCardQuick(){
   const id = HINT_IDS.quick;
-  const title = "Quick controls";
-  const cls = "opt-quick";
-
   const status = hintStatus(id);
-  const open = !!state.hintOpen.quick;
-  const dim = (status === 'used'); // locked never happens for quick
+  const dim = (status === 'used');
 
   const card = document.createElement('div');
-  card.className = `hintCard ${cls} ${dim ? "dim" : ""} ${open ? "open" : ""}`.trim();
+  card.className = `hintCard opt-quick ${dim ? "dim" : ""}`.trim();
 
   const top = document.createElement('div');
   top.className = "hintTop";
@@ -2670,37 +2667,10 @@ function makeHintCardQuick(){
   const left = document.createElement('div');
   left.className = "hintLeft";
 
-  const toggle = document.createElement('div');
-  toggle.className = "hintToggle";
-  toggle.setAttribute('role','button');
-  toggle.setAttribute('tabindex','0');
-  toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-
   const t = document.createElement('div');
   t.className = "hintTitle";
-  t.textContent = title;
-
-  const caret = document.createElement('span');
-  caret.className = "caretGlyph";
-  caret.textContent = "▾";
-
-  toggle.appendChild(t);
-  toggle.appendChild(caret);
-
-  const toggleFn = ()=>{
-    state.hintOpen.quick = !state.hintOpen.quick;
-    renderHintModal();
-  };
-
-  toggle.addEventListener('pointerdown', (e)=>{ e.preventDefault(); e.stopPropagation(); toggleFn(); }, {passive:false});
-  toggle.addEventListener('keydown', (e)=>{
-    if(e.key === "Enter" || e.key === " "){
-      e.preventDefault();
-      toggleFn();
-    }
-  });
-
-  left.appendChild(toggle);
+  t.textContent = "Quick controls";
+  left.appendChild(t);
 
   const action = document.createElement('button');
   action.type = "button";
@@ -2719,13 +2689,15 @@ function makeHintCardQuick(){
 
   top.appendChild(left);
   top.appendChild(action);
-
-  const details = document.createElement('div');
-  details.className = "hintDetails";
-  details.innerHTML = quickDetailsHTML();
-
   card.appendChild(top);
-  card.appendChild(details);
+
+  // Details only when not yet used
+  if(status === 'avail'){
+    const details = document.createElement('div');
+    details.className = "hintDetails";
+    details.innerHTML = quickDetailsHTML();
+    card.appendChild(details);
+  }
 
   return card;
 }
@@ -2733,7 +2705,6 @@ function makeHintCardQuick(){
 function renderHintModal(){
   el.hintModalTitle.textContent = "Choose a hint";
   el.hintModalBody.innerHTML = "";
-
   el.hintModalBody.appendChild(makeHintCardQuick());
   el.hintModalBody.appendChild(makeHintCardSimple({ id:HINT_IDS.w1,     title:"Word 1 trigram",  cls:"opt-w1" }));
   el.hintModalBody.appendChild(makeHintCardSimple({ id:HINT_IDS.w2,     title:"Word 2 trigram",  cls:"opt-w2" }));
@@ -2763,7 +2734,61 @@ document.addEventListener('keydown', (e)=>{
 }, {capture:true});
 
 /* =======================
-   Hint button / nav
+   Hint application
+   ======================= */
+function applyHint(id){
+  if(id === HINT_IDS.quick){
+    if(state.hintsUsed.quick) return;
+    state.hintsUsed.quick = true;
+    state.hintCount += 1;
+    state.assist = true;
+
+    closeHintModal();
+    clearTransientOnAnyChange();
+    setTransientMsg("Quick controls now active", 2600);
+
+    renderSmart();
+    return;
+  }
+
+  if(id === HINT_IDS.w1){
+    if(state.hintsUsed.w1) return;
+    state.hintsUsed.w1 = true;
+    state.hintCount += 1;
+    closeHintModal();
+    state.pendingFly = 'w1';
+    renderSmart();
+    scheduleHintFly('w1');
+    return;
+  }
+
+  if(id === HINT_IDS.w2){
+    if(state.hintsUsed.w2) return;
+    state.hintsUsed.w2 = true;
+    state.hintCount += 1;
+    closeHintModal();
+    state.pendingFly = 'w2';
+    renderSmart();
+    scheduleHintFly('w2');
+    return;
+  }
+
+  if(id === HINT_IDS.extras){
+    if(state.hintsUsed.extras) return;
+    if(!extrasUnlocked()) return;
+    state.hintsUsed.extras = true;
+    state.hintCount += 1;
+    if(state.bank.length === 0) rebuildBank();
+    closeHintModal();
+    state.pendingFly = 'extras';
+    renderSmart();
+    scheduleHintFly('extras');
+    return;
+  }
+}
+
+/* =======================
+   Buttons / nav
    ======================= */
 function bindFastTap(btn, fn){
   let last = 0;
@@ -2920,6 +2945,57 @@ document.addEventListener('keydown', (e)=>{
 });
 
 /* =======================
+   Render
+   ======================= */
+function render(stealFocus=true){
+  const p = current();
+  ensurePuzzleDerived(p);
+
+  const n = getN();
+  el.count.textContent = `${state.i+1}/${PUZZLES.length}`;
+  el.wrap.classList.toggle('solved', state.finished);
+  el.wrap.classList.toggle('no-assist', !state.assist);
+
+  el.hintBtn.textContent = allHintsUsed() ? "give up" : "hints";
+
+  renderGrid(stealFocus);
+
+  const [t1, t2] = splitClueTwoWords(p.clue);
+
+  const err1 = errorItemsForGroup('w1');
+  const err2 = errorItemsForGroup('w2');
+
+  let a = escapeHtml(t1);
+  let b = escapeHtml(t2);
+
+  if(err1.length) a = underlineBySubstrings(t1, err1);
+  else{
+    const tri1 = triForClue('w1');
+    if(tri1) a = underlineBySubstrings(t1, [{sub:tri1, cls:"u-w1"}]);
+  }
+
+  if(err2.length) b = underlineBySubstrings(t2, err2);
+  else{
+    const tri2 = triForClue('w2');
+    if(tri2) b = underlineBySubstrings(t2, [{sub:tri2, cls:"u-w2"}]);
+  }
+
+  el.clue.innerHTML =
+    `<span class="clueWord" data-group="w1">${a}</span> ` +
+    `<span class="clueWord" data-group="w2">${b}</span>` +
+    `<span class="len">(${n})</span>`;
+
+  renderHintTrack();
+
+  el.checkBtn.classList.toggle('ready', canEnableCheckNow());
+  el.hintBtn.disabled = state.finished;
+  el.checkBtn.disabled = state.finished;
+
+  updateStatusMessages();
+  updateKeyboardState();
+}
+
+/* =======================
    Resets + init
    ======================= */
 function resetMainGridOnly(){
@@ -2941,11 +3017,10 @@ function resetAllForPuzzle(){
   state.hintsUsed = { quick:false, w1:false, w2:false, extras:false };
   state.assist = false;
 
-  state.hintOpen = { quick:false };
-
-  state.popNext = { w1:false, w2:false, extras:false };
-
   state.bank = [];
+  state.pendingFly = null;
+  state.flyAttempts = 0;
+
   resetMainGridOnly();
 }
 
