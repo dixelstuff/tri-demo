@@ -17,7 +17,6 @@
       --bad:#ffc9d2;  /* red/pink warning */
       --submit:#F4D2FD;
 
-      /* keyboard */
       --kb-h: 260px; /* JS sets real height */
       --caret: rgba(0,0,0,.18);
     }
@@ -37,7 +36,6 @@
       -webkit-text-size-adjust: 100%;
     }
 
-    /* disable native selection/callout on interactive UI */
     #clue, #clue *,
     #gridWrap, #gridWrap *,
     #hintTrack, #hintTrack *,
@@ -351,7 +349,7 @@
       min-width:0;
     }
 
-    /* ===== Hint mini-grids (square tiles, no capsule) ===== */
+    /* ===== Hint mini-grids ===== */
     .letters{
       display:inline-flex;
       border:none;
@@ -392,18 +390,6 @@
     .letters.is-disabled .letter.extra{ cursor:default; }
     .letter.extra:active{ transform:translateY(1px); }
 
-    .tinyLbl{
-      font-size:12px;
-      font-weight:900;
-      color:#000;
-      line-height:1;
-      margin-top:2px;
-      pointer-events:none;
-      text-transform:lowercase;
-      font-style:normal;
-      opacity:.95;
-      display:none;
-    }
     .extrasRow{
       display:flex;
       gap:10px;
@@ -532,13 +518,8 @@
       letter-spacing: .08em;
       padding: 0;
     }
-    .kbKey.enter{
-      font-size: 11px;
-      letter-spacing: .02em;
-    }
-    .kbKey.enter:not(.is-disabled){
-      background: rgba(0,0,0,.07);
-    }
+    .kbKey.enter{ font-size: 11px; letter-spacing: .02em; }
+    .kbKey.enter:not(.is-disabled){ background: rgba(0,0,0,.07); }
     .kbKey.delete{
       font-size: 16.3px;
       letter-spacing: 0.03em;
@@ -611,15 +592,15 @@
       letter-spacing: .01em;
     }
 
-    /* subtle black X */
+    /* thin close cross */
     .modalX{
       border:none;
       background:transparent;
-      padding:0;
+      padding:2px 6px;
       margin:0;
       color:#000;
-      font-size: 18px;
-      font-weight: 950;
+      font-size: 20px;
+      font-weight: 400;
       line-height: 1;
       cursor:pointer;
       border-radius: 8px;
@@ -640,7 +621,7 @@
       text-align:left;
     }
 
-    /* ===== Hint option rows (equal height, left-aligned titles) ===== */
+    /* ===== Hint rows ===== */
     .hintOptRow{
       width:100%;
       border:2px solid rgba(0,0,0,.16);
@@ -648,7 +629,7 @@
       padding: 12px 12px;
       background:#fff;
       display:flex;
-      height: 82px;
+      height: 76px;
       align-items:center;
       gap: 10px;
       margin: 10px 0;
@@ -659,13 +640,24 @@
     .opt-w2{ background: var(--w2); }
     .opt-extras{ background: rgba(255,255,255,.95); }
 
+    /* greyed states (no opacity so badges still readable) */
+    .hintOptRow.is-used,
+    .hintOptRow.is-locked{
+      filter: saturate(0) grayscale(1);
+      border-color: rgba(0,0,0,.12);
+    }
+    .hintOptRow.is-used .hintOptTitle,
+    .hintOptRow.is-locked .hintOptTitle{
+      color: rgba(0,0,0,.55);
+    }
+
     .hintOptMain{
       display:flex;
       flex-direction:column;
       justify-content:center;
-      gap:4px;
+      gap:0;
       min-width:0;
-      margin-right:auto;  /* IMPORTANT: prevents any “indent” */
+      margin-right:auto;
       text-align:left;
     }
     .hintOptTitle{
@@ -679,15 +671,6 @@
       overflow:hidden;
       text-overflow:ellipsis;
     }
-    .hintOptSub{
-      font-size: 13px;
-      opacity:.78;
-      line-height:1.25;
-      display:-webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow:hidden;
-    }
 
     .hintOptRight{
       display:flex;
@@ -695,9 +678,60 @@
       gap:10px;
       flex:0 0 auto;
     }
+
+    /* DETAILS as text button */
+    .optLink{
+      border:0;
+      background:transparent;
+      color:#000;
+      font-weight:950;
+      font-size: 12px;
+      letter-spacing:.10em;
+      padding: 6px 2px;
+      cursor:pointer;
+      opacity:.78;
+      text-transform:uppercase;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      white-space:nowrap;
+    }
+    .optLink:hover{ opacity:1; text-decoration:underline; text-underline-offset:3px; }
+    .optLink:active{ transform:translateY(1px); }
+
+    /* rightmost select slot */
+    .selectSlot{
+      width: 110px;
+      display:flex;
+      justify-content:flex-end;
+      align-items:center;
+    }
+
+    /* SELECT as button */
+    .optSelect{
+      border:2px solid rgba(0,0,0,.18);
+      background: rgba(255,255,255,.65);
+      color:#000;
+      border-radius:999px;
+      padding:7px 12px;
+      font-weight:950;
+      letter-spacing:.10em;
+      font-size:12px;
+      text-transform:uppercase;
+      cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      white-space:nowrap;
+    }
+    .optSelect:active{ transform:translateY(1px); }
+    .optSelect[disabled]{
+      opacity:.38;
+      cursor:default;
+      transform:none !important;
+    }
+
+    /* USED / LOCKED in the same column as SELECT */
     .badge{
-      flex:0 0 auto;
-      padding: 5px 10px;
+      padding: 6px 10px;
       border-radius: 999px;
       font-size: 12px;
       font-weight: 950;
@@ -708,37 +742,7 @@
       align-items:center;
       gap:6px;
       white-space:nowrap;
-    }
-
-    .optBtns{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      justify-content:flex-end;
-      flex:0 0 auto;
-    }
-    .optBtn{
-      border:0;
-      background:transparent;
       color:#000;
-      font-weight:950;
-      font-size: 12px;
-      letter-spacing:.10em;
-      padding: 6px 8px;
-      border-radius:999px;
-      cursor:pointer;
-      opacity:.78;
-      text-transform:uppercase;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-    }
-    .optBtn:hover{ opacity:1; text-decoration:underline; text-underline-offset:3px; }
-    .optBtn:active{ transform:translateY(1px); }
-    .optBtn[disabled]{
-      opacity:.35;
-      cursor:default;
-      text-decoration:none !important;
-      transform:none !important;
     }
 
     /* ===== Detail view footer buttons ===== */
@@ -760,6 +764,7 @@
       font-size:12px;
       text-transform:uppercase;
       cursor:pointer;
+      color:#000; /* ensure not blue */
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
     }
@@ -767,11 +772,7 @@
       background: rgba(0,0,0,.07);
     }
     .detailBtn:active{ transform:translateY(1px); }
-    .detailBtn[disabled]{
-      opacity:.38;
-      cursor:default;
-      transform:none !important;
-    }
+    .detailBtn[disabled]{ opacity:.38; cursor:default; transform:none !important; }
 
     .qcHelp ul{
       margin: 10px 0 0 18px;
@@ -784,14 +785,6 @@
       margin-top: 12px;
       font-size: 13px;
       opacity:.75;
-    }
-
-    .hintTilesInline{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
-      margin: 10px 0 0;
     }
   </style>
 </head>
@@ -825,7 +818,7 @@
     </div>
 
     <div class="btnRow" id="btnRow">
-      <button class="btn hints" id="hintBtn" type="button">Hints</button>
+      <button class="btn hints" id="hintBtn" type="button">hints</button>
       <button class="btn check" id="checkBtn" type="button">check</button>
     </div>
   </div>
@@ -834,8 +827,8 @@
   <div class="modalOverlay" id="hintModal" aria-hidden="true">
     <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="hintModalTitle">
       <div class="modalHdr">
-        <div class="modalTitle" id="hintModalTitle">Hints</div>
-        <button class="modalX" id="hintModalClose" type="button" aria-label="Close">X</button>
+        <div class="modalTitle" id="hintModalTitle">Choose a hint</div>
+        <button class="modalX" id="hintModalClose" type="button" aria-label="Close"><span aria-hidden="true">×</span></button>
       </div>
       <div class="modalBody" id="hintModalBody"></div>
     </div>
@@ -918,7 +911,6 @@ const state = {
   hintCount: 0,
   hintsUsed: { quick:false, w1:false, w2:false, extras:false },
 
-  /* “assist features” unlocked by Quick controls only */
   assist: false,
 
   sel1: null,
@@ -951,13 +943,13 @@ const state = {
 
   modalOpen: false,
   modalView: 'list',        // 'list' | 'detail'
-  modalHintId: null,        // which hint is being shown in detail view
+  modalHintId: null,
   modalFixedH: null,
 };
 
 /* =======================
    Assist flags
-   NOTE: messages are ALWAYS enabled (per your request)
+   NOTE: messages are ALWAYS enabled
    ======================= */
 function flags(){
   if(state.assist){
@@ -969,7 +961,7 @@ function flags(){
       allowDragTrigrams: true,
       allowAutoPromote: true,
       showGridColors: true,
-      showStatusMessages: true,   // ALWAYS true, but kept explicit
+      showStatusMessages: true,
       showBadCellColor: true,
       checkFeedback: "detailed",
     };
@@ -982,7 +974,7 @@ function flags(){
     allowDragTrigrams: false,
     allowAutoPromote: false,
     showGridColors: false,
-    showStatusMessages: true,   // ALWAYS ON
+    showStatusMessages: true,     // ALWAYS ON
     showBadCellColor: false,
     checkFeedback: "minimal",
   };
@@ -1120,18 +1112,6 @@ function underlineBySubstrings(token, items){
 /* =======================
    Grid model + focus
    ======================= */
-function gridIndexFromPoint(x,y){
-  const els = document.elementsFromPoint ? document.elementsFromPoint(x,y) : [document.elementFromPoint(x,y)];
-  for(const n of els){
-    if(!n) continue;
-    const cell = n.closest ? n.closest('.cell') : null;
-    if(cell && cell.dataset && cell.dataset.idx != null){
-      const idx = Number(cell.dataset.idx);
-      if(Number.isFinite(idx)) return idx;
-    }
-  }
-  return null;
-}
 function trigramCells(start){ return [start, start+1, start+2]; }
 function overlapCount(aStart, bStart){
   const aset = new Set(trigramCells(aStart));
@@ -1336,7 +1316,7 @@ function updateKeyboardState(){
 }
 
 /* =======================
-   Invalid / excluded detection (for red underlines + warnings)
+   Invalid / excluded detection
    ======================= */
 function compressMaximalStrings(arr){
   const uniq = Array.from(new Set(arr.filter(Boolean)));
@@ -1477,7 +1457,7 @@ function computeOverlapIdxSet(){
 }
 
 /* =======================
-   Status messages (NOW ALWAYS ENABLED)
+   Status messages (ALWAYS ON)
    ======================= */
 function updateStatusMessages(){
   if(state.finished) return;
@@ -1512,7 +1492,7 @@ function computeHint3Letters(){
   const p = current();
   const ans = norm(p.answer);
   const covered = new Set();
-  // best-effort: derive positions from answer
+
   p.tri1 = norm(p.tri1 || "");
   p.tri2 = norm(p.tri2 || "");
   const t1 = (p.tri1 && ans.includes(p.tri1)) ? ans.indexOf(p.tri1) : 0;
@@ -1718,7 +1698,7 @@ function onCheck(){
 }
 
 /* =======================
-   Hint track UI (unchanged behaviour: clickable placement only after Quick controls)
+   Hint track UI
    ======================= */
 function makeTrigramBlock(tri, cls, labelText, onClickMaybe){
   const canClick = !!flags().allowHintTapPlace && typeof onClickMaybe === "function";
@@ -1828,7 +1808,7 @@ function renderGrid(stealFocus=true){
   const n = getN();
   const f = flags();
 
-  // compute invalids EVERY render (needed for always-on messages)
+  // compute invalids every render for always-on messages
   computeMax3Invalid();
   computeTwoTrigramsInvalid();
   computeHintExcludedTrigrams();
@@ -2001,9 +1981,8 @@ function render(stealFocus=true){
   el.checkBtn.classList.toggle('ready', canEnableCheckNow());
   el.checkBtn.disabled = state.finished;
 
-  // NEW: Hints button copy
   const anyLeft = hasAnyHintLeft();
-  el.hintBtn.textContent = anyLeft ? "Hints" : "GIVE UP";
+  el.hintBtn.textContent = anyLeft ? "hints" : "GIVE UP";
   el.hintBtn.disabled = state.finished;
 
   updateStatusMessages();
@@ -2034,7 +2013,7 @@ function unlockModalCardHeight(){
 }
 
 /* =======================
-   Hint modal: list + detail + SELECT/DETAILS
+   Hint modal: list + detail
    ======================= */
 function openHintModal(view='list', hintId=null){
   if(state.finished) return;
@@ -2125,9 +2104,13 @@ function makeBadge(status){
   return null;
 }
 
-function makeHintRow({id, title, sub, cls}){
+function makeHintRow({id, title, cls}){
   const row = document.createElement('div');
   row.className = `hintOptRow ${cls||""}`.trim();
+
+  const status = hintStatus(id);
+  if(status === "used") row.classList.add('is-used');
+  if(status === "locked") row.classList.add('is-locked');
 
   const main = document.createElement('div');
   main.className = "hintOptMain";
@@ -2137,26 +2120,12 @@ function makeHintRow({id, title, sub, cls}){
   t.textContent = title;
   main.appendChild(t);
 
-  if(sub){
-    const s = document.createElement('div');
-    s.className = "hintOptSub";
-    s.textContent = sub;
-    main.appendChild(s);
-  }
-
   const right = document.createElement('div');
   right.className = "hintOptRight";
 
-  const status = hintStatus(id);
-  const badge = makeBadge(status);
-  if(badge) right.appendChild(badge);
-
-  const btns = document.createElement('div');
-  btns.className = "optBtns";
-
   const details = document.createElement('button');
   details.type = "button";
-  details.className = "optBtn";
+  details.className = "optLink";
   details.textContent = "DETAILS";
   details.addEventListener('pointerdown', (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
   details.addEventListener('click', (e)=>{
@@ -2167,22 +2136,37 @@ function makeHintRow({id, title, sub, cls}){
     requestAnimationFrame(lockModalCardHeight);
   });
 
-  const select = document.createElement('button');
-  select.type = "button";
-  select.className = "optBtn";
-  select.textContent = "SELECT";
+  const slot = document.createElement('div');
+  slot.className = "selectSlot";
+
   const selectable = canSelectHint(id);
-  select.disabled = !selectable;
-  select.addEventListener('pointerdown', (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
-  select.addEventListener('click', (e)=>{
-    e.preventDefault(); e.stopPropagation();
-    applyHint(id);
-  });
+  if(selectable){
+    const select = document.createElement('button');
+    select.type = "button";
+    select.className = "optSelect";
+    select.textContent = "SELECT";
+    select.addEventListener('pointerdown', (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+    select.addEventListener('click', (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      applyHint(id);
+    });
+    slot.appendChild(select);
+  }else{
+    const badge = makeBadge(status || (state.hintsUsed[id] ? "used" : ""));
+    if(badge) slot.appendChild(badge);
+    else{
+      // fallback: disabled SELECT (shouldn't happen)
+      const select = document.createElement('button');
+      select.type="button";
+      select.className="optSelect";
+      select.textContent="SELECT";
+      select.disabled = true;
+      slot.appendChild(select);
+    }
+  }
 
-  btns.appendChild(details);
-  btns.appendChild(select);
-
-  right.appendChild(btns);
+  right.appendChild(details);
+  right.appendChild(slot);
 
   row.appendChild(main);
   row.appendChild(right);
@@ -2191,15 +2175,7 @@ function makeHintRow({id, title, sub, cls}){
 }
 
 function renderHintDetail(id){
-  const p = current();
   const wrap = document.createElement('div');
-
-  const title = document.createElement('div');
-  title.style.fontWeight = "950";
-  title.style.fontSize = "16px";
-  title.style.marginBottom = "8px";
-  title.textContent = hintLabel(id);
-  wrap.appendChild(title);
 
   if(id === HINT_IDS.quick){
     const box = document.createElement('div');
@@ -2209,7 +2185,7 @@ function renderHintDetail(id){
         <li><b>Tap a clue word</b> to place a trigram in the grid</li>
         <li><b>Tap again</b> to cycle to the next trigram</li>
         <li><b>Drag trigram blocks</b> around the grid</li>
-        <li><b>Colours</b> show trigrams, overlap and errors</li>
+        <li><b>Colours</b> show trigrams and overlap (after selecting Quick controls)</li>
         <li>Hints become tappable to place (trigrams / extra letters)</li>
       </ul>
       <div class="note">You can still play without Quick controls by typing letters normally.</div>
@@ -2221,67 +2197,24 @@ function renderHintDetail(id){
     const txt = document.createElement('div');
     txt.style.fontSize = "15px";
     txt.style.lineHeight = "1.35";
-    txt.textContent = "Reveals the correct trigram from clue word 1.";
+    txt.textContent = "Reveals the correct 3-letter trigram from clue word 1 (no spoilers shown here).";
     wrap.appendChild(txt);
-
-    const tiles = document.createElement('div');
-    tiles.className = "hintTilesInline";
-    const tri = norm(p.tri1);
-    const box = document.createElement('div');
-    box.className = "letters is-disabled";
-    for(const ch of tri){
-      const d = document.createElement('div');
-      d.className = "letter sel-w1";
-      d.textContent = ch;
-      box.appendChild(d);
-    }
-    tiles.appendChild(box);
-    wrap.appendChild(tiles);
   }
 
   if(id === HINT_IDS.w2){
     const txt = document.createElement('div');
     txt.style.fontSize = "15px";
     txt.style.lineHeight = "1.35";
-    txt.textContent = "Reveals the correct trigram from clue word 2.";
+    txt.textContent = "Reveals the correct 3-letter trigram from clue word 2 (no spoilers shown here).";
     wrap.appendChild(txt);
-
-    const tiles = document.createElement('div');
-    tiles.className = "hintTilesInline";
-    const tri = norm(p.tri2);
-    const box = document.createElement('div');
-    box.className = "letters is-disabled";
-    for(const ch of tri){
-      const d = document.createElement('div');
-      d.className = "letter sel-w2";
-      d.textContent = ch;
-      box.appendChild(d);
-    }
-    tiles.appendChild(box);
-    wrap.appendChild(tiles);
   }
 
   if(id === HINT_IDS.extras){
     const txt = document.createElement('div');
     txt.style.fontSize = "15px";
     txt.style.lineHeight = "1.35";
-    txt.textContent = "Shows the remaining letters (not part of the two trigrams).";
+    txt.textContent = "Reveals the remaining letters that are not part of the two trigrams (letters are shown only after selecting the hint).";
     wrap.appendChild(txt);
-
-    const tiles = document.createElement('div');
-    tiles.className = "hintTilesInline";
-
-    const letters = computeHint3Letters();
-    const row = document.createElement('div');
-    row.className = "letters is-disabled";
-    for(const ch of letters){
-      const d = document.createElement('div');
-      d.className = "letter extra";
-      d.textContent = ch;
-      row.appendChild(d);
-    }
-    tiles.appendChild(row);
-    wrap.appendChild(tiles);
 
     const note = document.createElement('div');
     note.style.marginTop = "10px";
@@ -2333,18 +2266,13 @@ function renderHintModal(){
     return;
   }
 
-  el.hintModalTitle.textContent = "Hints";
+  el.hintModalTitle.textContent = "Choose a hint";
 
   const list = document.createElement('div');
-  list.appendChild(makeHintRow({
-    id: HINT_IDS.quick,
-    title: "Quick controls",
-    sub: "Add, move and cycle trigrams without typing",
-    cls: "opt-quick"
-  }));
-  list.appendChild(makeHintRow({ id: HINT_IDS.w1, title: "Word 1 trigram", sub: null, cls: "opt-w1" }));
-  list.appendChild(makeHintRow({ id: HINT_IDS.w2, title: "Word 2 trigram", sub: null, cls: "opt-w2" }));
-  list.appendChild(makeHintRow({ id: HINT_IDS.extras, title: "Extra letters", sub: null, cls: "opt-extras" }));
+  list.appendChild(makeHintRow({ id: HINT_IDS.quick,   title: "Quick controls", cls: "opt-quick" }));
+  list.appendChild(makeHintRow({ id: HINT_IDS.w1,      title: "Word 1 trigram", cls: "opt-w1" }));
+  list.appendChild(makeHintRow({ id: HINT_IDS.w2,      title: "Word 2 trigram", cls: "opt-w2" }));
+  list.appendChild(makeHintRow({ id: HINT_IDS.extras,  title: "Extra letters",  cls: "opt-extras" }));
 
   el.hintModalBody.appendChild(list);
   requestAnimationFrame(lockModalCardHeight);
@@ -2398,7 +2326,6 @@ function onHintsButton(){
   if(state.modalOpen) return;
 
   if(!hasAnyHintLeft()){
-    // NEW: "GIVE UP" reveals answer
     showAnswerNow();
     return;
   }
@@ -2487,7 +2414,6 @@ function onClueWordActivate(group){
   if(state.placed[group]){
     cyclePlacedTrigram(group);
   }else{
-    // if their trigram hint was selected, start with the correct one
     let tri = null;
     if(group === 'w1' && state.hintsUsed.w1) tri = norm(current().tri1);
     if(group === 'w2' && state.hintsUsed.w2) tri = norm(current().tri2);
