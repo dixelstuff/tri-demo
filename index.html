@@ -1797,18 +1797,15 @@ function moveGhost(e){
   state.drag.ghost.style.left = e.clientX + "px";
   state.drag.ghost.style.top = e.clientY + "px";
 }
-function gridIndexFromPoint(x,y){
-  const els = document.elementsFromPoint ? document.elementsFromPoint(x,y) : [document.elementFromPoint(x,y)];
-  for(const n of els){
-    if(!n) continue;
-    const cell = n.closest ? n.closest('.cell') : null;
-    if(cell && cell.dataset && cell.dataset.idx != null){
-      const idx = Number(cell.dataset.idx);
-      if(Number.isFinite(idx)) return idx;
-    }
-  }
-  return null;
+function gridIndexFromPoint(x, y){
+  const rect = el.grid.getBoundingClientRect(); // NOTE: use the grid, not wrap
+  if(x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return null;
+
+  const colW = rect.width / N;
+  const idx = Math.floor((x - rect.left) / colW);
+  return clamp(idx, 0, N-1);
 }
+
 function beginDragWithThreshold(e, startFn){
   const startX = e.clientX, startY = e.clientY;
   let started = false;
