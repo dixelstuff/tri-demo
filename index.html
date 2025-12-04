@@ -17,10 +17,7 @@
       --bad:#ffc9d2;  /* red/pink warning */
       --submit:#F4D2FD;
 
-      /* keyboard */
-      --kb-h: 260px; /* JS sets real height */
-
-      /* caret */
+      --kb-h: 260px;
       --caret: rgba(0,0,0,.18);
     }
 
@@ -118,8 +115,6 @@
     }
     .clue .len{
       opacity:.55;
-      font-weight:inherit;
-      font-style:inherit;
       display:inline-block;
       font-size:0.92em;
       line-height:1;
@@ -386,6 +381,7 @@
       transition:opacity .15s ease, background .15s ease, transform .08s ease;
       border:1px solid rgba(0,0,0,.22);
       border-radius:0;
+      transform-origin:center;
     }
     .letter + .letter{ margin-left:-1px; }
     .letter.sel-w1{ background:var(--w1); }
@@ -406,6 +402,29 @@
       align-items:center;
       justify-content:center;
       flex-wrap:nowrap;
+    }
+
+    /* ===== Hint appearance animation ===== */
+    @keyframes hintPop {
+      0%   { transform: scale(1.85) rotate(0deg); }
+      42%  { transform: scale(1.18) rotate(-2deg); }
+      60%  { transform: scale(1.08) rotate(2deg); }
+      78%  { transform: scale(1.00) rotate(-1deg); }
+      100% { transform: scale(1.00) rotate(0deg); }
+    }
+    .letters.hint-pop{
+      animation: hintPop 520ms cubic-bezier(.18,.86,.23,1.05) both;
+    }
+
+    @keyframes tilePop {
+      0%   { transform: scale(1.95) rotate(0deg); }
+      45%  { transform: scale(1.18) rotate(-2deg); }
+      63%  { transform: scale(1.07) rotate(2deg); }
+      80%  { transform: scale(1.00) rotate(-1deg); }
+      100% { transform: scale(1.00) rotate(0deg); }
+    }
+    .letter.pop-tile{
+      animation: tilePop 540ms cubic-bezier(.18,.86,.23,1.05) both;
     }
 
     /* ===== Buttons ===== */
@@ -568,7 +587,7 @@
       .kbKey{ height:46px; }
     }
 
-    /* ========= Hint modal ========= */
+    /* ========= Hint modal (accordion) ========= */
     .modalOverlay{
       position:fixed;
       inset:0;
@@ -582,7 +601,7 @@
     .modalOverlay.open{ display:flex; }
 
     .modalCard{
-      width: min(520px, 94vw);
+      width: min(560px, 94vw);
       background:#fff;
       border-radius:18px;
       border:2px solid rgba(0,0,0,.15);
@@ -608,7 +627,7 @@
       color:var(--ink);
       font-size:20px;
       line-height:1;
-      font-weight:300; /* thin */
+      font-weight:300;
       cursor:pointer;
       padding: 2px 6px;
       opacity:.9;
@@ -619,126 +638,116 @@
       padding: 12px 14px 14px;
     }
 
-    .hintOpt{
+    .hintCard{
       width:100%;
       border:2px solid rgba(0,0,0,.16);
       border-radius: 14px;
       padding: 12px 12px;
+      margin: 10px 0;
+      box-shadow:none;
       background:#fff;
-      color: var(--ink);
+    }
+    .hintCard.dim{ opacity:.46; }
+
+    .hintCard.opt-quick{ background: var(--submit); }
+    .hintCard.opt-w1{ background: var(--w1); }
+    .hintCard.opt-w2{ background: var(--w2); }
+    .hintCard.opt-extras{ background: rgba(255,255,255,.95); }
+
+    .hintTop{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap: 10px;
-      margin: 10px 0;
-      box-shadow:none;
-      text-decoration:none;
-      appearance:none;
-      -webkit-appearance:none;
-      font: inherit;
-      min-height:64px; /* same size */
+      gap: 12px;
     }
-    .hintOpt.dim{ opacity:.46; }
-
-    .hintOptMain{
+    .hintLeft{
       display:flex;
-      flex-direction:column;
-      gap:0;
+      align-items:center;
+      gap:10px;
       min-width:0;
-      padding:0;
-      margin:0;
     }
-    .hintOptTitle{
+    .hintTitle{
       font-weight: 950;
       font-size: 16px;
       line-height:1.15;
-      color: var(--ink);
       margin:0;
       padding:0;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
 
-    .hintOptRight{
-      flex:0 0 auto;
-      display:flex;
-      flex-direction:column;
-      align-items:flex-end;
-      gap:8px;
-      min-width:118px;
-    }
-
-    .hintBtnMini{
+    .caretBtn{
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
       border:2px solid rgba(0,0,0,.14);
-      background: rgba(255,255,255,.62);
-      border-radius:999px;
-      padding:6px 10px;
-      font-size:12px;
-      font-weight:950;
-      letter-spacing:.06em;
-      color: var(--ink);
+      background: rgba(255,255,255,.55);
       cursor:pointer;
-      text-transform:uppercase;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:0;
+      flex:0 0 auto;
+      -webkit-tap-highlight-color: transparent;
     }
-    .hintBtnMini:active{ transform:translateY(1px); }
+    .caretBtn:active{ transform: translateY(1px); }
+    .caretGlyph{
+      display:inline-block;
+      font-size: 16px;
+      line-height:1;
+      transform: rotate(0deg);
+      transition: transform .18s ease;
+    }
+    .hintCard.open .caretGlyph{ transform: rotate(180deg); } /* down caret flips up */
 
-    .hintBtnSelect{
+    .hintAction{
+      flex:0 0 auto;
+      min-width: 134px;
+      height: 40px;
+      border-radius: 999px;
       border:2px solid rgba(0,0,0,.14);
       background: rgba(255,255,255,.75);
-      border-radius:999px;
-      padding:6px 12px;
-      font-size:12px;
-      font-weight:950;
-      letter-spacing:.06em;
+      font-weight: 950;
+      font-size: 13px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
       color: var(--ink);
       cursor:pointer;
-      text-transform:uppercase;
+      -webkit-tap-highlight-color: transparent;
     }
-    .hintBtnSelect:active{ transform:translateY(1px); }
-
-    .badge{
-      border:2px solid rgba(0,0,0,.14);
-      background: rgba(255,255,255,.62);
-      border-radius:999px;
-      padding:6px 10px;
-      font-size:12px;
-      font-weight:950;
-      letter-spacing:.06em;
-      color: var(--ink);
-      text-transform:uppercase;
-      white-space:nowrap;
+    .hintAction:active{ transform: translateY(1px); }
+    .hintAction[disabled]{
+      cursor:default;
+      opacity:.92;
     }
 
-    .opt-quick{ background: var(--submit); }
-    .opt-w1{ background: var(--w1); }
-    .opt-w2{ background: var(--w2); }
-    .opt-extras{ background: rgba(255,255,255,.95); }
-
-    .detailBox{
-      padding: 4px 2px 0;
+    .hintDetails{
+      overflow:hidden;
+      max-height: 0px;
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: max-height .22s ease, opacity .18s ease, transform .18s ease;
+      padding: 0 2px;
     }
-    .detailBox p{
-      margin: 10px 0;
-      font-size: 15px;
+    .hintCard.open .hintDetails{
+      max-height: 240px;
+      opacity: 1;
+      transform: translateY(0);
+      margin-top: 10px;
+    }
+    .hintDetails p{
+      margin: 8px 0;
+      font-size: 14.8px;
       line-height: 1.35;
     }
-    .detailBox ul{
-      margin: 8px 0 0 18px;
+    .hintDetails ul{
+      margin: 6px 0 0 18px;
       padding: 0;
-      font-size: 15px;
+      font-size: 14.8px;
       line-height: 1.35;
     }
-    .detailBox li{ margin: 8px 0; }
-
-    .detailActions{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      margin-top:14px;
-    }
-    .detailActions .hintBtnSelect{
-      min-width:120px;
-      text-align:center;
-    }
-
+    .hintDetails li{ margin: 7px 0; }
   </style>
 </head>
 
@@ -853,6 +862,7 @@ const state = {
 
   hintCount: 0,
   hintsUsed: { quick:false, w1:false, w2:false, extras:false },
+  hintOpen: { quick:false, w1:false, w2:false, extras:false },
 
   assist: false,
 
@@ -866,7 +876,6 @@ const state = {
   focusIdx: 0,
 
   drag: null,
-  lastDragEndedAt: 0,
 
   msgTimer: null,
   msgTransient: false,
@@ -887,7 +896,8 @@ const state = {
   useCustomKB: false,
 
   modalOpen: false,
-  modalView: { kind:'list', id:null }, // list | details
+
+  popNext: { w1:false, w2:false, extras:false },
 };
 
 /* =======================
@@ -916,8 +926,8 @@ function flags(){
     allowDragTrigrams: false,
     allowAutoPromote: false,
     showGridColors: false,
-    showStatusMessages: true,   // IMPORTANT: messages from the start
-    showBadCellColor: false,    // IMPORTANT: no grid colouring before quick controls
+    showStatusMessages: true,   // from the start
+    showBadCellColor: false,
     checkFeedback: "minimal",
   };
 }
@@ -937,7 +947,6 @@ function getN(){
   return clamp(a.length || 7, 6, 8);
 }
 function startMax(){ return Math.max(0, getN() - TR); }
-
 function renderSmart(){ render(!state.useCustomKB); }
 
 function shakeGrid(){
@@ -976,7 +985,6 @@ function updateKeyboardHeightVar(){
     document.documentElement.style.setProperty('--kb-h', `${Math.ceil(rect.height)}px`);
   }
 }
-
 function pressKeyAction(kind, val){
   if(state.finished) return;
   if(state.modalOpen) return;
@@ -989,20 +997,14 @@ function pressKeyAction(kind, val){
     onCheck();
   }
 }
-
 function makeKey(label, aria, cls, kind, val){
   const b = document.createElement('button');
   b.type = "button";
   b.className = `kbKey ${cls||""}`.trim();
   b.setAttribute('aria-label', aria || label);
-
-  if(kind === 'letter'){
-    b.textContent = label;
-  } else if(kind === 'enter') {
-    b.textContent = "CHECK";
-  } else {
-    b.textContent = "DEL";
-  }
+  if(kind === 'letter') b.textContent = label;
+  else if(kind === 'enter') b.textContent = "CHECK";
+  else b.textContent = "DEL";
 
   b.addEventListener('pointerdown', (e)=>{
     e.preventDefault();
@@ -1013,7 +1015,6 @@ function makeKey(label, aria, cls, kind, val){
 
   return b;
 }
-
 function buildKeyboard(){
   el.kbHost.innerHTML = "";
   if(!state.useCustomKB) return;
@@ -1021,8 +1022,7 @@ function buildKeyboard(){
   const kb = document.createElement('div');
   kb.className = "kb";
 
-  const rows = ["QWERTYUIOP","ASDFGHJKL"];
-  rows.forEach((row)=>{
+  ["QWERTYUIOP","ASDFGHJKL"].forEach((row)=>{
     const r = document.createElement('div');
     r.className = "kbRow";
     for(const ch of row){
@@ -1042,7 +1042,6 @@ function buildKeyboard(){
 
   el.kbHost.appendChild(kb);
 
-  // generous near-miss taps
   el.kbHost.onpointerdown = (e)=>{
     if(!state.useCustomKB || state.finished || state.modalOpen) return;
     if(e.target && e.target.closest && e.target.closest('.kbKey')) return;
@@ -1073,7 +1072,6 @@ function buildKeyboard(){
     updateKeyboardState();
   });
 }
-
 function updateKeyboardState(){
   if(!state.useCustomKB) return;
   const enter = el.kbHost.querySelector('.kbKey.enter');
@@ -1231,7 +1229,6 @@ function removeSinglesInCells(cells){
   const set = new Set(cells);
   state.singles = state.singles.filter(s => !set.has(s.idx));
 }
-
 function deleteTrigramGroup(group){
   if(!state.placed[group]) return false;
   const start = state.placed[group].start;
@@ -1250,7 +1247,6 @@ function deleteAtIndex(idx){
   }
   return false;
 }
-
 function focusCell(idx){
   const n = getN();
   const i = clamp(idx, 0, n-1);
@@ -1338,7 +1334,6 @@ function kbBackspace(){
   state.focusIdx = clamp(idx - 1, 0, n-1);
   renderSmart();
 }
-
 function deleteFromEnd(){
   if(state.finished) return false;
   const n = getN();
@@ -1786,10 +1781,9 @@ function updateStatusMessages(){
   if(state.finished) return;
   if(state.lockMsg) return;
 
-  // always compute current states (renderGrid also does, but keep safe)
-  if(!state.badSet) computeMax3Invalid();
-  if(!state.twoSet) computeTwoTrigramsInvalid();
-  if(!state.exclSet) computeHintExcludedTrigrams();
+  computeMax3Invalid();
+  computeTwoTrigramsInvalid();
+  computeHintExcludedTrigrams();
 
   const hasMax3 = state.badSet && state.badSet.size > 0;
   const hasTwo  = state.twoSet && state.twoSet.size > 0;
@@ -1836,7 +1830,6 @@ function hintPhraseText(h){
   if(h === 1) return "with 1 hint";
   return `with ${h} hints`;
 }
-
 function onCheck(){
   if(state.finished) return;
   if(state.modalOpen) return;
@@ -1901,9 +1894,9 @@ function onCheck(){
 }
 
 /* =======================
-   Hint track UI
+   Hint track UI (+ pop animation)
    ======================= */
-function makeTrigramBlock(tri, cls, labelText, onClickMaybe){
+function makeTrigramBlock(tri, cls, labelText, onClickMaybe, popIt){
   const canClick = !!flags().allowHintTapPlace && typeof onClickMaybe === "function";
 
   const block = document.createElement('div');
@@ -1911,6 +1904,7 @@ function makeTrigramBlock(tri, cls, labelText, onClickMaybe){
 
   const box = document.createElement('div');
   box.className = "letters " + (canClick ? "clickable" : "is-disabled");
+  if(popIt) box.classList.add('hint-pop');
   box.setAttribute("aria-label", labelText);
 
   if(canClick){
@@ -1941,21 +1935,27 @@ function renderHintTrack(){
   el.trackExtras.style.display = "none";
 
   if(state.hintsUsed.w1){
+    const pop = !!state.popNext.w1;
+    state.popNext.w1 = false;
+
     el.trackW1.appendChild(
       makeTrigramBlock(norm(p.tri1), "sel-w1", "word 1 trigram", ()=>{
         placeTrigram('w1', norm(p.tri1));
         renderSmart();
-      })
+      }, pop)
     );
     el.trackW1.style.display = "";
   }
 
   if(state.hintsUsed.w2){
+    const pop = !!state.popNext.w2;
+    state.popNext.w2 = false;
+
     el.trackW2.appendChild(
       makeTrigramBlock(norm(p.tri2), "sel-w2", "word 2 trigram", ()=>{
         placeTrigram('w2', norm(p.tri2));
         renderSmart();
-      })
+      }, pop)
     );
     el.trackW2.style.display = "";
   }
@@ -1963,12 +1963,16 @@ function renderHintTrack(){
   if(state.hintsUsed.extras){
     if(state.bank.length === 0) rebuildBank();
 
+    const popExtras = !!state.popNext.extras;
+    state.popNext.extras = false;
+
     const block = document.createElement('div');
     block.className = "trackBlock";
 
     const row = document.createElement('div');
     row.className = "extrasRow";
 
+    let idx = 0;
     for(const tile of state.bank){
       const box = document.createElement('div');
       const canInsert = !!flags().allowHint3TapInsert;
@@ -1977,6 +1981,12 @@ function renderHintTrack(){
       const d = document.createElement('div');
       d.className = "letter extra";
       d.textContent = tile.ch;
+
+      if(popExtras){
+        d.classList.add('pop-tile');
+        d.style.animationDelay = `${idx * 70}ms`;
+      }
+      idx++;
 
       if(canInsert){
         d.addEventListener('click', ()=>{
@@ -2008,7 +2018,7 @@ function renderHintTrack(){
 }
 
 /* =======================
-   Drag ghost (RESTORED working version)
+   Drag ghost (working version)
    ======================= */
 function trigramIsRedAtStart(start){
   computeMax3Invalid();
@@ -2248,7 +2258,6 @@ function errorItemsForGroup(group){
   }
   return [];
 }
-
 function inferredSingleTrigram(group){
   const n = getN();
   const p = current();
@@ -2273,7 +2282,6 @@ function inferredSingleTrigram(group){
 
   return (uniq.length === 1) ? uniq[0] : null;
 }
-
 function triForClue(group){
   const pl = state.placed[group];
   if(pl && pl.tri) return pl.tri;
@@ -2467,16 +2475,14 @@ function render(stealFocus=true){
   let a = escapeHtml(t1);
   let b = escapeHtml(t2);
 
-  if(err1.length){
-    a = underlineBySubstrings(t1, err1);
-  }else{
+  if(err1.length) a = underlineBySubstrings(t1, err1);
+  else{
     const tri1 = triForClue('w1');
     if(tri1) a = underlineBySubstrings(t1, [{sub:tri1, cls:"u-w1"}]);
   }
 
-  if(err2.length){
-    b = underlineBySubstrings(t2, err2);
-  }else{
+  if(err2.length) b = underlineBySubstrings(t2, err2);
+  else{
     const tri2 = triForClue('w2');
     if(tri2) b = underlineBySubstrings(t2, [{sub:tri2, cls:"u-w2"}]);
   }
@@ -2497,24 +2503,19 @@ function render(stealFocus=true){
 }
 
 /* =======================
-   Hint modal
+   Hint modal (accordion)
    ======================= */
-function openHintModal(view={kind:'list', id:null}){
+function openHintModal(){
   if(state.finished) return;
   state.modalOpen = true;
-  state.modalView = view;
-
   el.hintModal.classList.add('open');
   el.hintModal.setAttribute('aria-hidden', 'false');
-
   renderHintModal();
   requestAnimationFrame(()=>{ try{ el.hintModalClose.focus({preventScroll:true}); }catch{} });
 }
-
 function closeHintModal(){
   if(!state.modalOpen) return;
   state.modalOpen = false;
-  state.modalView = {kind:'list', id:null};
   el.hintModal.classList.remove('open');
   el.hintModal.setAttribute('aria-hidden', 'true');
 
@@ -2526,7 +2527,6 @@ function closeHintModal(){
 function extrasUnlocked(){
   return state.hintsUsed.w1 && state.hintsUsed.w2;
 }
-
 function hintStatus(id){
   if(id === HINT_IDS.extras && !state.hintsUsed.extras && !extrasUnlocked()) return 'locked';
   if(state.hintsUsed[id]) return 'used';
@@ -2539,10 +2539,9 @@ function applyHint(id){
     state.hintsUsed.quick = true;
     state.hintCount += 1;
     state.assist = true;
+    state.hintOpen.quick = true; // reveal details as soon as taken
     clearTransientOnAnyChange();
     renderSmart();
-    // stay open and show details page
-    state.modalView = {kind:'details', id: HINT_IDS.quick};
     renderHintModal();
     return;
   }
@@ -2551,9 +2550,10 @@ function applyHint(id){
     if(state.hintsUsed.w1) return;
     state.hintsUsed.w1 = true;
     state.hintCount += 1;
+    state.popNext.w1 = true;
     clearTransientOnAnyChange();
-    renderSmart();
     closeHintModal();
+    renderSmart();
     return;
   }
 
@@ -2561,9 +2561,10 @@ function applyHint(id){
     if(state.hintsUsed.w2) return;
     state.hintsUsed.w2 = true;
     state.hintCount += 1;
+    state.popNext.w2 = true;
     clearTransientOnAnyChange();
-    renderSmart();
     closeHintModal();
+    renderSmart();
     return;
   }
 
@@ -2573,150 +2574,124 @@ function applyHint(id){
     state.hintsUsed.extras = true;
     state.hintCount += 1;
     if(state.bank.length === 0) rebuildBank();
+    state.popNext.extras = true;
     clearTransientOnAnyChange();
-    renderSmart();
     closeHintModal();
+    renderSmart();
     return;
   }
 }
 
-function makeHintRow({id, title, cls}){
+function toggleHintOpen(id){
+  state.hintOpen[id] = !state.hintOpen[id];
+  renderHintModal();
+}
+
+function hintDetailsHTML(id){
+  if(id === HINT_IDS.quick){
+    return `
+      <p><b>Quick controls</b> lets you move and cycle trigrams without typing.</p>
+      <ul>
+        <li><b>Tap a clue word</b> to place a trigram</li>
+        <li><b>Tap again</b> to cycle to the next trigram</li>
+        <li><b>Drag trigram blocks</b> to reposition</li>
+        <li>Tap shown hint trigrams / extra letters to add them</li>
+        <li>Colours appear once Quick controls is enabled</li>
+      </ul>
+    `;
+  }
+  if(id === HINT_IDS.w1){
+    return `
+      <p><b>Word 1 trigram</b> reveals the correct 3-letter trigram for the first clue word.</p>
+      <p>(No spoilers here — the actual letters appear only after you select it.)</p>
+    `;
+  }
+  if(id === HINT_IDS.w2){
+    return `
+      <p><b>Word 2 trigram</b> reveals the correct 3-letter trigram for the second clue word.</p>
+      <p>(No spoilers here — the actual letters appear only after you select it.)</p>
+    `;
+  }
+  return `
+    <p><b>Extra letters</b> unlocks after you’ve taken both trigram hints.</p>
+    <p>It reveals the remaining letters you can tap into the grid.</p>
+  `;
+}
+
+function makeHintAccordionCard({id, title, cls}){
   const status = hintStatus(id);
+  const open = !!state.hintOpen[id];
   const dim = (status === 'used' || status === 'locked');
 
-  const row = document.createElement('div');
-  row.className = `hintOpt ${cls||""} ${dim ? "dim" : ""}`.trim();
+  const card = document.createElement('div');
+  card.className = `hintCard ${cls} ${dim ? "dim" : ""} ${open ? "open" : ""}`.trim();
 
-  const main = document.createElement('div');
-  main.className = "hintOptMain";
+  const top = document.createElement('div');
+  top.className = "hintTop";
+
+  const left = document.createElement('div');
+  left.className = "hintLeft";
+
+  const caret = document.createElement('button');
+  caret.type = "button";
+  caret.className = "caretBtn";
+  caret.setAttribute('aria-label', open ? `Collapse ${title}` : `Expand ${title}`);
+  caret.addEventListener('click', (e)=>{
+    e.preventDefault(); e.stopPropagation();
+    toggleHintOpen(id);
+  });
+
+  const glyph = document.createElement('span');
+  glyph.className = "caretGlyph";
+  glyph.textContent = "⌄";
+  caret.appendChild(glyph);
 
   const t = document.createElement('div');
-  t.className = "hintOptTitle";
+  t.className = "hintTitle";
   t.textContent = title;
-  main.appendChild(t);
 
-  const right = document.createElement('div');
-  right.className = "hintOptRight";
+  left.appendChild(caret);
+  left.appendChild(t);
 
-  const detailsBtn = document.createElement('button');
-  detailsBtn.type = "button";
-  detailsBtn.className = "hintBtnMini";
-  detailsBtn.textContent = "DETAILS";
-  detailsBtn.addEventListener('click', (e)=>{
-    e.preventDefault(); e.stopPropagation();
-    state.modalView = {kind:'details', id};
-    renderHintModal();
-  });
-  right.appendChild(detailsBtn);
+  const action = document.createElement('button');
+  action.type = "button";
+  action.className = "hintAction";
 
-  if(status === 'used'){
-    const badge = document.createElement('div');
-    badge.className = "badge";
-    badge.textContent = "✓ USED";
-    right.appendChild(badge);
-  }else if(status === 'locked'){
-    const badge = document.createElement('div');
-    badge.className = "badge";
-    badge.textContent = "LOCKED";
-    right.appendChild(badge);
-  }else{
-    const sel = document.createElement('button');
-    sel.type = "button";
-    sel.className = "hintBtnSelect";
-    sel.textContent = "SELECT";
-    sel.addEventListener('click', (e)=>{
+  if(status === 'avail'){
+    action.textContent = "SELECT";
+    action.addEventListener('click', (e)=>{
       e.preventDefault(); e.stopPropagation();
       applyHint(id);
     });
-    right.appendChild(sel);
+  }else if(status === 'used'){
+    action.textContent = "✓ USED";
+    action.disabled = true;
+  }else{
+    action.textContent = "LOCKED";
+    action.disabled = true;
   }
 
-  row.appendChild(main);
-  row.appendChild(right);
-  return row;
+  top.appendChild(left);
+  top.appendChild(action);
+
+  const details = document.createElement('div');
+  details.className = "hintDetails";
+  details.innerHTML = hintDetailsHTML(id);
+
+  card.appendChild(top);
+  card.appendChild(details);
+
+  return card;
 }
 
 function renderHintModal(){
+  el.hintModalTitle.textContent = "Choose a hint";
   el.hintModalBody.innerHTML = "";
 
-  // header title stays "Choose a hint"
-  el.hintModalTitle.textContent = "Choose a hint";
-
-  const view = state.modalView || {kind:'list', id:null};
-
-  if(view.kind === 'details'){
-    const id = view.id;
-
-    const box = document.createElement('div');
-    box.className = "detailBox";
-
-    if(id === HINT_IDS.quick){
-      box.innerHTML = `
-        <p><b>Quick controls</b> lets you move and cycle trigrams without typing.</p>
-        <ul>
-          <li><b>Tap a clue word</b> to place a trigram in the grid</li>
-          <li><b>Tap it again</b> to cycle to the next trigram</li>
-          <li><b>Drag trigram blocks</b> to reposition</li>
-          <li>Tap shown hint trigrams / extra letters to add them to the grid</li>
-          <li>Colours appear once Quick controls is enabled</li>
-        </ul>
-      `;
-    }else if(id === HINT_IDS.w1){
-      box.innerHTML = `
-        <p><b>Word 1 trigram</b> reveals the correct 3-letter trigram for the first clue word.</p>
-        <p>(No spoilers here — the actual letters appear only in the hint tracker after you select it.)</p>
-      `;
-    }else if(id === HINT_IDS.w2){
-      box.innerHTML = `
-        <p><b>Word 2 trigram</b> reveals the correct 3-letter trigram for the second clue word.</p>
-        <p>(No spoilers here — the actual letters appear only in the hint tracker after you select it.)</p>
-      `;
-    }else{
-      box.innerHTML = `
-        <p><b>Extra letters</b> unlocks after you’ve taken both trigram hints.</p>
-        <p>It reveals the remaining letters you can tap into the grid.</p>
-      `;
-    }
-
-    const actions = document.createElement('div');
-    actions.className = "detailActions";
-
-    const back = document.createElement('button');
-    back.type = "button";
-    back.className = "hintBtnSelect";
-    back.textContent = "GO BACK";
-    back.addEventListener('click', (e)=>{
-      e.preventDefault(); e.stopPropagation();
-      state.modalView = {kind:'list', id:null};
-      renderHintModal();
-    });
-    actions.appendChild(back);
-
-    const status = hintStatus(id);
-    if(status === 'avail'){
-      const sel = document.createElement('button');
-      sel.type = "button";
-      sel.className = "hintBtnSelect";
-      sel.textContent = "SELECT";
-      sel.addEventListener('click', (e)=>{
-        e.preventDefault(); e.stopPropagation();
-        applyHint(id);
-      });
-      actions.appendChild(sel);
-    }
-
-    el.hintModalBody.appendChild(box);
-    el.hintModalBody.appendChild(actions);
-    return;
-  }
-
-  // list view
-  const list = document.createElement('div');
-  list.appendChild(makeHintRow({ id:HINT_IDS.quick,  title:"Quick controls", cls:"opt-quick" }));
-  list.appendChild(makeHintRow({ id:HINT_IDS.w1,     title:"Word 1 trigram",  cls:"opt-w1" }));
-  list.appendChild(makeHintRow({ id:HINT_IDS.w2,     title:"Word 2 trigram",  cls:"opt-w2" }));
-  list.appendChild(makeHintRow({ id:HINT_IDS.extras, title:"Extra letters",   cls:"opt-extras" }));
-  el.hintModalBody.appendChild(list);
+  el.hintModalBody.appendChild(makeHintAccordionCard({ id:HINT_IDS.quick,  title:"Quick controls", cls:"opt-quick" }));
+  el.hintModalBody.appendChild(makeHintAccordionCard({ id:HINT_IDS.w1,     title:"Word 1 trigram",  cls:"opt-w1" }));
+  el.hintModalBody.appendChild(makeHintAccordionCard({ id:HINT_IDS.w2,     title:"Word 2 trigram",  cls:"opt-w2" }));
+  el.hintModalBody.appendChild(makeHintAccordionCard({ id:HINT_IDS.extras, title:"Extra letters",   cls:"opt-extras" }));
 }
 
 /* modal events */
@@ -2790,7 +2765,7 @@ function onHintButton(){
     showAnswerNow();
     return;
   }
-  openHintModal({kind:'list', id:null});
+  openHintModal();
 }
 
 bindFastTap(el.hintBtn, onHintButton);
@@ -2919,6 +2894,10 @@ function resetAllForPuzzle(){
   state.hintCount = 0;
   state.hintsUsed = { quick:false, w1:false, w2:false, extras:false };
   state.assist = false;
+
+  state.hintOpen = { quick:false, w1:false, w2:false, extras:false };
+
+  state.popNext = { w1:false, w2:false, extras:false };
 
   state.bank = [];
   resetMainGridOnly();
