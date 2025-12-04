@@ -22,6 +22,9 @@
 
       /* caret */
       --caret: rgba(0,0,0,.18);
+
+      /* grid width in px (JS updates per puzzle length) */
+      --grid-px: 312px;
     }
 
     *{ box-sizing:border-box; }
@@ -36,7 +39,7 @@
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
       color:var(--ink);
       text-align:center;
-      -webkit-text-size-adjust:100%;
+      -webkit-text-size-adjust: 100%;
     }
 
     /* =========================
@@ -97,12 +100,7 @@
       touch-action: manipulation;
     }
     .nav a:active{ transform:translateY(1px); }
-    .count{
-      font-weight:900;
-      opacity:.7;
-      min-width:58px;
-      text-align:center;
-    }
+    .count{ font-weight:900; opacity:.7; min-width:58px; text-align:center; }
 
     /* ====== Clue ====== */
     .clue{
@@ -124,13 +122,14 @@
       opacity:.55;
       font-weight:inherit;
       font-style:inherit;
+
       display:inline-block;
       font-size:0.92em;
       line-height:1;
       vertical-align:middle;
-      position:relative;
-      top:-0.1em;
-      margin-left:8px; /* controlled gap before (7) */
+      position: relative;
+      top: -0.1em;
+      margin-left:8px; /* controlled gap before (N) */
     }
 
     .clueWord{
@@ -139,8 +138,8 @@
       -webkit-tap-highlight-color: transparent;
       user-select:none;
       touch-action: manipulation;
-      font-kerning:none;
-      font-variant-ligatures:none;
+      font-kerning: none;
+      font-variant-ligatures: none;
       font-feature-settings: "kern" 0, "liga" 0, "clig" 0; /* Safari-friendly */
     }
 
@@ -148,7 +147,7 @@
       text-decoration: underline;
       text-decoration-thickness: 6px;
       text-underline-offset: 9px;
-      pointer-events:none;
+      pointer-events: none;
     }
     .u-w1{ text-decoration-color: rgba(255,220,0,.9); }
     .u-w2{ text-decoration-color: rgba(70,160,255,.92); }
@@ -233,9 +232,9 @@
 
     .grid{
       display:grid;
-      grid-template-columns:repeat(7,1fr);
-      width:min(312px,88vw);
+      width:min(var(--grid-px),88vw);
     }
+
     .cell{
       aspect-ratio:1/1;
       display:flex;
@@ -244,7 +243,8 @@
       background:#fff;
       position:relative;
     }
-    .cell:not(:nth-child(7n+1)){ border-left:3px solid var(--ink); }
+    /* single-row grid: just add dividers between adjacent cells */
+    .cell + .cell{ border-left:3px solid var(--ink); }
 
     /* Active-cell indicator */
     .cell.active::after{
@@ -278,15 +278,13 @@
     .cell input{
       width:100%;
       height:100%;
-      border:0;
-      outline:none;
+      border:0; outline:none;
       background:transparent;
       text-align:center;
       font-size:clamp(23px,5.1vw,32px);
       font-weight:900;
       font-style:italic;
-      padding:0;
-      margin:0;
+      padding:0; margin:0;
       color:var(--ink);
       text-transform:lowercase;
       caret-color: transparent;
@@ -321,7 +319,8 @@
       height:74px;
       width:100%;
       max-width:760px;
-      margin: clamp(10px, 2.2vh, 16px) auto 0;
+      margin: clamp(18px, 3.4vh, 26px) auto 0;
+      margin-top: clamp(10px, 2.2vh, 16px);
       user-select:none;
       flex:0 0 auto;
     }
@@ -375,16 +374,15 @@
       min-width:0;
     }
 
-    /* Hint mini-grids (clean, non-patched):
-       - no outer capsule border/radius
-       - each tile is a square with a thin border
-       - seams are single-thickness (no double borders) */
+    /* Hint mini-grids: individual square tiles with thin borders (no outer capsule) */
     .letters{
       display:inline-flex;
-      background:transparent;
-      overflow:visible;
       position:relative;
       flex:0 0 auto;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      overflow: visible;
     }
     .letters.clickable{ cursor:pointer; }
 
@@ -399,13 +397,14 @@
       font-size:19px;
       text-transform:lowercase;
       position:relative;
-      background:rgba(255,255,255,.35);
-      border:1px solid rgba(0,0,0,.22);
-      border-radius:0;
       transition:opacity .15s ease, background .15s ease, transform .08s ease;
+
+      border: 1px solid rgba(0,0,0,.22);
+      border-radius: 0;
+      background: rgba(255,255,255,.35);
     }
-    /* single-thickness seam between tiles */
-    .letter + .letter{ border-left:0; }
+    /* keep a single-thickness border between tiles */
+    .letter + .letter{ margin-left:-1px; }
 
     .letter.sel-w1{ background:var(--w1); }
     .letter.sel-w2{ background:var(--w2); }
@@ -447,7 +446,7 @@
       gap:12px;
       flex-wrap:wrap;
       flex:0 0 auto;
-      padding-bottom:2px;
+      padding-bottom: 2px;
     }
     .btn{
       border:4px solid var(--ink);
@@ -537,15 +536,15 @@
     }
     .kbKey{
       width: var(--keyW);
-      height:48px;
+      height: 48px;
       border:2px solid rgba(0,0,0,.16);
       border-radius:11px;
       background:rgba(255,255,255,.82);
       font-weight:700;
       font-style:normal;
       text-transform:none;
-      font-size:18px;
-      color:var(--ink);
+      font-size: 18px;
+      color: var(--ink);
       box-shadow:none;
       cursor:pointer;
       user-select:none;
@@ -556,21 +555,21 @@
 
     .kbKey.wide{
       width: calc(var(--keyW) * 1.55);
-      font-size:12px;
-      font-weight:900;
-      letter-spacing:.08em;
-      padding:0;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      padding: 0;
     }
     .kbKey.enter{
-      font-size:11px;
-      letter-spacing:.02em;
+      font-size: 11px;
+      letter-spacing: .02em;
     }
     .kbKey.enter:not(.is-disabled){
       background: rgba(0,0,0,.07);
     }
     .kbKey.delete{
-      font-size:16.3px;
-      letter-spacing:0.03em;
+      font-size: 16.3px;
+      letter-spacing: 0.03em;
       font-weight:750;
       background: rgba(0,0,0,.07);
     }
@@ -584,24 +583,18 @@
 
     @media (max-width:520px){
       .nav a{ padding:4px 9px; }
-
       .clue{
         font-size:clamp(32px,6.6vw,38px);
         margin-top: clamp(16px, 3.4vh, 28px);
       }
-
-      .grid{ width:min(302px,92vw); }
+      .grid{ width:min(var(--grid-px),92vw); }
       .gridWrap{ margin-top: clamp(44px, 7.0vh, 72px); }
-
       .cell input{ font-size:clamp(24px,6.05vw,36px); }
-
       .letter{ width:28px; height:28px; font-size:19px; }
       .tinyLbl{ font-size:13px; }
-
       .msgSlot{ height:74px; margin-top: clamp(10px, 2.6vh, 16px); }
       .msg{ font-size:20px; top:12px; }
       .msg.warn{ font-size:19px; }
-
       .btn{ font-size:19px; padding:9px 15px; min-width:98px; }
       .kbKey{ height:46px; }
     }
@@ -647,8 +640,17 @@
 <script>
 /* =======================
    Puzzles
+   - You can now omit tri1/tri2/pos and it will infer them.
    ======================= */
-const PUZZLES = [
+const PUZZLES_RAW = [
+  // 6-letter tests
+  { clue:"Beachy sights",     word1:"beachy",  word2:"sights",   answer:"yachts" },
+  { clue:"Believe oracle?",   word1:"believe", word2:"oracle",   answer:"clever" },
+
+  // 8-letter test
+  { clue:"Perform, monkey!",  word1:"perform", word2:"monkey",   answer:"hormones" },
+
+  // existing
   { clue:"Raccoon scuffle!",  word1:"raccoon", word2:"scuffle", answer:"buffoon", tri1:"oon", tri2:"uff", tri1_pos:4, tri2_pos:1 },
   { clue:"Tidal tiptoes",     word1:"tidal",   word2:"tiptoes", answer:"riptide", tri1:"tid", tri2:"ipt", tri1_pos:3, tri2_pos:1 },
   { clue:"Trusty boombox",    word1:"trusty",  word2:"boombox", answer:"combust", tri1:"ust", tri2:"omb", tri1_pos:4, tri2_pos:1 },
@@ -656,9 +658,120 @@ const PUZZLES = [
   { clue:"Juicy muscles",     word1:"juicy",   word2:"muscles", answer:"bicycle", tri1:"icy", tri2:"cle", tri1_pos:1, tri2_pos:4 },
 ];
 
-const N = 7;
 const TR = 3;
-const START_MAX = N - TR;
+let N = 7;
+let START_MAX = N - TR;
+
+/* -----------------------
+   Helpers / normalization
+   ----------------------- */
+function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+function norm(s){ return String(s||"").toLowerCase().replace(/[^a-z]/g,""); }
+
+function allTrigrams(s){
+  const w = norm(s);
+  const out = [];
+  const seen = new Set();
+  for(let i=0;i<=w.length-TR;i++){
+    const t = w.slice(i,i+TR);
+    if(!seen.has(t)){ seen.add(t); out.push(t); }
+  }
+  return out;
+}
+function allPositions(hay, needle){
+  const s = norm(hay);
+  const t = norm(needle);
+  const out = [];
+  if(!t) return out;
+  let i = s.indexOf(t);
+  while(i >= 0){
+    out.push(i);
+    i = s.indexOf(t, i+1);
+  }
+  return out;
+}
+function segOverlap(aStart, bStart){
+  const a0 = aStart, a1 = aStart + TR - 1;
+  const b0 = bStart, b1 = bStart + TR - 1;
+  const lo = Math.max(a0,b0);
+  const hi = Math.min(a1,b1);
+  return Math.max(0, hi - lo + 1);
+}
+
+function inferTriAndPos(word, answer){
+  const ans = norm(answer);
+  const candidates = [];
+  for(const tri of allTrigrams(word)){
+    const poses = allPositions(ans, tri);
+    for(const pos of poses) candidates.push({tri, pos});
+  }
+  return candidates;
+}
+
+function normalizePuzzle(p){
+  const out = {...p};
+  out.word1 = norm(out.word1);
+  out.word2 = norm(out.word2);
+  out.answer = norm(out.answer);
+
+  // If tri/pos are fully supplied, trust them.
+  const hasAll =
+    out.tri1 && out.tri2 &&
+    Number.isFinite(out.tri1_pos) && Number.isFinite(out.tri2_pos);
+
+  if(hasAll){
+    out.tri1 = norm(out.tri1);
+    out.tri2 = norm(out.tri2);
+    out.tri1_pos = Number(out.tri1_pos);
+    out.tri2_pos = Number(out.tri2_pos);
+    return out;
+  }
+
+  // Infer (tri,pos) pairs from intersections with the answer
+  const c1 = inferTriAndPos(out.word1, out.answer);
+  const c2 = inferTriAndPos(out.word2, out.answer);
+
+  // Choose a valid pair (prefer 1-letter overlap to make hint3 more meaningful)
+  let best = null;
+  for(const a of c1){
+    for(const b of c2){
+      // avoid same trigram if possible
+      const sameTri = (a.tri === b.tri);
+
+      const ol = segOverlap(a.pos, b.pos);
+      if(ol > 1) continue;
+
+      // score: prefer overlap==1, then prefer different trigrams, then earlier positions
+      let score = (ol === 1 ? 0 : 100);
+      score += (sameTri ? 50 : 0);
+      score += a.pos * 3 + b.pos * 2;
+
+      if(best == null || score < best.score){
+        best = {score, a, b};
+      }
+    }
+  }
+
+  // Fallback: if no valid pair (shouldn't happen in real puzzles), just pick first candidates
+  if(!best){
+    const a = c1[0] || {tri: out.word1.slice(0,TR), pos: 0};
+    const b = c2[0] || {tri: out.word2.slice(0,TR), pos: Math.max(0, out.answer.length-TR)};
+    best = {a,b};
+  }
+
+  out.tri1 = best.a.tri;
+  out.tri2 = best.b.tri;
+  out.tri1_pos = best.a.pos;
+  out.tri2_pos = best.b.pos;
+  return out;
+}
+
+const PUZZLES = PUZZLES_RAW.map(normalizePuzzle);
+
+function current(){ return PUZZLES[state.i]; }
+function isAlpha(ch){ return /^[a-z]$/i.test(ch); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
 
 const el = {
   wrap: document.getElementById('wrap'),
@@ -701,7 +814,6 @@ const state = {
   focusIdx: 0,
 
   drag: null,
-  lastDragEndedAt: 0,
 
   msgTimer: null,
   msgTransient: false,
@@ -722,12 +834,21 @@ const state = {
   useCustomKB: false,
 };
 
-function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
-function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
-function current(){ return PUZZLES[state.i]; }
-function norm(s){ return String(s||"").toLowerCase().replace(/[^a-z]/g,""); }
-function isAlpha(ch){ return /^[a-z]$/i.test(ch); }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function applyPuzzleSize(){
+  const p = current();
+  const len = norm(p.answer).length;
+  N = clamp(len || 7, 1, 64);
+  START_MAX = Math.max(0, N - TR);
+
+  // update grid layout + width
+  el.grid.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+  // matches your earlier 7=>~312px feel
+  const baseCell = 44.6;
+  document.documentElement.style.setProperty('--grid-px', `${Math.round(N * baseCell)}px`);
+
+  // keep focus in range
+  state.focusIdx = clamp(state.focusIdx ?? 0, 0, N-1);
+}
 
 function renderSmart(){ render(!state.useCustomKB); }
 
@@ -1144,7 +1265,6 @@ function deleteFromEnd(){
 
 /* =======================
    Typed trigram detection / promotion + rest of logic
-   (UNCHANGED FROM YOUR VERSION)
    ======================= */
 function allowedSet(group){
   const p = current();
@@ -1403,11 +1523,15 @@ function computeOverlapIdxSet(){
 function computeHint3Letters(){
   const p = current();
   const ans = norm(p.answer);
+
   const covered = new Set();
   for(let k=0;k<TR;k++) covered.add(p.tri1_pos + k);
   for(let k=0;k<TR;k++) covered.add(p.tri2_pos + k);
+
   const leftover = [];
-  for(let i=0;i<N;i++) if(!covered.has(i)) leftover.push(ans[i]);
+  for(let i=0;i<N;i++){
+    if(!covered.has(i)) leftover.push(ans[i]);
+  }
   leftover.sort();
   return leftover;
 }
@@ -1563,7 +1687,7 @@ function onCheck(){
   clearTransientOnAnyChange();
 
   if(!canEnableCheckNow()){
-    setTransientMsg("Fill all 7");
+    setTransientMsg(`Fill all ${N}`);
     return;
   }
 
@@ -1727,7 +1851,7 @@ function renderHintTrack(){
   }
 }
 
-/* ===== Drag ghost & other logic unchanged (keeping your working behaviour) ===== */
+/* ===== Drag ghost & other logic unchanged ===== */
 function trigramIsRedAtStart(start){
   computeMax3Invalid();
   computeTwoTrigramsInvalid();
@@ -1973,6 +2097,8 @@ function errorItemsForGroup(group){
    Render grid
    ======================= */
 function renderGrid(stealFocus=true){
+  applyPuzzleSize();
+
   for(let k=0;k<2;k++){
     if(!autoPromoteTypedTrigrams()) break;
   }
@@ -2115,6 +2241,8 @@ function renderGrid(stealFocus=true){
 }
 
 function render(stealFocus=true){
+  applyPuzzleSize();
+
   const p = current();
   el.count.textContent = `${state.i+1}/${PUZZLES.length}`;
 
@@ -2153,7 +2281,7 @@ function render(stealFocus=true){
   el.clue.innerHTML =
     `<span class="clueWord" data-group="w1">${a}</span> ` +
     `<span class="clueWord" data-group="w2">${b}</span>` +
-    `<span class="len">(7)</span>`;
+    `<span class="len">(${N})</span>`;
 
   renderHintTrack();
 
@@ -2314,6 +2442,7 @@ function resetMainGridOnly(){
   abortDrag();
 }
 function resetAllForPuzzle(){
+  applyPuzzleSize();
   state.hint = 0;
   state.finished = false;
   state.revealedAnswer = false;
@@ -2328,6 +2457,7 @@ window.addEventListener('resize', ()=>{
   updateKeyboardState();
 });
 
+applyPuzzleSize();
 setCustomKBEnabled(shouldUseCustomKB());
 renderSmart();
 </script>
