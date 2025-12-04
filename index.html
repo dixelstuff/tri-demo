@@ -404,27 +404,29 @@
       flex-wrap:nowrap;
     }
 
-    /* ===== Hint appearance animation ===== */
+    /* ===== Bigger, longer hint appearance animation ===== */
     @keyframes hintPop {
-      0%   { transform: scale(1.85) rotate(0deg); }
-      42%  { transform: scale(1.18) rotate(-2deg); }
-      60%  { transform: scale(1.08) rotate(2deg); }
-      78%  { transform: scale(1.00) rotate(-1deg); }
-      100% { transform: scale(1.00) rotate(0deg); }
+      0%   { transform: scale(2.75) rotate(-4deg); filter: drop-shadow(0 18px 16px rgba(0,0,0,.18)); }
+      34%  { transform: scale(1.42) rotate(3.5deg);  }
+      56%  { transform: scale(1.16) rotate(-2.5deg); }
+      74%  { transform: scale(1.06) rotate(1.3deg);  }
+      88%  { transform: scale(1.02) rotate(-0.6deg); }
+      100% { transform: scale(1.00) rotate(0deg); filter: drop-shadow(0 10px 12px rgba(0,0,0,.10)); }
     }
     .letters.hint-pop{
-      animation: hintPop 520ms cubic-bezier(.18,.86,.23,1.05) both;
+      animation: hintPop 860ms cubic-bezier(.12,.86,.22,1.08) both;
     }
 
     @keyframes tilePop {
-      0%   { transform: scale(1.95) rotate(0deg); }
-      45%  { transform: scale(1.18) rotate(-2deg); }
-      63%  { transform: scale(1.07) rotate(2deg); }
-      80%  { transform: scale(1.00) rotate(-1deg); }
-      100% { transform: scale(1.00) rotate(0deg); }
+      0%   { transform: scale(3.0) rotate(-5deg); filter: drop-shadow(0 18px 16px rgba(0,0,0,.18)); }
+      38%  { transform: scale(1.46) rotate(4deg); }
+      60%  { transform: scale(1.18) rotate(-2.6deg); }
+      78%  { transform: scale(1.06) rotate(1.4deg); }
+      90%  { transform: scale(1.02) rotate(-0.6deg); }
+      100% { transform: scale(1.00) rotate(0deg); filter: drop-shadow(0 10px 12px rgba(0,0,0,.10)); }
     }
     .letter.pop-tile{
-      animation: tilePop 540ms cubic-bezier(.18,.86,.23,1.05) both;
+      animation: tilePop 920ms cubic-bezier(.12,.86,.22,1.08) both;
     }
 
     /* ===== Buttons ===== */
@@ -587,7 +589,7 @@
       .kbKey{ height:46px; }
     }
 
-    /* ========= Hint modal (accordion) ========= */
+    /* ========= Hint modal ========= */
     .modalOverlay{
       position:fixed;
       inset:0;
@@ -660,12 +662,15 @@
       justify-content:space-between;
       gap: 12px;
     }
+
     .hintLeft{
       display:flex;
       align-items:center;
-      gap:10px;
       min-width:0;
+      gap: 6px;
+      flex:1 1 auto;
     }
+
     .hintTitle{
       font-weight: 950;
       font-size: 16px;
@@ -677,29 +682,29 @@
       text-overflow:ellipsis;
     }
 
-    .caretBtn{
-      width: 32px;
-      height: 32px;
-      border-radius: 10px;
-      border:2px solid rgba(0,0,0,.14);
-      background: rgba(255,255,255,.55);
-      cursor:pointer;
-      display:flex;
+    /* Quick controls title + caret (not a button look) */
+    .hintToggle{
+      display:inline-flex;
       align-items:center;
-      justify-content:center;
-      padding:0;
-      flex:0 0 auto;
+      gap:7px;
+      cursor:pointer;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
-    .caretBtn:active{ transform: translateY(1px); }
+    .hintCard.dim .hintToggle{ cursor:pointer; } /* still allow open */
     .caretGlyph{
       display:inline-block;
-      font-size: 16px;
+      font-size: 14px;
+      font-weight: 900;
       line-height:1;
+      color:#000;
+      opacity:.85;
       transform: rotate(0deg);
       transition: transform .18s ease;
+      position:relative;
+      top:1px;
     }
-    .hintCard.open .caretGlyph{ transform: rotate(180deg); } /* down caret flips up */
+    .hintCard.open .caretGlyph{ transform: rotate(180deg); }
 
     .hintAction{
       flex:0 0 auto;
@@ -722,6 +727,7 @@
       opacity:.92;
     }
 
+    /* Quick controls details only */
     .hintDetails{
       overflow:hidden;
       max-height: 0px;
@@ -862,7 +868,7 @@ const state = {
 
   hintCount: 0,
   hintsUsed: { quick:false, w1:false, w2:false, extras:false },
-  hintOpen: { quick:false, w1:false, w2:false, extras:false },
+  hintOpen: { quick:false },
 
   assist: false,
 
@@ -1099,7 +1105,7 @@ function setMsg(text, kind){
   if(kind === 'warn') el.msg.classList.add('warn');
   if(kind === 'result') el.msg.classList.add('result');
 }
-function setTransientMsg(text, ms=2200){
+function setTransientMsg(text, ms=2400){
   setMsg(text);
   state.msgTransient = true;
   state.msgTimer = setTimeout(()=>{
@@ -1984,7 +1990,7 @@ function renderHintTrack(){
 
       if(popExtras){
         d.classList.add('pop-tile');
-        d.style.animationDelay = `${idx * 70}ms`;
+        d.style.animationDelay = `${idx * 80}ms`;
       }
       idx++;
 
@@ -1996,7 +2002,8 @@ function renderHintTrack(){
 
           const n = getN();
           for(let i=0;i<n;i++){
-            if(trigramAtIndex(i)) continue;
+            if(state.placed.w1 && i>=state.placed.w1.start && i<state.placed.w1.start+TR) continue;
+            if(state.placed.w2 && i>=state.placed.w2.start && i<state.placed.w2.start+TR) continue;
             if(state.singles.find(s=>s.idx===i)) continue;
             state.singles.push({id: uid(), ch: tile.ch, idx: i});
             state.focusIdx = clamp(i+1,0,n-1);
@@ -2503,11 +2510,15 @@ function render(stealFocus=true){
 }
 
 /* =======================
-   Hint modal (accordion)
+   Hint modal (Quick only accordion)
    ======================= */
 function openHintModal(){
   if(state.finished) return;
   state.modalOpen = true;
+
+  // Default quick accordion state based on whether quick controls already enabled
+  state.hintOpen.quick = !state.hintsUsed.quick;
+
   el.hintModal.classList.add('open');
   el.hintModal.setAttribute('aria-hidden', 'false');
   renderHintModal();
@@ -2539,10 +2550,12 @@ function applyHint(id){
     state.hintsUsed.quick = true;
     state.hintCount += 1;
     state.assist = true;
-    state.hintOpen.quick = true; // reveal details as soon as taken
+
+    closeHintModal();
     clearTransientOnAnyChange();
+    setTransientMsg("Quick controls now active", 2600);
+
     renderSmart();
-    renderHintModal();
     return;
   }
 
@@ -2582,49 +2595,25 @@ function applyHint(id){
   }
 }
 
-function toggleHintOpen(id){
-  state.hintOpen[id] = !state.hintOpen[id];
-  renderHintModal();
-}
-
-function hintDetailsHTML(id){
-  if(id === HINT_IDS.quick){
-    return `
-      <p><b>Quick controls</b> lets you move and cycle trigrams without typing.</p>
-      <ul>
-        <li><b>Tap a clue word</b> to place a trigram</li>
-        <li><b>Tap again</b> to cycle to the next trigram</li>
-        <li><b>Drag trigram blocks</b> to reposition</li>
-        <li>Tap shown hint trigrams / extra letters to add them</li>
-        <li>Colours appear once Quick controls is enabled</li>
-      </ul>
-    `;
-  }
-  if(id === HINT_IDS.w1){
-    return `
-      <p><b>Word 1 trigram</b> reveals the correct 3-letter trigram for the first clue word.</p>
-      <p>(No spoilers here — the actual letters appear only after you select it.)</p>
-    `;
-  }
-  if(id === HINT_IDS.w2){
-    return `
-      <p><b>Word 2 trigram</b> reveals the correct 3-letter trigram for the second clue word.</p>
-      <p>(No spoilers here — the actual letters appear only after you select it.)</p>
-    `;
-  }
+function quickDetailsHTML(){
   return `
-    <p><b>Extra letters</b> unlocks after you’ve taken both trigram hints.</p>
-    <p>It reveals the remaining letters you can tap into the grid.</p>
+    <p><b>Quick controls</b> lets you move and cycle trigrams without typing.</p>
+    <ul>
+      <li><b>Tap a clue word</b> to place a trigram</li>
+      <li><b>Tap again</b> to cycle to the next trigram</li>
+      <li><b>Drag trigram blocks</b> to reposition</li>
+      <li>Tap shown hint trigrams / extra letters to add them</li>
+      <li>Colours appear once Quick controls is enabled</li>
+    </ul>
   `;
 }
 
-function makeHintAccordionCard({id, title, cls}){
+function makeHintCardSimple({id, title, cls}){
   const status = hintStatus(id);
-  const open = !!state.hintOpen[id];
   const dim = (status === 'used' || status === 'locked');
 
   const card = document.createElement('div');
-  card.className = `hintCard ${cls} ${dim ? "dim" : ""} ${open ? "open" : ""}`.trim();
+  card.className = `hintCard ${cls} ${dim ? "dim" : ""}`.trim();
 
   const top = document.createElement('div');
   top.className = "hintTop";
@@ -2632,25 +2621,10 @@ function makeHintAccordionCard({id, title, cls}){
   const left = document.createElement('div');
   left.className = "hintLeft";
 
-  const caret = document.createElement('button');
-  caret.type = "button";
-  caret.className = "caretBtn";
-  caret.setAttribute('aria-label', open ? `Collapse ${title}` : `Expand ${title}`);
-  caret.addEventListener('click', (e)=>{
-    e.preventDefault(); e.stopPropagation();
-    toggleHintOpen(id);
-  });
-
-  const glyph = document.createElement('span');
-  glyph.className = "caretGlyph";
-  glyph.textContent = "⌄";
-  caret.appendChild(glyph);
-
   const t = document.createElement('div');
   t.className = "hintTitle";
   t.textContent = title;
 
-  left.appendChild(caret);
   left.appendChild(t);
 
   const action = document.createElement('button');
@@ -2674,9 +2648,81 @@ function makeHintAccordionCard({id, title, cls}){
   top.appendChild(left);
   top.appendChild(action);
 
+  card.appendChild(top);
+  return card;
+}
+
+function makeHintCardQuick(){
+  const id = HINT_IDS.quick;
+  const title = "Quick controls";
+  const cls = "opt-quick";
+
+  const status = hintStatus(id);
+  const open = !!state.hintOpen.quick;
+  const dim = (status === 'used'); // locked never happens for quick
+
+  const card = document.createElement('div');
+  card.className = `hintCard ${cls} ${dim ? "dim" : ""} ${open ? "open" : ""}`.trim();
+
+  const top = document.createElement('div');
+  top.className = "hintTop";
+
+  const left = document.createElement('div');
+  left.className = "hintLeft";
+
+  const toggle = document.createElement('div');
+  toggle.className = "hintToggle";
+  toggle.setAttribute('role','button');
+  toggle.setAttribute('tabindex','0');
+  toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+  const t = document.createElement('div');
+  t.className = "hintTitle";
+  t.textContent = title;
+
+  const caret = document.createElement('span');
+  caret.className = "caretGlyph";
+  caret.textContent = "▾";
+
+  toggle.appendChild(t);
+  toggle.appendChild(caret);
+
+  const toggleFn = ()=>{
+    state.hintOpen.quick = !state.hintOpen.quick;
+    renderHintModal();
+  };
+
+  toggle.addEventListener('pointerdown', (e)=>{ e.preventDefault(); e.stopPropagation(); toggleFn(); }, {passive:false});
+  toggle.addEventListener('keydown', (e)=>{
+    if(e.key === "Enter" || e.key === " "){
+      e.preventDefault();
+      toggleFn();
+    }
+  });
+
+  left.appendChild(toggle);
+
+  const action = document.createElement('button');
+  action.type = "button";
+  action.className = "hintAction";
+
+  if(status === 'avail'){
+    action.textContent = "SELECT";
+    action.addEventListener('click', (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      applyHint(id);
+    });
+  }else{
+    action.textContent = "✓ USED";
+    action.disabled = true;
+  }
+
+  top.appendChild(left);
+  top.appendChild(action);
+
   const details = document.createElement('div');
   details.className = "hintDetails";
-  details.innerHTML = hintDetailsHTML(id);
+  details.innerHTML = quickDetailsHTML();
 
   card.appendChild(top);
   card.appendChild(details);
@@ -2688,10 +2734,10 @@ function renderHintModal(){
   el.hintModalTitle.textContent = "Choose a hint";
   el.hintModalBody.innerHTML = "";
 
-  el.hintModalBody.appendChild(makeHintAccordionCard({ id:HINT_IDS.quick,  title:"Quick controls", cls:"opt-quick" }));
-  el.hintModalBody.appendChild(makeHintAccordionCard({ id:HINT_IDS.w1,     title:"Word 1 trigram",  cls:"opt-w1" }));
-  el.hintModalBody.appendChild(makeHintAccordionCard({ id:HINT_IDS.w2,     title:"Word 2 trigram",  cls:"opt-w2" }));
-  el.hintModalBody.appendChild(makeHintAccordionCard({ id:HINT_IDS.extras, title:"Extra letters",   cls:"opt-extras" }));
+  el.hintModalBody.appendChild(makeHintCardQuick());
+  el.hintModalBody.appendChild(makeHintCardSimple({ id:HINT_IDS.w1,     title:"Word 1 trigram",  cls:"opt-w1" }));
+  el.hintModalBody.appendChild(makeHintCardSimple({ id:HINT_IDS.w2,     title:"Word 2 trigram",  cls:"opt-w2" }));
+  el.hintModalBody.appendChild(makeHintCardSimple({ id:HINT_IDS.extras, title:"Extra letters",   cls:"opt-extras" }));
 }
 
 /* modal events */
@@ -2895,7 +2941,7 @@ function resetAllForPuzzle(){
   state.hintsUsed = { quick:false, w1:false, w2:false, extras:false };
   state.assist = false;
 
-  state.hintOpen = { quick:false, w1:false, w2:false, extras:false };
+  state.hintOpen = { quick:false };
 
   state.popNext = { w1:false, w2:false, extras:false };
 
