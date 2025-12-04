@@ -2632,7 +2632,7 @@ function renderHintModal(){
     makeOpt({
       id: HINT_IDS.quick,
       title: "Quick controls",
-      sub: "Move and cycle trigrams without typing",
+      sub: "Add, move and cycle trigrams without typing",
       cls: "opt-quick",
       status: state.hintsUsed.quick ? "used" : "",
       disabled: state.hintsUsed.quick,
@@ -2654,7 +2654,7 @@ function renderHintModal(){
   list.appendChild(
     makeOpt({
       id: HINT_IDS.w1,
-      title: "Show word 1 trigram",
+      title: "Reveal word 1 trigram",
       sub: null,
       cls: "opt-w1",
       status: state.hintsUsed.w1 ? "used" : "",
@@ -2674,7 +2674,7 @@ function renderHintModal(){
   list.appendChild(
     makeOpt({
       id: HINT_IDS.w2,
-      title: "Show word 2 trigram",
+      title: "Reveal word 2 trigram",
       sub: null,
       cls: "opt-w2",
       status: state.hintsUsed.w2 ? "used" : "",
@@ -2695,7 +2695,7 @@ function renderHintModal(){
   list.appendChild(
     makeOpt({
       id: HINT_IDS.extras,
-      title: "Show extra letters",
+      title: "Reveal any extra letters",
       sub: null,
       cls: "opt-extras",
       status: state.hintsUsed.extras ? "used" : (locked ? "locked" : ""),
