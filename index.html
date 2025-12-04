@@ -607,6 +607,11 @@
       box-shadow: 0 10px 26px rgba(0,0,0,.18);
       overflow:hidden;
       text-align:left;
+
+      /* NEW: fixed frame + scrollable body */
+      display:flex;
+      flex-direction:column;
+      max-height: calc(100dvh - 28px);
     }
     .modalHdr{
       display:flex;
@@ -614,30 +619,42 @@
       justify-content:space-between;
       padding: 14px 14px 12px;
       border-bottom:1px solid rgba(0,0,0,.08);
+      flex:0 0 auto;
     }
     .modalTitle{
       font-weight: 950;
       font-size: 18px;
       letter-spacing: .01em;
     }
+
+    /* NEW: plain black X (no circle button) */
     .modalX{
-      width: 38px;
-      height: 38px;
-      border-radius: 999px;
-      border: 2px solid rgba(0,0,0,.14);
-      background: rgba(255,255,255,.55);
-      font-size: 22px;
+      width:auto;
+      height:auto;
+      border:none;
+      background:transparent;
+      padding:2px 6px;
+      margin:0;
+      color:#000;
+      font-size: 26px;
+      font-weight: 950;
       line-height: 1;
       cursor:pointer;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:0;
+      border-radius: 8px;
     }
     .modalX:active{ transform: translateY(1px); }
+    .modalX:focus{ outline:none; }
+    .modalX:focus-visible{
+      outline: 2px solid rgba(0,0,0,.25);
+      outline-offset: 2px;
+    }
 
     .modalBody{
       padding: 12px 14px 14px;
+
+      /* NEW */
+      flex:1 1 auto;
+      overflow:auto;
     }
 
     .hintOpt{
@@ -649,7 +666,11 @@
       background:#fff;
       color: var(--ink);
       display:flex;
-      align-items:flex-start;
+
+      /* NEW: same size tiles */
+      height: 82px;
+      align-items:center;
+
       justify-content:space-between;
       gap: 10px;
       margin: 10px 0;
@@ -674,17 +695,31 @@
       flex-direction:column;
       gap:4px;
       min-width:0;
+
+      /* NEW */
+      justify-content:center;
     }
     .hintOptTitle{
       font-weight: 950;
       font-size: 16px;
       line-height:1.15;
       color: var(--ink);
+
+      /* NEW: guard against any odd indent */
+      margin:0;
+      padding:0;
+      text-indent:0;
     }
     .hintOptSub{
       font-size: 13px;
       opacity:.78;
       line-height:1.25;
+
+      /* NEW: keep tile height stable */
+      display:-webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow:hidden;
     }
 
     .badge{
@@ -696,9 +731,16 @@
       letter-spacing: .06em;
       border: 2px solid rgba(0,0,0,.14);
       background: rgba(255,255,255,.62);
+
+      /* NEW */
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
     }
 
-    .opt-quick{ background: #fff3bd; }
+    /* NEW: Quick controls matches CHECK button background */
+    .opt-quick{ background: var(--submit); }
+
     .opt-w1{ background: var(--w1); }
     .opt-w2{ background: var(--w2); }
     .opt-extras{ background: rgba(255,255,255,.95); }
@@ -762,7 +804,7 @@
     <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="hintModalTitle">
       <div class="modalHdr">
         <div class="modalTitle" id="hintModalTitle">Choose a hint</div>
-        <button class="modalX" id="hintModalClose" type="button" aria-label="Close">×</button>
+        <button class="modalX" id="hintModalClose" type="button" aria-label="Close">X</button>
       </div>
       <div class="modalBody" id="hintModalBody"></div>
     </div>
@@ -887,6 +929,9 @@ const state = {
   // modal view state: 'list' | 'quickHelp'
   modalOpen: false,
   modalView: 'list',
+
+  // NEW: lock modal height so quickHelp uses same frame as list
+  modalFixedH: null,
 };
 
 /* =======================
@@ -2518,8 +2563,30 @@ function render(stealFocus=true){
 }
 
 /* =======================
-   Hint modal (Choose a hint)
+   Hint modal (Choose a hint) + fixed-frame sizing
    ======================= */
+function modalCardEl(){
+  return el.hintModal.querySelector('.modalCard');
+}
+function lockModalCardHeight(){
+  const card = modalCardEl();
+  if(!card) return;
+
+  const maxH = Math.max(240, Math.floor(window.innerHeight - 28));
+  const h = Math.ceil(card.getBoundingClientRect().height);
+
+  if(state.modalView === 'list'){
+    state.modalFixedH = Math.min(h, maxH);
+  }
+  const use = (state.modalFixedH != null) ? Math.min(state.modalFixedH, maxH) : Math.min(h, maxH);
+  card.style.height = `${use}px`;
+}
+function unlockModalCardHeight(){
+  const card = modalCardEl();
+  if(card) card.style.height = "";
+  state.modalFixedH = null;
+}
+
 function openHintModal(view='list'){
   if(state.finished) return;
   state.modalOpen = true;
@@ -2532,6 +2599,7 @@ function openHintModal(view='list'){
 
   // move focus safely away from grid (prevents accidental typing into grid while modal open)
   requestAnimationFrame(()=>{
+    lockModalCardHeight();
     try{ el.hintModalClose.focus({preventScroll:true}); }catch{}
   });
 }
@@ -2542,6 +2610,8 @@ function closeHintModal(){
   state.modalView = 'list';
   el.hintModal.classList.remove('open');
   el.hintModal.setAttribute('aria-hidden', 'true');
+
+  unlockModalCardHeight();
 
   // restore focus to grid
   requestAnimationFrame(()=>{
@@ -2564,7 +2634,7 @@ function makeOpt({id, title, sub, cls, status, disabled, onPick}){
 
   const t = document.createElement('div');
   t.className = "hintOptTitle";
-  t.textContent = title;
+  t.textContent = String(title || "").trim();
   main.appendChild(t);
 
   if(sub){
@@ -2579,7 +2649,7 @@ function makeOpt({id, title, sub, cls, status, disabled, onPick}){
   if(status === "used"){
     const badge = document.createElement('div');
     badge.className = "badge";
-    badge.textContent = "USED";
+    badge.innerHTML = `<span aria-hidden="true">✓</span><span>USED</span>`;
     b.appendChild(badge);
   }else if(status === "locked"){
     const badge = document.createElement('div');
@@ -2609,7 +2679,6 @@ function renderHintModal(){
     const wrap = document.createElement('div');
     wrap.className = "qcHelp";
     wrap.innerHTML = `
-      
       <ul>
         <li><b>Tap a clue word</b> to place a trigram in the grid</li>
         <li><b>Tap that clue word again</b> to cycle to the next trigram</li>
@@ -2619,6 +2688,8 @@ function renderHintModal(){
       </ul>
     `;
     el.hintModalBody.appendChild(wrap);
+
+    requestAnimationFrame(lockModalCardHeight);
     return;
   }
 
@@ -2714,6 +2785,8 @@ function renderHintModal(){
   );
 
   el.hintModalBody.appendChild(list);
+
+  requestAnimationFrame(lockModalCardHeight);
 }
 
 /* modal events */
@@ -2936,6 +3009,7 @@ window.addEventListener('resize', ()=>{
   if(next !== state.useCustomKB) setCustomKBEnabled(next);
   updateKeyboardHeightVar();
   updateKeyboardState();
+  if(state.modalOpen) requestAnimationFrame(lockModalCardHeight);
 });
 
 /* init */
