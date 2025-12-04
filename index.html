@@ -2609,15 +2609,14 @@ function renderHintModal(){
     const wrap = document.createElement('div');
     wrap.className = "qcHelp";
     wrap.innerHTML = `
-      <p><b>Quick controls</b> lets you move fast without typing everything.</p>
+      
       <ul>
-        <li><b>Tap a clue word</b> to place a trigram near the cursor.</li>
-        <li><b>Tap that clue word again</b> to cycle to the next trigram in that word.</li>
-        <li><b>Drag a trigram block</b> in the grid to reposition it.</li>
-        <li>If the two trigrams overlap by 1 letter, the overlap is allowed when the letter matches.</li>
-        <li>Hint mini-grids (and extra letters) become tappable once Quick controls is used.</li>
+        <li><b>Tap a clue word</b> to place a trigram in the grid</li>
+        <li><b>Tap that clue word again</b> to cycle to the next trigram</li>
+        <li><b>Automatic colours</b> to show trigrams, errors and overlap</li>
+        <li><b>Drag trigram blocks</b> around the grid to reposition</li>
+        <li>Tap any hint trigrams or extra letters to add to grid</li>
       </ul>
-      <p class="note">Tap outside this panel when you’re ready.</p>
     `;
     el.hintModalBody.appendChild(wrap);
     return;
