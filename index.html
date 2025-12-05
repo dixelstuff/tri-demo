@@ -36,7 +36,6 @@
       -webkit-text-size-adjust: 100%;
     }
 
-    /* disable native selection/callout on interactive UI */
     #clue, #clue *,
     #gridDock, #gridDock *,
     #gridWrap, #gridWrap *,
@@ -66,7 +65,6 @@
       position:relative;
     }
 
-    /* ====== Top nav ====== */
     .toprow{
       display:flex;
       justify-content:center;
@@ -98,7 +96,6 @@
     .nav a:active, .nav button:active{ transform:translateY(1px); }
     .count{ font-weight:900; opacity:.7; min-width:58px; text-align:center; }
 
-    /* ====== Clue ====== */
     .clue{
       display:block;
       width:fit-content;
@@ -145,7 +142,6 @@
     .u-w2{ text-decoration-color: rgba(70,160,255,.92); }
     .u-red{ text-decoration-color: rgba(235,80,92,.92); }
 
-    /* ====== Grid dock ====== */
     .gridDock{
       display:block;
       width:fit-content;
@@ -168,7 +164,6 @@
 
     .gridDock.shake{ animation:shake .16s linear 0s 2; }
 
-    /* Correct solve glow */
     .wrap.solved:not(.gaveup) .gridDock{
       pointer-events:none;
       transform: translate3d(0,24px,0) scale(1.01);
@@ -181,7 +176,6 @@
         glowPulse 1.15s ease-in-out 0s 2;
     }
 
-    /* Give up: SAME animation, red ring */
     .wrap.gaveup .gridDock{
       pointer-events:none;
       transform: translate3d(0,24px,0) scale(1.01);
@@ -248,7 +242,6 @@
       100%{ transform:translateX(0); }
     }
 
-    /* ====== Grid ====== */
     .gridWrap{
       display:block;
       border:4px solid var(--ink);
@@ -329,7 +322,6 @@
 
     html.has-kb .cell input{ pointer-events:none; }
 
-    /* ===== Messages ===== */
     .msgSlot{
       position:relative;
       height: 98px;
@@ -367,7 +359,6 @@
     .msg.result{ top: 28px; }
     .wrap.solved .msg.result{ top: 34px; }
 
-    /* ===== Hint tracker ===== */
     .hintTrack{
       margin: clamp(14px, 3.4vh, 24px) auto 0;
       width:fit-content;
@@ -399,7 +390,6 @@
       min-width:0;
     }
 
-    /* ===== Hint mini-grids ===== */
     .letters{
       display:inline-flex;
       border:none;
@@ -448,7 +438,6 @@
       flex-wrap:nowrap;
     }
 
-    /* ===== Spotlight hint animation ===== */
     .hintSpotOverlay{
       position:fixed;
       inset:0;
@@ -489,7 +478,6 @@
       }
     }
 
-    /* ===== Buttons ===== */
     .btnRow{
       margin-top: clamp(18px, 3.8vh, 26px);
       display:flex;
@@ -541,7 +529,6 @@
     }
     html.has-kb .btn{ border-width:3px; }
 
-    /* ===== Ghost (drag overlay) ===== */
     .ghost{
       position:fixed;
       z-index:9999;
@@ -551,7 +538,6 @@
       opacity:.95;
     }
 
-    /* ========= Custom On-screen Keyboard ========= */
     .kbHost{
       position:fixed;
       left:0; right:0;
@@ -654,7 +640,6 @@
       .kbKey{ height:46px; }
     }
 
-    /* ========= Modals (kept for later) ========= */
     .modalOverlay{
       position:fixed;
       inset:0;
@@ -755,7 +740,6 @@
     </div>
   </div>
 
-  <!-- kept for later -->
   <div class="modalOverlay" id="hintsModal" aria-hidden="true">
     <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="hintsModalTitle">
       <div class="modalHdr">
@@ -829,8 +813,7 @@ const state = {
   hintCount: 0,
   hintsUsed: { w1:false, w2:false, extras:false },
 
-  /* Enhanced mode: defaults ON and does NOT persist */
-  assist: true,
+  assist: true,     // defaults ON, non-persistent
 
   sel1: null,
   sel2: null,
@@ -988,7 +971,7 @@ function bindTapReliable(node, fn){
 }
 
 /* =======================
-   Background-tap toggles Enhanced (not on clue / buttons / keyboard)
+   Background-tap toggles Enhanced
    ======================= */
 function isBackgroundToggleTarget(t){
   if(!t) return false;
@@ -1919,7 +1902,9 @@ function revealAnswerGiveUp(){
 }
 
 /* =======================
-   Spotlight fly animation (CHANGED: extras fly sequentially)
+   Spotlight fly animation
+   - unified style for trigram + single letters
+   - removed all jiggle/rotate
    ======================= */
 function makeSpotLettersHTML(chars, mode){
   const spot = document.createElement('div');
@@ -1936,20 +1921,29 @@ function makeSpotLettersHTML(chars, mode){
   return spot;
 }
 
+function hintFlyKeyframes(dx, dy, scale){
+  const SH0 = 'drop-shadow(0 18px 18px rgba(0,0,0,.24))';
+  const SHM = 'drop-shadow(0 10px 10px rgba(0,0,0,.12))';
+  const SH1 = 'drop-shadow(0 2px 2px rgba(0,0,0,0))';
+
+  return [
+    { transform: `translate(-50%,-50%) scale(1)`, filter: SH0, offset: 0.00 },
+    { transform: `translate(-50%,-50%) scale(1)`, filter: SH0, offset: 0.58 },
+    { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scale})`, filter: SHM, offset: 0.88 },
+    { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scale})`, filter: SH1, offset: 1.00 }
+  ];
+}
+
 function runHintFlyExtrasSequential(targetRow, chars){
   if(!targetRow) return false;
   const targets = Array.from(targetRow.querySelectorAll('.letter'));
   if(!targets.length) return false;
 
-  // Hide all target letters first (so nothing "blocky" appears)
   for(const t of targets) t.style.opacity = "0";
 
   const overlay = document.createElement('div');
   overlay.className = "hintSpotOverlay";
   document.body.appendChild(overlay);
-
-  const SH0 = 'drop-shadow(0 18px 18px rgba(0,0,0,.24))';
-  const SH1 = 'drop-shadow(0 2px 2px rgba(0,0,0,0))';
 
   const total = Math.min(chars.length, targets.length);
   let idx = 0;
@@ -1957,7 +1951,6 @@ function runHintFlyExtrasSequential(targetRow, chars){
   const flyOne = ()=>{
     if(idx >= total){
       try{ overlay.remove(); }catch{}
-      // Ensure all visible at end (just in case)
       for(const t of targets) t.style.opacity = "";
       return;
     }
@@ -1965,7 +1958,6 @@ function runHintFlyExtrasSequential(targetRow, chars){
     const ch = chars[idx];
     const tEl = targets[idx];
 
-    // Build 1-letter "spot"
     const spot = makeSpotLettersHTML([ch], 'hex');
     overlay.appendChild(spot);
 
@@ -1984,54 +1976,23 @@ function runHintFlyExtrasSequential(targetRow, chars){
     const sy = tr.height / sr.height;
     const scale = clamp(Math.min(sx, sy), 0.20, 0.95);
 
-    const DURATION = 700;
-    const FADE_MS = 140;               // crossfade window at the end
-    const fadeOffset = 1 - (FADE_MS / DURATION);
-
-    // Crossfade IN the real target letter (removes the 1-frame "flash")
-    // Use WAAPI so it's tied to timing rather than setTimeout jitter.
-    try{
-      tEl.animate(
-        [{opacity: 0}, {opacity: 1}],
-        {duration: FADE_MS, delay: DURATION - FADE_MS, easing: 'linear', fill: 'forwards'}
-      );
-    }catch{
-      // fallback: just show at the end
-    }
-
-    // Fade OUT the flying spot over the same final window
-    const kf = [
-      { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`,  filter: SH0, opacity: 1, offset: 0.00 },
-      { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`,  filter: SH0, opacity: 1, offset: 0.44 },
-      { transform: `translate(-50%,-50%) scale(1) rotate(3deg)`,   filter: SH0, opacity: 1, offset: 0.54 },
-      { transform: `translate(-50%,-50%) scale(1) rotate(-2deg)`,  filter: SH0, opacity: 1, offset: 0.60 },
-      { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scale}) rotate(0deg)`, filter: SH1, opacity: 1, offset: fadeOffset },
-      { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scale}) rotate(0deg)`, filter: SH1, opacity: 0, offset: 1.00 }
-    ];
-
-    const anim = spot.animate(kf, {
-      duration: DURATION,
+    const anim = spot.animate(hintFlyKeyframes(dx, dy, scale), {
+      duration: 820,
       easing: 'cubic-bezier(.16,.88,.22,1)',
       fill: 'forwards'
     });
 
     anim.onfinish = ()=>{
-      // Ensure the target is shown (even if WAAPI failed)
+      try{ spot.remove(); }catch{}
       tEl.style.opacity = "";
-
-      // Remove the flying node on the next frame so there's never a blank tick
-      requestAnimationFrame(()=>{
-        try{ spot.remove(); }catch{}
-        idx++;
-        requestAnimationFrame(flyOne);
-      });
+      idx++;
+      requestAnimationFrame(flyOne);
     };
   };
 
   requestAnimationFrame(flyOne);
   return true;
 }
-
 
 function runHintFly(kind){
   let target = null;
@@ -2050,17 +2011,13 @@ function runHintFly(kind){
     chars = Array.from(norm(p.tri2));
   }else if(kind === 'extras'){
     const row = document.getElementById('trackBox-extras');
-    mode = 'hex';
     if(state.bank.length === 0) rebuildBank();
     chars = state.bank.map(t=>t.ch);
-
-    // NEW: sequential letter fly-in
     return runHintFlyExtrasSequential(row, chars);
   }
 
   if(!target || !chars.length) return false;
 
-  // old behavior for trigram hints
   target.style.opacity = "0";
 
   const overlay = document.createElement('div');
@@ -2085,20 +2042,7 @@ function runHintFly(kind){
   const sy = tr.height / sr.height;
   const scale = clamp(Math.min(sx, sy), 0.20, 0.95);
 
-  const SH0 = 'drop-shadow(0 18px 18px rgba(0,0,0,.24))';
-  const SH1 = 'drop-shadow(0 2px 2px rgba(0,0,0,0))';
-
-  const kf = [
-    { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, filter: SH0, offset: 0.00 },
-    { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, filter: SH0, offset: 0.40 },
-    { transform: `translate(-50%,-50%) scale(1) rotate(4deg)`,  filter: SH0, offset: 0.50 },
-    { transform: `translate(-50%,-50%) scale(1) rotate(-3deg)`, filter: SH0, offset: 0.58 },
-    { transform: `translate(-50%,-50%) scale(1) rotate(2deg)`,  filter: SH0, offset: 0.64 },
-    { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`,  filter: SH0, offset: 0.70 },
-    { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scale}) rotate(0deg)`, filter: SH1, offset: 1.00 }
-  ];
-
-  const anim = spot.animate(kf, {
+  const anim = spot.animate(hintFlyKeyframes(dx, dy, scale), {
     duration: 820,
     easing: 'cubic-bezier(.16,.88,.22,1)',
     fill: 'forwards'
@@ -2618,11 +2562,7 @@ function renderHintTrack(){
 }
 
 /* =======================
-   Clue tap behavior:
-   - If Enhanced is OFF:
-       • Tap on word WITH placed trigram => just enable (no cycle/place)
-       • Tap on word WITHOUT placed trigram => enable AND place immediately
-       • Tap elsewhere in clue => just enable
+   Clue tap behavior
    ======================= */
 function onClueWordActivate(group){
   if(state.finished) return;
@@ -2659,15 +2599,12 @@ function onClueWordActivate(group){
     const group = w ? w.dataset.group : null;
 
     if(!state.assist){
-      // turn on enhanced
       if(group && !state.placed[group]){
-        // NO trigram placed yet for this word => enable + place immediately
         setEnhanced(true, false);
         lastActionAt = Date.now();
         onClueWordActivate(group);
         return;
       }else{
-        // trigram already placed (or not on a word) => enable only, action on next tap
         setEnhanced(true, true);
         lastActionAt = 0;
         if(!state.useCustomKB){
@@ -2884,7 +2821,7 @@ function renderGrid(stealFocus=true){
 }
 
 /* =======================
-   Hints: sequential button (hint 1 → hint 2 → hint 3 → give up)
+   Hints: sequential button
    ======================= */
 function nextHintStage(){
   if(!state.hintsUsed.w1) return 1;
@@ -2901,7 +2838,6 @@ function updateHintButtonLabel(){
   el.hintsBtn.textContent = (st === 1) ? "hint 1" : (st === 2) ? "hint 2" : (st === 3) ? "hint 3" : "give up";
 }
 
-/* if a hint causes excluded trigram while Enhanced is OFF, auto-enable Enhanced */
 function maybeAutoEnableEnhancedForExcluded(){
   computeHintExcludedTrigrams();
   const hasExcluded = state.exclSet && state.exclSet.size > 0;
@@ -3001,7 +2937,6 @@ el.nextBtn.addEventListener('click', (e)=>{
   renderSmart();
 });
 
-/* Always-active typing outside grid */
 document.addEventListener('keydown', (e)=>{
   if(state.finished) return;
   if(state.modalOpen) return;
