@@ -181,7 +181,7 @@
         glowPulse 1.15s ease-in-out 0s 2;
     }
 
-    /* Give up: SAME animation as correct, just red ring */
+    /* Give up: SAME animation, red ring */
     .wrap.gaveup .gridDock{
       pointer-events:none;
       transform: translate3d(0,24px,0) scale(1.01);
@@ -276,7 +276,6 @@
       position:relative;
     }
 
-    /* Active-cell indicator */
     .cell.active::after{
       content:"";
       position:absolute;
@@ -319,7 +318,6 @@
     }
     .cell input::selection{ background:transparent; color:inherit; }
 
-    /* Grid colouring (ONLY when Enhanced ON and NOT revealed) */
     .cell.bg-w1{ background:var(--w1); }
     .cell.bg-w2{ background:var(--w2); }
     .cell.bg-ol{ background:var(--ol); }
@@ -382,13 +380,10 @@
       user-select:none;
       flex:0 0 auto;
     }
-
-    /* Fade hint grids after reveal */
     .wrap.solved .hintTrack{
       opacity: .16;
       pointer-events:none;
     }
-
     .trackRow{
       display:flex;
       align-items:flex-start;
@@ -484,6 +479,7 @@
     .hintSpot.h2 .letter{ background: var(--w2); }
     .hintSpot.hex .letter{ background: rgba(255,255,255,.97); }
     .hintSpot .letter + .letter{ margin-left:-2px; }
+
     @media (max-width:520px){
       .hintSpot{ top:40%; }
       .hintSpot .letter{
@@ -1794,7 +1790,6 @@ function updateStatusMessages(){
 
   if(el.msg.classList.contains('warn')) setMsg("");
 
-  /* overlap message ONLY when Enhanced is ON */
   const hasOverlap = state.assist && overlapActiveNow();
 
   if(hasOverlap){
@@ -1916,7 +1911,6 @@ function revealAnswerGiveUp(){
   state.finished = true;
   state.gaveUp = true;
 
-  /* No "Answer —" message on give up */
   state.lockMsg = false;
   clearMsgTimer();
   setMsg("");
@@ -1925,7 +1919,7 @@ function revealAnswerGiveUp(){
 }
 
 /* =======================
-   Spotlight fly animation (shadow fades down smoothly)
+   Spotlight fly animation (CHANGED: extras fly sequentially)
    ======================= */
 function makeSpotLettersHTML(chars, mode){
   const spot = document.createElement('div');
@@ -1941,6 +1935,80 @@ function makeSpotLettersHTML(chars, mode){
   spot.appendChild(wrap);
   return spot;
 }
+
+function runHintFlyExtrasSequential(targetRow, chars){
+  if(!targetRow) return false;
+  const targets = Array.from(targetRow.querySelectorAll('.letter'));
+  if(!targets.length) return false;
+
+  // Hide all target letters first (so nothing "blocky" appears)
+  for(const t of targets) t.style.opacity = "0";
+
+  const overlay = document.createElement('div');
+  overlay.className = "hintSpotOverlay";
+  document.body.appendChild(overlay);
+
+  const SH0 = 'drop-shadow(0 18px 18px rgba(0,0,0,.24))';
+  const SH1 = 'drop-shadow(0 2px 2px rgba(0,0,0,0))';
+
+  const total = Math.min(chars.length, targets.length);
+  let idx = 0;
+
+  const flyOne = ()=>{
+    if(idx >= total){
+      try{ overlay.remove(); }catch{}
+      // Ensure all visible at end (just in case)
+      for(const t of targets) t.style.opacity = "";
+      return;
+    }
+
+    const ch = chars[idx];
+    const tEl = targets[idx];
+
+    const spot = makeSpotLettersHTML([ch], 'hex');
+    overlay.appendChild(spot);
+
+    const sr = spot.getBoundingClientRect();
+    const tr = tEl.getBoundingClientRect();
+
+    const scx = sr.left + sr.width/2;
+    const scy = sr.top + sr.height/2;
+    const tcx = tr.left + tr.width/2;
+    const tcy = tr.top + tr.height/2;
+
+    const dx = tcx - scx;
+    const dy = tcy - scy;
+
+    const sx = tr.width / sr.width;
+    const sy = tr.height / sr.height;
+    const scale = clamp(Math.min(sx, sy), 0.20, 0.95);
+
+    const kf = [
+      { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, filter: SH0, offset: 0.00 },
+      { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, filter: SH0, offset: 0.44 },
+      { transform: `translate(-50%,-50%) scale(1) rotate(3deg)`,  filter: SH0, offset: 0.54 },
+      { transform: `translate(-50%,-50%) scale(1) rotate(-2deg)`, filter: SH0, offset: 0.60 },
+      { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scale}) rotate(0deg)`, filter: SH1, offset: 1.00 }
+    ];
+
+    const anim = spot.animate(kf, {
+      duration: 700,
+      easing: 'cubic-bezier(.16,.88,.22,1)',
+      fill: 'forwards'
+    });
+
+    anim.onfinish = ()=>{
+      try{ spot.remove(); }catch{}
+      tEl.style.opacity = "";     // reveal this letter as it "lands"
+      idx++;
+      requestAnimationFrame(flyOne);
+    };
+  };
+
+  requestAnimationFrame(flyOne);
+  return true;
+}
+
 function runHintFly(kind){
   let target = null;
   let mode = 'hex';
@@ -1957,14 +2025,18 @@ function runHintFly(kind){
     mode = 'h2';
     chars = Array.from(norm(p.tri2));
   }else if(kind === 'extras'){
-    target = document.getElementById('trackBox-extras');
+    const row = document.getElementById('trackBox-extras');
     mode = 'hex';
     if(state.bank.length === 0) rebuildBank();
     chars = state.bank.map(t=>t.ch);
+
+    // NEW: sequential letter fly-in
+    return runHintFlyExtrasSequential(row, chars);
   }
 
   if(!target || !chars.length) return false;
 
+  // old behavior for trigram hints
   target.style.opacity = "0";
 
   const overlay = document.createElement('div');
@@ -2015,6 +2087,7 @@ function runHintFly(kind){
 
   return true;
 }
+
 function scheduleHintFly(kind){
   state.pendingFly = kind;
   state.flyAttempts = 0;
@@ -2040,7 +2113,7 @@ function scheduleHintFly(kind){
 }
 
 /* =======================
-   Drag ghost
+   Drag ghost + drag logic
    ======================= */
 function trigramIsRedAtStart(start){
   computeMax3Invalid();
@@ -2522,8 +2595,10 @@ function renderHintTrack(){
 
 /* =======================
    Clue tap behavior:
-   - If Enhanced is OFF: first tap in clue just turns it ON (no cycle/place).
-   - Next tap does the action.
+   - If Enhanced is OFF:
+       • Tap on word WITH placed trigram => just enable (no cycle/place)
+       • Tap on word WITHOUT placed trigram => enable AND place immediately
+       • Tap elsewhere in clue => just enable
    ======================= */
 function onClueWordActivate(group){
   if(state.finished) return;
@@ -2556,23 +2631,35 @@ function onClueWordActivate(group){
     e.preventDefault();
     e.stopPropagation();
 
+    const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
+    const group = w ? w.dataset.group : null;
+
     if(!state.assist){
-      setEnhanced(true, true);
-      lastActionAt = 0;
-      if(!state.useCustomKB){
-        requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
+      // turn on enhanced
+      if(group && !state.placed[group]){
+        // NO trigram placed yet for this word => enable + place immediately
+        setEnhanced(true, false);
+        lastActionAt = Date.now();
+        onClueWordActivate(group);
+        return;
+      }else{
+        // trigram already placed (or not on a word) => enable only, action on next tap
+        setEnhanced(true, true);
+        lastActionAt = 0;
+        if(!state.useCustomKB){
+          requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
+        }
+        return;
       }
-      return;
     }
 
-    const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
     if(!w) return;
 
     const now = Date.now();
     if(now - lastActionAt < 220) return;
     lastActionAt = now;
 
-    onClueWordActivate(w.dataset.group);
+    onClueWordActivate(group);
   }, { passive:false });
 
   el.clue.addEventListener('click', (e)=>{
@@ -2584,20 +2671,29 @@ function onClueWordActivate(group){
 
     e.preventDefault();
 
+    const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
+    const group = w ? w.dataset.group : null;
+
     if(!state.assist){
-      setEnhanced(true, true);
-      lastActionAt = 0;
-      return;
+      if(group && !state.placed[group]){
+        setEnhanced(true, false);
+        lastActionAt = Date.now();
+        onClueWordActivate(group);
+        return;
+      }else{
+        setEnhanced(true, true);
+        lastActionAt = 0;
+        return;
+      }
     }
 
-    const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
     if(!w) return;
 
     const now = Date.now();
     if(now - lastActionAt < 220) return;
     lastActionAt = now;
 
-    onClueWordActivate(w.dataset.group);
+    onClueWordActivate(group);
   });
 })();
 
@@ -2980,7 +3076,6 @@ function resetAllForPuzzle(){
   state.sel1 = null;
   state.sel2 = null;
 
-  /* Enhanced mode always ON on new puzzle */
   state.assist = true;
 
   setMsg("");
