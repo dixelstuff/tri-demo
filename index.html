@@ -38,12 +38,12 @@
 
     /* disable native selection/callout on interactive UI */
     #clue, #clue *,
+    #gridDock, #gridDock *,
     #gridWrap, #gridWrap *,
     #hintTrack, #hintTrack *,
     #btnRow, #btnRow *,
     #kbHost, #kbHost *,
-    #hintsModal, #hintsModal *,
-    #turboModal, #turboModal *{
+    #hintsModal, #hintsModal *{
       -webkit-user-select:none;
       user-select:none;
       -webkit-touch-callout:none;
@@ -146,33 +146,29 @@
     .u-w2{ text-decoration-color: rgba(70,160,255,.92); }
     .u-red{ text-decoration-color: rgba(235,80,92,.92); }
 
-    /* ====== Grid ====== */
-    .gridWrap{
+    /* ====== Grid dock (wraps grid + floating sparkle icon; does NOT affect flow) ====== */
+    .gridDock{
       display:block;
       width:fit-content;
       margin: clamp(38px, 6.0vh, 58px) auto 0;
-      border:4px solid var(--ink);
+      position:relative;
+      flex:0 0 auto;
       border-radius:14px;
-      overflow:hidden;
-      background:#fff;
       box-shadow:0 3px 8px rgba(0,0,0,.08);
       transition: box-shadow .45s ease;
       will-change: transform, box-shadow;
-      flex:0 0 auto;
     }
-
     @media (pointer:coarse) and (max-width: 920px){
-      .gridWrap{ margin-top: clamp(36px, 6.1vh, 62px); }
+      .gridDock{ margin-top: clamp(36px, 6.1vh, 62px); }
     }
-
-    html.has-kb .gridWrap{
+    html.has-kb .gridDock{
       margin: clamp(52px, 8.0vh, 86px) auto 0;
     }
 
-    .gridWrap.shake{ animation:shake .16s linear 0s 2; }
+    .gridDock.shake{ animation:shake .16s linear 0s 2; }
 
     /* Correct solve glow (NOT on give up) */
-    .wrap.solved:not(.gaveup) .gridWrap{
+    .wrap.solved:not(.gaveup) .gridDock{
       pointer-events:none;
       transform: translate3d(0,18px,0) scale(1.01);
       box-shadow:
@@ -183,7 +179,7 @@
         solvedPop .46s ease-out both,
         glowPulse 1.15s ease-in-out 0s 2;
     }
-    .wrap.gaveup .gridWrap{
+    .wrap.gaveup .gridDock{
       pointer-events:none;
       transform: translate3d(0,12px,0) scale(1.005);
       box-shadow:
@@ -191,61 +187,6 @@
         0 16px 28px rgba(0,0,0,.14);
       animation: none;
     }
-    /* ===== Under-grid enhanced toggle (icon-only) ===== */
-.gridUnder{
-  --n: 7;
-  --gap: 3px;
-  --cell: 44px;
-  width: min(calc(var(--n) * var(--cell) + (var(--n) - 1) * var(--gap)), 92vw);
-  margin: 10px auto 0;
-  display: grid;
-  grid-template-columns: repeat(var(--n), 1fr);
-  gap: var(--gap);
-  align-items: center;
-  justify-items: center;
-  pointer-events: auto;
-}
-
-.enhanceBtn{
-  grid-column: var(--n); /* sits under final cell */
-  width: 42px;
-  height: 42px;
-  border-radius: 999px;
-  border: 2px solid rgba(0,0,0,.20);
-  background: rgba(255,255,255,.18);
-  color: rgba(0,0,0,.55);
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-  appearance: none;
-  -webkit-appearance: none;
-  -webkit-tap-highlight-color: transparent;
-  outline: none;
-  box-shadow: none;
-}
-.enhanceBtn:active{ transform: translateY(1px); }
-.enhanceBtn:focus,
-.enhanceBtn:focus-visible{ outline: none; box-shadow: none; }
-
-.enhanceBtn.on{
-  border-color: rgba(0,0,0,.45);
-  background: rgba(255,255,255,.42);
-  color: rgba(0,0,0,.92);
-}
-
-/* allow multi-line tutorial in message zone */
-.msg{ white-space: pre-line; }
-
-@media (max-width:520px){
-  .gridUnder{ --cell: 43px; }
-  .enhanceBtn{ width: 40px; height: 40px; font-size: 19px; }
-}
-
-
-    .wrap.solved .cell{ background:#fff !important; }
-    .wrap.solved .hintTrack{ opacity:0.35; }
-    .wrap.solved .btnRow{ opacity:0.55; pointer-events:none; }
 
     @keyframes solvedPop{
       0%{ transform: translate3d(0,8px,0) scale(.985); }
@@ -279,6 +220,15 @@
       50%{ transform:translateX(6px); }
       75%{ transform:translateX(-4px); }
       100%{ transform:translateX(0); }
+    }
+
+    /* ====== Grid ====== */
+    .gridWrap{
+      display:block;
+      border:4px solid var(--ink);
+      border-radius:14px;
+      overflow:hidden;
+      background:#fff;
     }
 
     .grid{
@@ -343,7 +293,7 @@
     }
     .cell input::selection{ background:transparent; color:inherit; }
 
-    /* Grid colouring (ONLY when turbo ON) */
+    /* Grid colouring (ONLY when Enhanced ON) */
     .cell.bg-w1{ background:var(--w1); }
     .cell.bg-w2{ background:var(--w2); }
     .cell.bg-ol{ background:var(--ol); }
@@ -354,6 +304,52 @@
     .cell.grabbable input{ pointer-events:none; cursor:grab; }
 
     html.has-kb .cell input{ pointer-events:none; }
+
+    /* ===== Enhanced sparkle icon (floats; takes ~0 layout space) ===== */
+    .enhanceBtn{
+      position:absolute;
+      right: 0px;               /* aligns under final cell pretty closely */
+      top: calc(100% + 6px);    /* just beneath the grid, without pushing layout */
+      width: 44px;
+      height: 44px;
+      padding: 9px;             /* generous hit area */
+      border-radius: 14px;
+      border:2px solid rgba(0,0,0,.14);
+      background: rgba(255,255,255,.10);
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      appearance:none;
+      -webkit-appearance:none;
+      z-index: 10;
+    }
+    .enhanceBtn svg{
+      width: 20px;
+      height: 20px;
+      stroke: rgba(0,0,0,.32);
+      fill: rgba(0,0,0,.05);
+      stroke-width: 1.8;
+      transition: stroke .18s ease, fill .18s ease, transform .08s ease;
+    }
+    .enhanceBtn:active{ transform: translateY(1px); }
+
+    /* Enhanced ON */
+    .enhanceBtn.is-on{
+      border-color: rgba(0,0,0,.26);
+      background: rgba(255,255,255,.55);
+    }
+    .enhanceBtn.is-on svg{
+      stroke: rgba(0,0,0,.92);
+      fill: rgba(0,0,0,.12);
+    }
+
+    /* disable icon when solved */
+    .wrap.solved .enhanceBtn{
+      opacity:.45;
+      pointer-events:none;
+    }
 
     /* ===== Messages ===== */
     .msgSlot{
@@ -379,13 +375,21 @@
       pointer-events:none;
       width:max-content;
       max-width:min(92vw,760px);
-      white-space:normal;
+      white-space: pre-line; /* allow \n for 4-line Enhanced explainer */
       line-height:1.15;
       text-align:center;
     }
     .msg.show{ opacity:.92; }
     .msg.warn{ opacity:.92; font-size:20px; }
     .msg.result{ top:22px; }
+    .msg.help{
+      font-size:15px;
+      line-height:1.12;
+      top:10px;
+      opacity:.92;
+      font-weight:850;
+      letter-spacing: .01em;
+    }
 
     /* ===== Hint tracker ===== */
     .hintTrack{
@@ -540,7 +544,6 @@
       box-shadow: 0 6px 0 rgba(0,0,0,.16);
     }
     .btn.hints{ background:#fff3bd; }
-    .btn.turbo{ background:rgba(255,255,255,.28); }
     .btn.check{ background:rgba(255,255,255,.25); opacity:.55; }
     .btn.check.ready{ opacity:1; background:var(--submit); }
     .btn:disabled{
@@ -663,8 +666,11 @@
       .msgSlot{ height:74px; }
       .msg{ font-size:20px; top:12px; }
       .msg.warn{ font-size:19px; }
+      .msg.help{ font-size:14px; line-height:1.12; top:10px; }
       .btn{ font-size:19px; padding:9px 15px; min-width:98px; }
       .kbKey{ height:46px; }
+      .enhanceBtn{ width:42px; height:42px; padding:8px; top: calc(100% + 5px); }
+      .enhanceBtn svg{ width:19px; height:19px; }
     }
 
     /* ========= Modals ========= */
@@ -706,13 +712,6 @@
       text-overflow: ellipsis;
     }
 
-    .modalHdrRight{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      flex: 0 0 auto;
-    }
-
     /* subtle X, no iOS blue focus square */
     .modalX{
       border:0;
@@ -740,20 +739,6 @@
 
     .modalBody{
       padding: 12px 14px 14px;
-    }
-
-    /* Turbo modal: header has no border; we draw our own hr */
-    .modalTurbo .modalHdr{
-      border-bottom:none;
-      padding-bottom: 10px;
-    }
-    .modalTurbo .modalBody{
-      padding-top: 0;
-    }
-    .turboHr{
-      border:0;
-      border-top:1px solid rgba(0,0,0,.10);
-      margin: 0 0 10px 0;
     }
 
     /* Cards inside hints modal */
@@ -831,80 +816,6 @@
       min-width: 116px;
     }
     .statusPill.used{ background: rgba(255,255,255,.78); }
-
-    /* Turbo toggle (used in turbo modal header) */
-    .qcSwitchBtn{
-      border:2px solid rgba(0,0,0,.14);
-      background: rgba(255,255,255,.75);
-      border-radius: 999px;
-      height: 38px;
-      min-width: 170px;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:10px;
-      cursor:pointer;
-      padding: 0 14px;
-      -webkit-tap-highlight-color: transparent;
-      appearance:none;
-      -webkit-appearance:none;
-      font:inherit;
-    }
-    .qcSwitchBtn:active{ transform: translateY(1px); }
-
-    .qcLabel{
-      font-weight:950;
-      font-size:12px;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      min-width: 34px;
-      text-align:right;
-      opacity:.95;
-    }
-    .qcPill{
-      width: 64px;
-      height: 30px;
-      border-radius:999px;
-      border:2px solid rgba(0,0,0,.18);
-      background: rgba(255,255,255,.78);
-      position:relative;
-    }
-    .qcKnob{
-      position:absolute;
-      top:50%;
-      transform:translateY(-50%);
-      width: 26px;
-      height: 26px;
-      border-radius:999px;
-      border:2px solid rgba(0,0,0,.18);
-      background:#fff;
-      left: 2px;
-      transition: left .18s ease;
-    }
-    .qcPill.on{
-      background: rgba(0,0,0,.08);
-    }
-    .qcPill.on .qcKnob{
-      left: calc(100% - 28px);
-    }
-
-    .hintDetails{
-      margin-top: 0;
-      padding: 0;
-      text-align:left;
-    }
-    .hintDetails p{
-      margin: 10px 0;
-      font-size: 14.8px;
-      line-height: 1.35;
-    }
-    .hintDetails ul{
-      margin: 6px 0 0 18px;
-      padding: 0;
-      font-size: 14.8px;
-      line-height: 1.35;
-    }
-    .hintDetails li{ margin: 7px 0; }
   </style>
 </head>
 
@@ -920,13 +831,20 @@
 
     <div class="clue" id="clue"></div>
 
-    <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
-      <div class="grid" id="grid" style="--n:7"></div>
+    <!-- Grid + floating Enhanced sparkle (does not push message/hints down) -->
+    <div class="gridDock" id="gridDock">
+      <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
+        <div class="grid" id="grid" style="--n:7"></div>
+      </div>
+
+      <button class="enhanceBtn" id="enhanceBtn" type="button" aria-pressed="false" aria-label="Toggle enhanced mode">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M12 2l1.2 4.2L17.4 7.4 13.2 8.6 12 12.8 10.8 8.6 6.6 7.4l4.2-1.2L12 2z"></path>
+          <path d="M19 12l.8 2.8 2.2.6-2.2.6L19 19l-.6-2.2-2.2-.6 2.2-.6L19 12z"></path>
+          <path d="M6 13l.7 2.4 2 .5-2 .5L6 19l-.5-2-2-.5 2-.5L6 13z"></path>
+        </svg>
+      </button>
     </div>
-<!-- under-grid enhanced toggle (icon only) -->
-<div class="gridUnder" id="gridUnder" aria-hidden="false">
-  <button id="enhanceBtn" class="enhanceBtn" type="button" aria-label="Toggle enhanced mode">✨</button>
-</div>
 
     <div class="msgSlot" id="msgSlot" aria-live="polite">
       <div class="msg" id="msg"></div>
@@ -942,7 +860,6 @@
 
     <div class="btnRow" id="btnRow">
       <button class="btn hints" id="hintsBtn" type="button">hints</button>
-      <button class="btn turbo" id="turboBtn" type="button">turbo</button>
       <button class="btn check" id="checkBtn" type="button">check</button>
     </div>
   </div>
@@ -955,20 +872,6 @@
         <button class="modalX" id="hintsModalClose" type="button" aria-label="Close">×</button>
       </div>
       <div class="modalBody" id="hintsModalBody"></div>
-    </div>
-  </div>
-
-  <!-- Turbo modal -->
-  <div class="modalOverlay modalTurbo" id="turboModal" aria-hidden="true">
-    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="turboModalTitle">
-      <div class="modalHdr">
-        <div class="modalTitle" id="turboModalTitle">Turbo controls</div>
-        <div class="modalHdrRight">
-          <div id="turboHdrToggle"></div>
-          <button class="modalX" id="turboModalClose" type="button" aria-label="Close">×</button>
-        </div>
-      </div>
-      <div class="modalBody" id="turboModalBody"></div>
     </div>
   </div>
 
@@ -995,12 +898,10 @@ const TR = 3;
 const el = {
   wrap: document.getElementById('wrap'),
   clue: document.getElementById('clue'),
+  gridDock: document.getElementById('gridDock'),
   gridWrap: document.getElementById('gridWrap'),
   grid: document.getElementById('grid'),
-  msg: document.getElementById('msg'),  
-  gridUnder: document.getElementById('gridUnder'),
-  enhanceBtn: document.getElementById('enhanceBtn'),
-
+  msg: document.getElementById('msg'),
 
   hintTrack: document.getElementById('hintTrack'),
   trackW1: document.getElementById('trackW1'),
@@ -1008,7 +909,6 @@ const el = {
   trackExtras: document.getElementById('trackExtras'),
 
   hintsBtn: document.getElementById('hintsBtn'),
-  turboBtn: document.getElementById('turboBtn'),
   checkBtn: document.getElementById('checkBtn'),
 
   prevBtn: document.getElementById('prevBtn'),
@@ -1021,13 +921,11 @@ const el = {
   hintsModalBody: document.getElementById('hintsModalBody'),
   hintsModalClose: document.getElementById('hintsModalClose'),
 
-  turboModal: document.getElementById('turboModal'),
-  turboModalBody: document.getElementById('turboModalBody'),
-  turboModalClose: document.getElementById('turboModalClose'),
-  turboHdrToggle: document.getElementById('turboHdrToggle'),
+  enhanceBtn: document.getElementById('enhanceBtn'),
 };
 
-const TURBO_SESSION_KEY = "triDemoTurbo_v1";
+const ENHANCED_SESSION_KEY = "triDemoEnhanced_v1";
+const ENHANCED_HELP_SESSION_KEY = "triDemoEnhancedHelpShown_v1";
 
 const TWOTRI_TEXT  = "Two trigrams from same word";
 const OVERLAP_TEXT = "1-letter overlap allowed ✓";
@@ -1045,14 +943,10 @@ const state = {
   hintCount: 0,
   hintsUsed: { w1:false, w2:false, extras:false },
 
-  assist: false, // turbo on/off (session persisted)
+  assist: false, // Enhanced on/off (session persisted)
 
   sel1: null,
   sel2: null,
-    
-  enhanced: false,
-  tutorialUntil: 0,
-
 
   placed: { w1: null, w2: null },
   singles: [],
@@ -1081,23 +975,21 @@ const state = {
   useCustomKB: false,
 
   modalOpen: false,
-  modalType: null, // 'hints' | 'turbo' | null
+  modalType: null, // 'hints' | null
 
   pendingFly: null,
   flyAttempts: 0,
 
-  // NEW: inline (in-card) locked hint message
+  // inline (in-card) locked hint message
   hintInline: null,         // {id, text} | null
   hintInlineTimer: null,
 };
-const ENHANCED_KEY = 'triDemo:enhanced';
-const ENHANCED_TEACH_KEY = 'triDemo:enhancedTeachSeen';
 
 /* =======================
-   Turbo flags
+   Enhanced flags
    ======================= */
 function flags(){
-  if(state.enhanced){
+  if(state.assist){
     return {
       allowClueTapPlace: true,
       allowClueTapCycle: true,
@@ -1119,12 +1011,11 @@ function flags(){
     allowDragTrigrams: false,
     allowAutoPromote: false,
     showGridColors: false,
-    showStatusMessages: true,   // keep your rule-warnings if you want them always
-    showBadCellColor: true,     // keep red bad cells if you want them always
+    showStatusMessages: true,
+    showBadCellColor: false,
     checkFeedback: "minimal",
   };
 }
-
 
 /* =======================
    Helpers
@@ -1136,43 +1027,6 @@ function norm(s){ return String(s||"").toLowerCase().replace(/[^a-z]/g,""); }
 function isAlpha(ch){ return /^[a-z]$/i.test(ch); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function tutorialActive(){
-  return Date.now() < (state.tutorialUntil || 0);
-}
-
-function showEnhancedTeachOnce(){
-  if(sessionStorage.getItem(ENHANCED_TEACH_KEY) === '1') return;
-
-  sessionStorage.setItem(ENHANCED_TEACH_KEY, '1');
-  state.tutorialUntil = Date.now() + 4200;
-
-  setMsg(
-    "Tap a clue word to place a trigram\n" +
-    "Tap again to cycle to the next trigram\n" +
-    "Drag trigram blocks to reposition\n" +
-    "Auto-highlighting of trigram blocks"
-  );
-
-  // let it clear naturally after the interval
-  setTimeout(()=>{
-    if(tutorialActive()) return;
-    // only clear if nothing else important replaced it
-    if(el.msg && el.msg.classList.contains('show') && !el.msg.classList.contains('warn') && !el.msg.classList.contains('result')){
-      setMsg("");
-    }
-  }, 4300);
-}
-
-function setEnhanced(on){
-  state.enhanced = !!on;
-  sessionStorage.setItem(ENHANCED_KEY, state.enhanced ? '1' : '0');
-  if(el.enhanceBtn) el.enhanceBtn.classList.toggle('on', state.enhanced);
-
-  if(state.enhanced) showEnhancedTeachOnce();
-  renderSmart();
-}
-
-  
 function getN(){
   const a = norm(current().answer);
   return clamp(a.length || 7, 6, 8);
@@ -1181,16 +1035,16 @@ function startMax(){ return Math.max(0, getN() - TR); }
 function renderSmart(){ render(!state.useCustomKB); }
 
 function shakeGrid(){
-  el.gridWrap.classList.remove('shake');
-  void el.gridWrap.offsetWidth;
-  el.gridWrap.classList.add('shake');
-  setTimeout(()=> el.gridWrap.classList.remove('shake'), 420);
+  el.gridDock.classList.remove('shake');
+  void el.gridDock.offsetWidth;
+  el.gridDock.classList.add('shake');
+  setTimeout(()=> el.gridDock.classList.remove('shake'), 420);
 }
 
 /* prevent context menu on interactive surface */
 document.addEventListener('contextmenu', (e)=>{
   const t = e.target;
-  if(t && t.closest && t.closest('#clue, #gridWrap, #hintTrack, #btnRow, #kbHost, #hintsModal, #turboModal')){
+  if(t && t.closest && t.closest('#clue, #gridDock, #gridWrap, #hintTrack, #btnRow, #kbHost, #hintsModal')){
     e.preventDefault();
   }
 });
@@ -1219,32 +1073,57 @@ function showHintInlineMsg(id, text){
 }
 
 /* =======================
-   Turbo persistence
+   Enhanced persistence + teach-once
    ======================= */
-function loadTurboFromSession(){
+function loadEnhancedFromSession(){
   try{
-    const v = sessionStorage.getItem(TURBO_SESSION_KEY);
+    const v = sessionStorage.getItem(ENHANCED_SESSION_KEY);
     state.assist = (v === "1");
   }catch{
     state.assist = false;
   }
 }
-function saveTurboToSession(){
+function saveEnhancedToSession(){
   try{
-    sessionStorage.setItem(TURBO_SESSION_KEY, state.assist ? "1" : "0");
+    sessionStorage.setItem(ENHANCED_SESSION_KEY, state.assist ? "1" : "0");
   }catch{}
 }
-function setTurbo(on, showMsg=true){
+function enhancedHelpAlreadyShownThisSession(){
+  try{ return sessionStorage.getItem(ENHANCED_HELP_SESSION_KEY) === "1"; }
+  catch{ return false; }
+}
+function markEnhancedHelpShownThisSession(){
+  try{ sessionStorage.setItem(ENHANCED_HELP_SESSION_KEY, "1"); }
+  catch{}
+}
+function updateEnhancedButtonUI(){
+  if(!el.enhanceBtn) return;
+  el.enhanceBtn.classList.toggle('is-on', !!state.assist);
+  el.enhanceBtn.setAttribute('aria-pressed', state.assist ? 'true' : 'false');
+}
+function showEnhancedHelpOnceIfNeeded(){
+  if(enhancedHelpAlreadyShownThisSession()) return;
+  markEnhancedHelpShownThisSession();
+  setTransientMsg(
+    [
+      "Tap a clue word to place a trigram",
+      "Tap again to cycle to the next trigram",
+      "Drag trigram blocks to reposition",
+      "Auto-highlighting of trigram blocks",
+    ].join("\n"),
+    3200,
+    "help"
+  );
+}
+function setEnhanced(on){
   const next = !!on;
   if(state.assist === next) return;
+
   state.assist = next;
-  saveTurboToSession();
+  saveEnhancedToSession();
 
   if(!state.assist) abortDrag();
-
-  if(showMsg){
-    setTransientMsg(state.assist ? "Turbo controls ON" : "Turbo controls OFF", 1800);
-  }
+  if(state.assist) showEnhancedHelpOnceIfNeeded();
 
   renderSmart();
 }
@@ -1376,32 +1255,32 @@ function clearMsgTimer(){
 }
 function setMsg(text, kind){
   clearMsgTimer();
-  el.msg.classList.remove('show','warn','result');
+  el.msg.classList.remove('show','warn','result','help');
   el.msg.textContent = text || "";
   if(!text) return;
   void el.msg.offsetWidth;
   el.msg.classList.add('show');
   if(kind === 'warn') el.msg.classList.add('warn');
   if(kind === 'result') el.msg.classList.add('result');
+  if(kind === 'help') el.msg.classList.add('help');
 }
 function setTransientMsg(text, ms=2400, kind=null){
   setMsg(text, kind);
   state.msgTransient = true;
   state.msgTimer = setTimeout(()=>{
-    el.msg.classList.remove('show','warn','result');
+    el.msg.classList.remove('show','warn','result','help');
     el.msg.textContent = "";
     state.msgTimer = null;
     state.msgTransient = false;
   }, ms);
 }
 function clearTransientOnAnyChange(){
-    if(tutorialActive()) return;
-if(state.lockMsg){
+  if(state.lockMsg){
     state.lockMsg = false;
     setMsg("");
   }
   if(state.msgTransient){
-    el.msg.classList.remove('show','warn','result');
+    el.msg.classList.remove('show','warn','result','help');
     el.msg.textContent = "";
     clearMsgTimer();
   }
@@ -1424,11 +1303,6 @@ function openModal(type){
     el.hintsModal.setAttribute('aria-hidden', 'false');
     renderHintsModal();
     requestAnimationFrame(()=>{ try{ el.hintsModalClose.focus({preventScroll:true}); }catch{} });
-  }else if(type === 'turbo'){
-    el.turboModal.classList.add('open');
-    el.turboModal.setAttribute('aria-hidden', 'false');
-    renderTurboModal();
-    requestAnimationFrame(()=>{ try{ el.turboModalClose.focus({preventScroll:true}); }catch{} });
   }
 }
 function closeModal(){
@@ -1436,17 +1310,11 @@ function closeModal(){
 
   el.hintsModal.classList.remove('open');
   el.hintsModal.setAttribute('aria-hidden', 'true');
-  el.turboModal.classList.remove('open');
-  el.turboModal.setAttribute('aria-hidden', 'true');
 
   state.modalOpen = false;
   state.modalType = null;
 
-  // clear inline hint message on close
   clearHintInlineMsg();
-
-  // clear turbo header toggle contents when hiding
-  if(el.turboHdrToggle) el.turboHdrToggle.innerHTML = "";
 
   requestAnimationFrame(()=>{
     if(!state.useCustomKB && !state.finished) focusCell(state.focusIdx ?? 0);
@@ -1457,12 +1325,7 @@ function closeModal(){
 el.hintsModal.addEventListener('pointerdown', (e)=>{
   if(e.target === el.hintsModal){ e.preventDefault(); e.stopPropagation(); closeModal(); }
 },{passive:false});
-el.turboModal.addEventListener('pointerdown', (e)=>{
-  if(e.target === el.turboModal){ e.preventDefault(); e.stopPropagation(); closeModal(); }
-},{passive:false});
-
 el.hintsModalClose.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeModal(); });
-el.turboModalClose.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeModal(); });
 
 /* Esc closes modal + suppress typing while open */
 document.addEventListener('keydown', (e)=>{
@@ -1706,7 +1569,7 @@ function deleteFromEnd(){
 }
 
 /* =======================
-   Typed trigram detection / promotion (turbo only)
+   Typed trigram detection / promotion (Enhanced only)
    ======================= */
 function allowedSet(group){
   const p = current();
@@ -2386,7 +2249,7 @@ function renderHintTrack(){
 }
 
 /* =======================
-   Placing / cycling (turbo only)
+   Placing / cycling (Enhanced only)
    ======================= */
 function placeTrigram(group, tri){
   if(!flags().allowClueTapPlace && !flags().allowHintTapPlace) return;
@@ -2700,7 +2563,7 @@ function onDragEnd(e){
   try{ d.ghost.remove(); }catch{}
   state.drag = null;
 
-  const rect = el.gridWrap.getBoundingClientRect();
+  const rect = el.gridWrap.getBoundingClientRect(); // keep logic tied to actual grid, not sparkle
   const dist = rectDistance(e.clientX, e.clientY, rect);
   const REMOVE_DIST = 150;
   if(dist > REMOVE_DIST){
@@ -2761,8 +2624,6 @@ function triForClue(group){
    ======================= */
 function renderGrid(stealFocus=true){
   const n = getN();
-    if(el.gridUnder) el.gridUnder.style.setProperty('--n', String(n));
-
   const f = flags();
 
   if(f.allowAutoPromote){
@@ -2920,7 +2781,7 @@ function renderGrid(stealFocus=true){
 }
 
 /* =======================
-   Hints + turbo modals
+   Hints modal
    ======================= */
 function extrasUnlocked(){
   return state.hintsUsed.w1 && state.hintsUsed.w2;
@@ -2930,7 +2791,6 @@ function hintStatus(id){
   if(state.hintsUsed[id]) return 'used';
   return 'avail';
 }
-
 function makeHintCardTile({id, title, cls}){
   const status = hintStatus(id);
   const dim = (status === 'used' || status === 'locked');
@@ -2950,7 +2810,6 @@ function makeHintCardTile({id, title, cls}){
     pill.className = "statusPill used";
     pill.textContent = "✓ USED";
   }else{
-    // (locked or available) -> no LOCKED pill, keep spacing stable
     pill.className = "statusPill empty";
     pill.textContent = "";
   }
@@ -2959,7 +2818,6 @@ function makeHintCardTile({id, title, cls}){
   top.appendChild(pill);
   card.appendChild(top);
 
-  // Inline message (only when triggered)
   if(state.hintInline && state.hintInline.id === id){
     const m = document.createElement('div');
     m.className = "hintInlineMsg";
@@ -2975,7 +2833,6 @@ function makeHintCardTile({id, title, cls}){
       return;
     }
     if(status === 'locked'){
-      // keep panel open; show message inside the tile
       showHintInlineMsg(id, "Locked until other hints taken");
       return;
     }
@@ -2983,58 +2840,11 @@ function makeHintCardTile({id, title, cls}){
 
   return card;
 }
-
 function renderHintsModal(){
   el.hintsModalBody.innerHTML = "";
   el.hintsModalBody.appendChild(makeHintCardTile({ id:HINT_IDS.w1,     title:"Word 1 trigram", cls:"opt-w1" }));
   el.hintsModalBody.appendChild(makeHintCardTile({ id:HINT_IDS.w2,     title:"Word 2 trigram", cls:"opt-w2" }));
   el.hintsModalBody.appendChild(makeHintCardTile({ id:HINT_IDS.extras, title:"Extra letters",  cls:"opt-extras" }));
-}
-
-function quickDetailsHTML(){
-  return `
-    <p>Add, move and cycle trigrams without typing!</p>
-    <ul>
-      <li><b>Tap a clue word</b> to place a trigram</li>
-      <li><b>Tap again</b> to cycle to the next trigram</li>
-      <li><b>Drag trigram blocks</b> to reposition</li>
-      <li><b>Auto-highlighting</b> of trigram blocks</li>
-    </ul>
-  `;
-}
-
-function renderTurboModal(){
-  // Body: hr + description (white background, no extra card)
-  el.turboModalBody.innerHTML = `<hr class="turboHr">${quickDetailsHTML()}`;
-
-  // Header toggle (top right)
-  el.turboHdrToggle.innerHTML = "";
-  const switchBtn = document.createElement('button');
-  switchBtn.type = "button";
-  switchBtn.className = "qcSwitchBtn";
-  switchBtn.setAttribute('aria-pressed', state.assist ? 'true' : 'false');
-
-  const lab = document.createElement('span');
-  lab.className = "qcLabel";
-  lab.textContent = state.assist ? "ON" : "OFF";
-
-  const pill = document.createElement('span');
-  pill.className = "qcPill" + (state.assist ? " on" : "");
-  const knob = document.createElement('span');
-  knob.className = "qcKnob";
-  pill.appendChild(knob);
-
-  switchBtn.appendChild(lab);
-  switchBtn.appendChild(pill);
-
-  switchBtn.addEventListener('click', (e)=>{
-    e.preventDefault(); e.stopPropagation();
-    const next = !state.assist;
-    closeModal();         // close immediately on change
-    setTurbo(next, true); // persist + message
-  });
-
-  el.turboHdrToggle.appendChild(switchBtn);
 }
 
 /* =======================
@@ -3064,7 +2874,6 @@ function applyHint(id){
   if(id === HINT_IDS.extras){
     if(state.hintsUsed.extras) return;
     if(!extrasUnlocked()){
-      // keep panel open + in-tile message
       showHintInlineMsg(HINT_IDS.extras, "Locked until other hints taken");
       return;
     }
@@ -3082,6 +2891,7 @@ function applyHint(id){
    Buttons / nav
    ======================= */
 function bindFastTap(btn, fn){
+  if(!btn) return;
   let last = 0;
   const run = (e)=>{
     const now = Date.now();
@@ -3111,13 +2921,13 @@ bindFastTap(el.hintsBtn, ()=>{
   openModal('hints');
 });
 
-bindFastTap(el.turboBtn, ()=>{
+bindFastTap(el.checkBtn, onCheck);
+
+bindFastTap(el.enhanceBtn, ()=>{
   if(state.finished) return;
   if(state.modalOpen) return;
-  openModal('turbo');
+  setEnhanced(!state.assist);
 });
-
-bindFastTap(el.checkBtn, onCheck);
 
 el.prevBtn.addEventListener('click', (e)=>{
   e.preventDefault();
@@ -3125,19 +2935,6 @@ el.prevBtn.addEventListener('click', (e)=>{
   closeModal();
   state.i=(state.i-1+PUZZLES.length)%PUZZLES.length;
   resetAllForPuzzle();
-  // init enhanced from session
-state.enhanced = sessionStorage.getItem(ENHANCED_KEY) === '1';
-if(el.enhanceBtn) el.enhanceBtn.classList.toggle('on', state.enhanced);
-
-el.enhanceBtn?.addEventListener('pointerdown', (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
-el.enhanceBtn?.addEventListener('click', (e)=>{
-  e.preventDefault();
-  e.stopPropagation();
-  if(state.finished) return;
-  if(state.modalOpen) return;
-  setEnhanced(!state.enhanced);
-});
-
   renderSmart();
 });
 el.nextBtn.addEventListener('click', (e)=>{
@@ -3150,7 +2947,7 @@ el.nextBtn.addEventListener('click', (e)=>{
 });
 
 /* =======================
-   Clue tap (turbo only)
+   Clue tap (Enhanced only)
    ======================= */
 function onClueWordActivate(group){
   if(state.finished) return;
@@ -3248,6 +3045,8 @@ function render(stealFocus=true){
   el.wrap.classList.toggle('gaveup', state.gaveUp);
   el.wrap.classList.toggle('no-assist', !state.assist);
 
+  updateEnhancedButtonUI();
+
   renderGrid(stealFocus);
 
   const [t1, t2] = splitClueTwoWords(p.clue);
@@ -3279,7 +3078,6 @@ function render(stealFocus=true){
 
   el.checkBtn.classList.toggle('ready', canEnableCheckNow());
   el.checkBtn.disabled = state.finished;
-  el.turboBtn.disabled = state.finished;
 
   el.hintsBtn.textContent = allHintsUsed() ? "give up" : "hints";
   el.hintsBtn.disabled = state.finished;
@@ -3326,7 +3124,7 @@ window.addEventListener('resize', ()=>{
 });
 
 /* init */
-loadTurboFromSession();
+loadEnhancedFromSession();
 setCustomKBEnabled(shouldUseCustomKB());
 resetAllForPuzzle();
 renderSmart();
