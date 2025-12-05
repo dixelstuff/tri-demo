@@ -168,10 +168,10 @@
 
     .gridDock.shake{ animation:shake .16s linear 0s 2; }
 
-    /* Correct solve glow (NOT on give up) */
+    /* Correct solve glow */
     .wrap.solved:not(.gaveup) .gridDock{
       pointer-events:none;
-      transform: translate3d(0,24px,0) scale(1.01); /* moved down a touch more */
+      transform: translate3d(0,24px,0) scale(1.01);
       box-shadow:
         0 0 0 7px rgba(200,247,210,.55),
         0 0 0 13px rgba(200,247,210,.22),
@@ -181,15 +181,17 @@
         glowPulse 1.15s ease-in-out 0s 2;
     }
 
-    /* Give up: red ring */
+    /* Give up: SAME animation as correct, just red ring */
     .wrap.gaveup .gridDock{
       pointer-events:none;
-      transform: translate3d(0,16px,0) scale(1.005); /* moved down a touch more */
+      transform: translate3d(0,24px,0) scale(1.01);
       box-shadow:
         0 0 0 7px rgba(255, 150, 160, .46),
         0 0 0 13px rgba(255, 150, 160, .20),
-        0 16px 28px rgba(0,0,0,.14);
-      animation: none;
+        0 14px 26px rgba(0,0,0,.14);
+      animation:
+        solvedPop .46s ease-out both,
+        redPulse 1.15s ease-in-out 0s 2;
     }
 
     @keyframes solvedPop{
@@ -214,6 +216,26 @@
         box-shadow:
           0 0 0 7px rgba(200,247,210,.55),
           0 0 0 13px rgba(200,247,210,.22),
+          0 14px 26px rgba(0,0,0,.14);
+      }
+    }
+    @keyframes redPulse{
+      0%{
+        box-shadow:
+          0 0 0 7px rgba(255,150,160,.32),
+          0 0 0 13px rgba(255,150,160,.12),
+          0 14px 26px rgba(0,0,0,.14);
+      }
+      50%{
+        box-shadow:
+          0 0 0 7px rgba(255,150,160,.60),
+          0 0 0 14px rgba(255,150,160,.24),
+          0 16px 30px rgba(0,0,0,.16);
+      }
+      100%{
+        box-shadow:
+          0 0 0 7px rgba(255,150,160,.46),
+          0 0 0 13px rgba(255,150,160,.20),
           0 14px 26px rgba(0,0,0,.14);
       }
     }
@@ -315,12 +337,11 @@
       height: 98px;
       width:100%;
       max-width:760px;
-      margin: clamp(6px, 1.3vh, 12px) auto 0; /* slightly tighter */
+      margin: clamp(6px, 1.3vh, 12px) auto 0;
       user-select:none;
       flex:0 0 auto;
-      pointer-events: none; /* don't block background taps */
+      pointer-events: none;
     }
-    /* add a little MORE spacing on answer reveal */
     .wrap.solved .msgSlot{
       margin-top: clamp(10px, 1.9vh, 16px);
     }
@@ -346,7 +367,7 @@
     .msg.show{ opacity:.92; }
     .msg.warn{ opacity:.92; font-size:20px; }
     .msg.result{ top: 28px; }
-    .wrap.solved .msg.result{ top: 34px; } /* more gap to grid on reveal */
+    .wrap.solved .msg.result{ top: 34px; }
 
     /* ===== Hint tracker ===== */
     .hintTrack{
@@ -362,7 +383,7 @@
       flex:0 0 auto;
     }
 
-    /* Fade hint grids after reveal (restored) */
+    /* Fade hint grids after reveal */
     .wrap.solved .hintTrack{
       opacity: .16;
       pointer-events:none;
@@ -1895,7 +1916,11 @@ function revealAnswerGiveUp(){
   state.finished = true;
   state.gaveUp = true;
 
-  setMsg(`Answer — ${ans}`, 'result');
+  /* No "Answer —" message on give up */
+  state.lockMsg = false;
+  clearMsgTimer();
+  setMsg("");
+
   renderSmart();
 }
 
@@ -2756,7 +2781,7 @@ function updateHintButtonLabel(){
   el.hintsBtn.textContent = (st === 1) ? "hint 1" : (st === 2) ? "hint 2" : (st === 3) ? "hint 3" : "give up";
 }
 
-/* NEW: if a hint causes "excluded trigram" while Enhanced is OFF, auto-enable Enhanced */
+/* if a hint causes excluded trigram while Enhanced is OFF, auto-enable Enhanced */
 function maybeAutoEnableEnhancedForExcluded(){
   computeHintExcludedTrigrams();
   const hasExcluded = state.exclSet && state.exclSet.size > 0;
