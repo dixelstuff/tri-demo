@@ -305,17 +305,20 @@
 
     html.has-kb .cell input{ pointer-events:none; }
 
-    /* ===== Enhanced sparkle icon (BIGGER hit area + clearer ON state) ===== */
+    /* ===== Enhanced sparkle icon (moved DOWN ~20px, LEFT ~10px, slightly smaller) ===== */
     .enhanceBtn{
       position:absolute;
-      right: -2px;
-      /* Pull it up a little so it doesn’t intrude into message area too much */
-      top: calc(100% - 16px);
 
-      width: 48px;
-      height: 48px;
-      padding: 11px;
-      border-radius: 16px;
+      /* moved 10px further left (via right +10) */
+      right: 8px;
+
+      /* moved down ~20px from previous placement */
+      top: calc(100% + 4px);
+
+      width: 44px;
+      height: 44px;
+      padding: 10px;
+      border-radius: 14px;
 
       border:2px solid rgba(0,0,0,.16);
       background: rgba(255,255,255,.08);
@@ -331,8 +334,8 @@
       pointer-events:auto;
     }
     .enhanceBtn svg{
-      width: 22px;
-      height: 22px;
+      width: 20px;
+      height: 20px;
       stroke: rgba(0,0,0,.28);
       fill: rgba(0,0,0,.03);
       stroke-width: 2.0;
@@ -365,7 +368,6 @@
       height: 98px; /* room for 4-line help */
       width:100%;
       max-width:760px;
-      /* moved down a touch to clear the sparkle button */
       margin: clamp(18px, 3.0vh, 28px) auto 0;
       user-select:none;
       flex:0 0 auto;
@@ -374,7 +376,7 @@
       position:absolute;
       left:50%;
       transform:translateX(-50%);
-      top: 18px;       /* moved down a touch */
+      top: 18px;
       margin:0;
       font-weight:900;
       opacity:0;
@@ -384,7 +386,7 @@
       pointer-events:none;
       width:max-content;
       max-width:min(92vw,760px);
-      white-space: pre-line; /* allow \n */
+      white-space: pre-line;
       line-height:1.15;
       text-align:center;
     }
@@ -392,9 +394,9 @@
     .msg.warn{ opacity:.92; font-size:20px; }
     .msg.result{ top: 28px; }
     .msg.help{
-      font-size: 18px;   /* bigger than before */
+      font-size: 18px;
       line-height: 1.16;
-      top: 22px;         /* pushed down a bit more */
+      top: 22px;
       opacity:.92;
       font-weight:900;
       letter-spacing: .01em;
@@ -684,13 +686,14 @@
       .kbKey{ height:46px; }
 
       .enhanceBtn{
-        width: 46px;
-        height: 46px;
-        padding: 10px;
-        border-radius: 15px;
-        top: calc(100% - 16px);
+        right: 8px;
+        top: calc(100% + 4px);
+        width: 42px;
+        height: 42px;
+        padding: 9px;
+        border-radius: 13px;
       }
-      .enhanceBtn svg{ width:21px; height:21px; }
+      .enhanceBtn svg{ width:19px; height:19px; }
     }
 
     /* ========= Modals ========= */
@@ -796,20 +799,6 @@
       text-overflow:ellipsis;
     }
 
-    .hintInlineMsg{
-      margin-top: 9px;
-      font-size: 13.6px;
-      font-weight: 850;
-      opacity: .86;
-      letter-spacing: .01em;
-      font-style: italic;
-      animation: hintMsgPop .18s ease-out both;
-    }
-    @keyframes hintMsgPop{
-      0%{ transform: translateY(-2px); opacity: .2; }
-      100%{ transform: translateY(0); opacity: .86; }
-    }
-
     .statusPill{
       flex:0 0 auto;
       min-width: 116px;
@@ -826,6 +815,9 @@
       align-items:center;
       justify-content:center;
       padding: 0 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .statusPill.empty{
       border-color: transparent;
@@ -833,6 +825,20 @@
       min-width: 116px;
     }
     .statusPill.used{ background: rgba(255,255,255,.78); }
+
+    /* Locked text for Extras: small and contained, no card expansion */
+    .statusPill.lockedNote{
+      min-width: 220px;
+      font-size: 10px;
+      letter-spacing: 0;
+      text-transform: none;
+      font-weight: 900;
+      opacity: .82;
+      background: rgba(0,0,0,.04);
+      border-color: rgba(0,0,0,.14);
+      justify-content: flex-end;
+      padding: 0 12px;
+    }
   </style>
 </head>
 
@@ -848,7 +854,7 @@
 
     <div class="clue" id="clue"></div>
 
-    <!-- Grid + floating Enhanced sparkle (does NOT push layout much; icon is pulled up slightly) -->
+    <!-- Grid + floating Enhanced sparkle -->
     <div class="gridDock" id="gridDock">
       <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
         <div class="grid" id="grid" style="--n:7"></div>
@@ -960,7 +966,7 @@ const state = {
   hintCount: 0,
   hintsUsed: { w1:false, w2:false, extras:false },
 
-  assist: false, // Enhanced on/off (session persisted)
+  assist: false,
 
   sel1: null,
   sel2: null,
@@ -992,13 +998,10 @@ const state = {
   useCustomKB: false,
 
   modalOpen: false,
-  modalType: null, // 'hints' | null
+  modalType: null,
 
   pendingFly: null,
   flyAttempts: 0,
-
-  hintInline: null,
-  hintInlineTimer: null,
 };
 
 /* =======================
@@ -1066,29 +1069,6 @@ document.addEventListener('contextmenu', (e)=>{
 });
 
 /* =======================
-   Inline hint message helpers
-   ======================= */
-function clearHintInlineMsg(){
-  if(state.hintInlineTimer){
-    clearTimeout(state.hintInlineTimer);
-    state.hintInlineTimer = null;
-  }
-  state.hintInline = null;
-}
-function showHintInlineMsg(id, text){
-  clearHintInlineMsg();
-  state.hintInline = {id, text};
-  renderHintsModal();
-  state.hintInlineTimer = setTimeout(()=>{
-    if(state.modalOpen && state.modalType === 'hints' && state.hintInline && state.hintInline.id === id){
-      state.hintInline = null;
-      renderHintsModal();
-    }
-    state.hintInlineTimer = null;
-  }, 2200);
-}
-
-/* =======================
    Enhanced persistence + teach-once
    ======================= */
 function loadEnhancedFromSession(){
@@ -1142,7 +1122,7 @@ function setEnhanced(on){
 }
 
 /* =======================
-   SUPER reliable tap binding (fixes “needs multiple taps”)
+   SUPER reliable tap binding
    ======================= */
 function bindTapReliable(btn, fn){
   if(!btn) return;
@@ -1155,30 +1135,25 @@ function bindTapReliable(btn, fn){
     try{ fn(e); }catch(err){ console.error(err); }
   };
 
-  // pointerup catches mouse + touch-pointer browsers
   btn.addEventListener('pointerup', (e)=>{
-    // only primary
     if(e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
     fire(e);
   }, {passive:false});
 
-  // iOS/Safari sometimes prefers click in certain edge cases
   btn.addEventListener('click', (e)=>{
     e.preventDefault();
     e.stopPropagation();
     fire(e);
   }, {passive:false});
 
-  // extra belt-and-suspenders for older iOS translations
   btn.addEventListener('touchend', (e)=>{
     e.preventDefault();
     e.stopPropagation();
     fire(e);
   }, {passive:false});
 
-  // keyboard accessibility
   btn.addEventListener('keydown', (e)=>{
     if(e.key === 'Enter' || e.key === ' '){
       e.preventDefault();
@@ -1372,8 +1347,6 @@ function closeModal(){
 
   state.modalOpen = false;
   state.modalType = null;
-
-  clearHintInlineMsg();
 
   requestAnimationFrame(()=>{
     if(!state.useCustomKB && !state.finished) focusCell(state.focusIdx ?? 0);
@@ -1942,7 +1915,7 @@ function rebuildBank(){
 }
 
 /* =======================
-   Status messages (always on)
+   Status messages
    ======================= */
 function updateStatusMessages(){
   if(state.finished) return;
@@ -2868,6 +2841,9 @@ function makeHintCardTile({id, title, cls}){
   if(status === 'used'){
     pill.className = "statusPill used";
     pill.textContent = "✓ USED";
+  }else if(status === 'locked' && id === HINT_IDS.extras){
+    pill.className = "statusPill lockedNote";
+    pill.textContent = "Locked until other hints taken";
   }else{
     pill.className = "statusPill empty";
     pill.textContent = "";
@@ -2877,17 +2853,10 @@ function makeHintCardTile({id, title, cls}){
   top.appendChild(pill);
   card.appendChild(top);
 
-  if(state.hintInline && state.hintInline.id === id){
-    const m = document.createElement('div');
-    m.className = "hintInlineMsg";
-    m.textContent = state.hintInline.text;
-    card.appendChild(m);
-  }
-
   card.addEventListener('click', ()=>{
     if(state.finished) return;
     if(status === 'avail'){ applyHint(id); return; }
-    if(status === 'locked'){ showHintInlineMsg(id, "Locked until other hints taken"); return; }
+    // locked/used: no-op (locked message is shown in the pill)
   });
 
   return card;
@@ -2926,7 +2895,7 @@ function applyHint(id){
   if(id === HINT_IDS.extras){
     if(state.hintsUsed.extras) return;
     if(!extrasUnlocked()){
-      showHintInlineMsg(HINT_IDS.extras, "Locked until other hints taken");
+      // locked text is always shown in the right pill; do nothing here
       return;
     }
     state.hintsUsed.extras = true;
@@ -2975,7 +2944,7 @@ bindFastTap(el.hintsBtn, ()=>{
 
 bindFastTap(el.checkBtn, onCheck);
 
-/* ✅ sparkle: reliable tap + works on desktop (and obvious ON state) */
+/* sparkle */
 bindTapReliable(el.enhanceBtn, ()=>{
   if(state.finished) return;
   if(state.modalOpen) return;
@@ -3163,8 +3132,6 @@ function resetAllForPuzzle(){
   state.bank = [];
   state.pendingFly = null;
   state.flyAttempts = 0;
-
-  clearHintInlineMsg();
 
   resetMainGridOnly();
 }
