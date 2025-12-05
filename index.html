@@ -191,6 +191,57 @@
         0 16px 28px rgba(0,0,0,.14);
       animation: none;
     }
+    /* ===== Under-grid enhanced toggle (icon-only) ===== */
+.gridUnder{
+  --n: 7;
+  --gap: 3px;
+  --cell: 44px;
+  width: min(calc(var(--n) * var(--cell) + (var(--n) - 1) * var(--gap)), 92vw);
+  margin: 10px auto 0;
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  gap: var(--gap);
+  align-items: center;
+  justify-items: center;
+  pointer-events: auto;
+}
+
+.enhanceBtn{
+  grid-column: var(--n); /* sits under final cell */
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 2px solid rgba(0,0,0,.20);
+  background: rgba(255,255,255,.18);
+  color: rgba(0,0,0,.55);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  box-shadow: none;
+}
+.enhanceBtn:active{ transform: translateY(1px); }
+.enhanceBtn:focus,
+.enhanceBtn:focus-visible{ outline: none; box-shadow: none; }
+
+.enhanceBtn.on{
+  border-color: rgba(0,0,0,.45);
+  background: rgba(255,255,255,.42);
+  color: rgba(0,0,0,.92);
+}
+
+/* allow multi-line tutorial in message zone */
+.msg{ white-space: pre-line; }
+
+@media (max-width:520px){
+  .gridUnder{ --cell: 43px; }
+  .enhanceBtn{ width: 40px; height: 40px; font-size: 19px; }
+}
+
 
     .wrap.solved .cell{ background:#fff !important; }
     .wrap.solved .hintTrack{ opacity:0.35; }
@@ -872,6 +923,10 @@
     <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
       <div class="grid" id="grid" style="--n:7"></div>
     </div>
+<!-- under-grid enhanced toggle (icon only) -->
+<div class="gridUnder" id="gridUnder" aria-hidden="false">
+  <button id="enhanceBtn" class="enhanceBtn" type="button" aria-label="Toggle enhanced mode">✨</button>
+</div>
 
     <div class="msgSlot" id="msgSlot" aria-live="polite">
       <div class="msg" id="msg"></div>
@@ -942,7 +997,10 @@ const el = {
   clue: document.getElementById('clue'),
   gridWrap: document.getElementById('gridWrap'),
   grid: document.getElementById('grid'),
-  msg: document.getElementById('msg'),
+  msg: document.getElementById('msg'),  
+  gridUnder: document.getElementById('gridUnder'),
+  enhanceBtn: document.getElementById('enhanceBtn'),
+
 
   hintTrack: document.getElementById('hintTrack'),
   trackW1: document.getElementById('trackW1'),
@@ -991,6 +1049,10 @@ const state = {
 
   sel1: null,
   sel2: null,
+    
+  enhanced: false,
+  tutorialUntil: 0,
+
 
   placed: { w1: null, w2: null },
   singles: [],
@@ -1028,12 +1090,14 @@ const state = {
   hintInline: null,         // {id, text} | null
   hintInlineTimer: null,
 };
+const ENHANCED_KEY = 'triDemo:enhanced';
+const ENHANCED_TEACH_KEY = 'triDemo:enhancedTeachSeen';
 
 /* =======================
    Turbo flags
    ======================= */
 function flags(){
-  if(state.assist){
+  if(state.enhanced){
     return {
       allowClueTapPlace: true,
       allowClueTapCycle: true,
@@ -1055,11 +1119,12 @@ function flags(){
     allowDragTrigrams: false,
     allowAutoPromote: false,
     showGridColors: false,
-    showStatusMessages: true,
-    showBadCellColor: false,
+    showStatusMessages: true,   // keep your rule-warnings if you want them always
+    showBadCellColor: true,     // keep red bad cells if you want them always
     checkFeedback: "minimal",
   };
 }
+
 
 /* =======================
    Helpers
@@ -1071,6 +1136,43 @@ function norm(s){ return String(s||"").toLowerCase().replace(/[^a-z]/g,""); }
 function isAlpha(ch){ return /^[a-z]$/i.test(ch); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+function tutorialActive(){
+  return Date.now() < (state.tutorialUntil || 0);
+}
+
+function showEnhancedTeachOnce(){
+  if(sessionStorage.getItem(ENHANCED_TEACH_KEY) === '1') return;
+
+  sessionStorage.setItem(ENHANCED_TEACH_KEY, '1');
+  state.tutorialUntil = Date.now() + 4200;
+
+  setMsg(
+    "Tap a clue word to place a trigram\n" +
+    "Tap again to cycle to the next trigram\n" +
+    "Drag trigram blocks to reposition\n" +
+    "Auto-highlighting of trigram blocks"
+  );
+
+  // let it clear naturally after the interval
+  setTimeout(()=>{
+    if(tutorialActive()) return;
+    // only clear if nothing else important replaced it
+    if(el.msg && el.msg.classList.contains('show') && !el.msg.classList.contains('warn') && !el.msg.classList.contains('result')){
+      setMsg("");
+    }
+  }, 4300);
+}
+
+function setEnhanced(on){
+  state.enhanced = !!on;
+  sessionStorage.setItem(ENHANCED_KEY, state.enhanced ? '1' : '0');
+  if(el.enhanceBtn) el.enhanceBtn.classList.toggle('on', state.enhanced);
+
+  if(state.enhanced) showEnhancedTeachOnce();
+  renderSmart();
+}
+
+  
 function getN(){
   const a = norm(current().answer);
   return clamp(a.length || 7, 6, 8);
@@ -1293,7 +1395,8 @@ function setTransientMsg(text, ms=2400, kind=null){
   }, ms);
 }
 function clearTransientOnAnyChange(){
-  if(state.lockMsg){
+    if(tutorialActive()) return;
+if(state.lockMsg){
     state.lockMsg = false;
     setMsg("");
   }
@@ -2658,6 +2761,8 @@ function triForClue(group){
    ======================= */
 function renderGrid(stealFocus=true){
   const n = getN();
+    if(el.gridUnder) el.gridUnder.style.setProperty('--n', String(n));
+
   const f = flags();
 
   if(f.allowAutoPromote){
@@ -3020,6 +3125,19 @@ el.prevBtn.addEventListener('click', (e)=>{
   closeModal();
   state.i=(state.i-1+PUZZLES.length)%PUZZLES.length;
   resetAllForPuzzle();
+  // init enhanced from session
+state.enhanced = sessionStorage.getItem(ENHANCED_KEY) === '1';
+if(el.enhanceBtn) el.enhanceBtn.classList.toggle('on', state.enhanced);
+
+el.enhanceBtn?.addEventListener('pointerdown', (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+el.enhanceBtn?.addEventListener('click', (e)=>{
+  e.preventDefault();
+  e.stopPropagation();
+  if(state.finished) return;
+  if(state.modalOpen) return;
+  setEnhanced(!state.enhanced);
+});
+
   renderSmart();
 });
 el.nextBtn.addEventListener('click', (e)=>{
