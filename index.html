@@ -180,11 +180,14 @@
         solvedPop .46s ease-out both,
         glowPulse 1.15s ease-in-out 0s 2;
     }
+
+    /* Give up: red ring */
     .wrap.gaveup .gridDock{
       pointer-events:none;
       transform: translate3d(0,16px,0) scale(1.005); /* moved down a touch more */
       box-shadow:
-        0 0 0 6px rgba(0,0,0,.10),
+        0 0 0 7px rgba(255, 150, 160, .46),
+        0 0 0 13px rgba(255, 150, 160, .20),
         0 16px 28px rgba(0,0,0,.14);
       animation: none;
     }
@@ -312,11 +315,16 @@
       height: 98px;
       width:100%;
       max-width:760px;
-      margin: clamp(8px, 1.6vh, 14px) auto 0;
+      margin: clamp(6px, 1.3vh, 12px) auto 0; /* slightly tighter */
       user-select:none;
       flex:0 0 auto;
       pointer-events: none; /* don't block background taps */
     }
+    /* add a little MORE spacing on answer reveal */
+    .wrap.solved .msgSlot{
+      margin-top: clamp(10px, 1.9vh, 16px);
+    }
+
     .msg{
       position:absolute;
       left:50%;
@@ -338,6 +346,7 @@
     .msg.show{ opacity:.92; }
     .msg.warn{ opacity:.92; font-size:20px; }
     .msg.result{ top: 28px; }
+    .wrap.solved .msg.result{ top: 34px; } /* more gap to grid on reveal */
 
     /* ===== Hint tracker ===== */
     .hintTrack{
@@ -439,7 +448,6 @@
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      /* keep an initial shadow, but we animate it down smoothly */
       filter: drop-shadow(0 18px 18px rgba(0,0,0,.24));
       will-change: transform, filter;
     }
@@ -618,10 +626,12 @@
       .cell input{ font-size:clamp(24px,6.05vw,36px); }
       .letter{ width:28px; height:28px; font-size:19px; }
 
-      .msgSlot{ height: 104px; margin-top: clamp(8px, 1.5vh, 14px); }
+      .msgSlot{ height: 104px; margin-top: clamp(6px, 1.2vh, 12px); }
+      .wrap.solved .msgSlot{ margin-top: clamp(10px, 1.8vh, 16px); }
       .msg{ font-size:20px; top: 20px; }
       .msg.warn{ font-size:19px; }
       .msg.result{ top: 30px; }
+      .wrap.solved .msg.result{ top: 36px; }
 
       .btn{ font-size:19px; padding:9px 15px; min-width:98px; }
       .kbKey{ height:46px; }
@@ -802,7 +812,7 @@ const state = {
   hintCount: 0,
   hintsUsed: { w1:false, w2:false, extras:false },
 
-  /* Enhanced mode: now defaults ON and does NOT persist */
+  /* Enhanced mode: defaults ON and does NOT persist */
   assist: true,
 
   sel1: null,
@@ -1169,17 +1179,6 @@ function excludedMsgText(){
 /* =======================
    Modal control (kept for later)
    ======================= */
-function openModal(type){
-  if(state.finished) return;
-  state.modalOpen = true;
-  state.modalType = type;
-
-  if(type === 'hints'){
-    el.hintsModal.classList.add('open');
-    el.hintsModal.setAttribute('aria-hidden', 'false');
-    requestAnimationFrame(()=>{ try{ el.hintsModalClose.focus({preventScroll:true}); }catch{} });
-  }
-}
 function closeModal(){
   if(!state.modalOpen) return;
 
@@ -1768,7 +1767,6 @@ function updateStatusMessages(){
   const hasTwo  = state.twoSet && state.twoSet.size > 0;
   const hasExcluded = state.exclSet && state.exclSet.size > 0;
 
-  /* keep warnings always */
   if(hasMax3){ setMsg("Max 3 contiguous letters allowed", 'warn'); state.overlapMsgOn=false; return; }
   if(hasTwo){  setMsg(TWOTRI_TEXT, 'warn'); state.overlapMsgOn=false; return; }
   if(hasExcluded){ setMsg(excludedMsgText(), 'warn'); state.overlapMsgOn=false; return; }
@@ -1783,7 +1781,6 @@ function updateStatusMessages(){
     state.overlapMsgOn = true;
   }else{
     if(state.overlapMsgOn && el.msg.textContent === OVERLAP_TEXT) setMsg("");
-    /* also clear if user toggled enhanced off while message showing */
     if(!state.assist && el.msg.textContent === OVERLAP_TEXT) setMsg("");
     state.overlapMsgOn = false;
   }
@@ -1968,7 +1965,7 @@ function runHintFly(kind){
   const scale = clamp(Math.min(sx, sy), 0.20, 0.95);
 
   const SH0 = 'drop-shadow(0 18px 18px rgba(0,0,0,.24))';
-  const SH1 = 'drop-shadow(0 2px 2px rgba(0,0,0,0))'; /* fade to zero rather than snapping */
+  const SH1 = 'drop-shadow(0 2px 2px rgba(0,0,0,0))';
 
   const kf = [
     { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, filter: SH0, offset: 0.00 },
@@ -2018,7 +2015,7 @@ function scheduleHintFly(kind){
 }
 
 /* =======================
-   Drag ghost (unchanged)
+   Drag ghost
    ======================= */
 function trigramIsRedAtStart(start){
   computeMax3Invalid();
@@ -2500,8 +2497,8 @@ function renderHintTrack(){
 
 /* =======================
    Clue tap behavior:
-   - If Enhanced is OFF: first tap anywhere in clue just turns it ON (no cycle/place).
-   - Next tap on a word does the action.
+   - If Enhanced is OFF: first tap in clue just turns it ON (no cycle/place).
+   - Next tap does the action.
    ======================= */
 function onClueWordActivate(group){
   if(state.finished) return;
@@ -2748,7 +2745,7 @@ function nextHintStage(){
   if(!state.hintsUsed.w1) return 1;
   if(!state.hintsUsed.w2) return 2;
   if(!state.hintsUsed.extras) return 3;
-  return 4; // give up
+  return 4;
 }
 function updateHintButtonLabel(){
   if(state.finished){
@@ -2758,11 +2755,25 @@ function updateHintButtonLabel(){
   const st = nextHintStage();
   el.hintsBtn.textContent = (st === 1) ? "hint 1" : (st === 2) ? "hint 2" : (st === 3) ? "hint 3" : "give up";
 }
+
+/* NEW: if a hint causes "excluded trigram" while Enhanced is OFF, auto-enable Enhanced */
+function maybeAutoEnableEnhancedForExcluded(){
+  computeHintExcludedTrigrams();
+  const hasExcluded = state.exclSet && state.exclSet.size > 0;
+  if(hasExcluded && !state.assist){
+    setEnhanced(true, false);
+  }
+}
+
 function applyHint(id){
+  if(state.finished) return;
+
   if(id === HINT_IDS.w1){
     if(state.hintsUsed.w1) return;
     state.hintsUsed.w1 = true;
     state.hintCount += 1;
+
+    maybeAutoEnableEnhancedForExcluded();
     renderSmart();
     scheduleHintFly('w1');
     return;
@@ -2772,6 +2783,8 @@ function applyHint(id){
     if(state.hintsUsed.w2) return;
     state.hintsUsed.w2 = true;
     state.hintCount += 1;
+
+    maybeAutoEnableEnhancedForExcluded();
     renderSmart();
     scheduleHintFly('w2');
     return;
