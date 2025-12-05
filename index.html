@@ -158,7 +158,7 @@
       transition: box-shadow .45s ease;
       will-change: transform, box-shadow;
 
-      /* NEW: ensure sparkle always sits above whatever comes below (desktop “stuck” fix) */
+      /* keep sparkle reliably clickable */
       z-index: 20;
       isolation: isolate;
     }
@@ -297,7 +297,7 @@
     }
     .cell input::selection{ background:transparent; color:inherit; }
 
-    /* Grid colouring (ONLY when Enhanced ON) */
+    /* Grid colouring (ONLY when Enhanced ON and NOT revealed) */
     .cell.bg-w1{ background:var(--w1); }
     .cell.bg-w2{ background:var(--w2); }
     .cell.bg-ol{ background:var(--ol); }
@@ -331,7 +331,6 @@
       appearance:none;
       -webkit-appearance:none;
 
-      /* NEW: make absolutely sure it’s on top (desktop “stuck” fix) */
       z-index: 300;
       pointer-events:auto;
     }
@@ -345,7 +344,6 @@
     }
     .enhanceBtn:active{ transform: translateY(1px); }
 
-    /* Enhanced ON: very obvious */
     .enhanceBtn.is-on{
       border-color: rgba(0,0,0,.34);
       background: rgba(255,255,255,.72);
@@ -358,24 +356,21 @@
       fill: rgba(0,0,0,.12);
     }
 
-    /* disable icon when solved */
+    /* NEW: when answer is revealed, hide sparkle entirely */
     .wrap.solved .enhanceBtn{
-      opacity:.45;
-      pointer-events:none;
+      display:none !important;
     }
 
-    /* ===== Messages (moved down + bigger help) ===== */
+    /* ===== Messages ===== */
     .msgSlot{
       position:relative;
-      height: 98px; /* room for 4-line help */
+      height: 98px;
       width:100%;
       max-width:760px;
       margin: clamp(18px, 3.0vh, 28px) auto 0;
       user-select:none;
       flex:0 0 auto;
-
-      /* NEW: don’t ever block clicks on sparkle that sits “over” this zone */
-      pointer-events: none;
+      pointer-events: none; /* don't block sparkle clicks */
     }
     .msg{
       position:absolute;
@@ -421,6 +416,13 @@
       user-select:none;
       flex:0 0 auto;
     }
+
+    /* NEW: when answer is revealed, fade hint grids down again */
+    .wrap.solved .hintTrack{
+      opacity: .16;
+      pointer-events:none;
+    }
+
     .trackRow{
       display:flex;
       align-items:flex-start;
@@ -487,7 +489,7 @@
       flex-wrap:nowrap;
     }
 
-    /* ===== Spotlight hint animation (center -> fly to tracker) ===== */
+    /* ===== Spotlight hint animation ===== */
     .hintSpotOverlay{
       position:fixed;
       inset:0;
@@ -831,9 +833,8 @@
     }
     .statusPill.used{ background: rgba(255,255,255,.78); }
 
-    /* FIX: no weird left blank space; keep pill size (no expansion), use ellipsis */
     .statusPill.lockedNote{
-      min-width: 116px;          /* keep same box size */
+      min-width: 116px;
       font-size: 10px;
       letter-spacing: 0;
       text-transform: none;
@@ -841,7 +842,7 @@
       opacity: .82;
       background: rgba(0,0,0,.04);
       border-color: rgba(0,0,0,.14);
-      justify-content: center;   /* <-- key fix */
+      justify-content: center;
       text-align: center;
       padding: 0 10px;
       overflow: hidden;
@@ -863,7 +864,6 @@
 
     <div class="clue" id="clue"></div>
 
-    <!-- Grid + floating Enhanced sparkle -->
     <div class="gridDock" id="gridDock">
       <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
         <div class="grid" id="grid" style="--n:7"></div>
@@ -896,7 +896,6 @@
     </div>
   </div>
 
-  <!-- Hints modal -->
   <div class="modalOverlay" id="hintsModal" aria-hidden="true">
     <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="hintsModalTitle">
       <div class="modalHdr">
@@ -1176,7 +1175,7 @@ function bindTapReliable(btn, fn){
    ======================= */
 function shouldUseCustomKB(){
   const coarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
-  const small = window.matchMedia && window.matchMedia('(max-width: 920px)').matches;
+  const small  = window.matchMedia && window.matchMedia('(max-width: 920px)').matches;
   return !!(coarse && small);
 }
 function setCustomKBEnabled(on){
@@ -1362,13 +1361,11 @@ function closeModal(){
   });
 }
 
-/* Backdrop click closes */
 el.hintsModal.addEventListener('pointerdown', (e)=>{
   if(e.target === el.hintsModal){ e.preventDefault(); e.stopPropagation(); closeModal(); }
 },{passive:false});
 el.hintsModalClose.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeModal(); });
 
-/* Esc closes modal + suppress typing while open */
 document.addEventListener('keydown', (e)=>{
   if(!state.modalOpen) return;
   if(e.key === "Escape"){
@@ -1829,8 +1826,8 @@ function computeMax3Invalid(){
           const inW2 = (w2 && w2.includes(s));
           if(inW1 || inW2){
             for(let k=a;k<b;k++) state.badSet.add(k);
-            for(let t=0; t<=s.length-TR; t++){
-              const tri = s.slice(t,t+TR);
+            for(let t=0; t<=s.length-3; t++){
+              const tri = s.slice(t,t+3);
               if(inW1) state.badTris.w1.add(tri);
               if(inW2) state.badTris.w2.add(tri);
             }
@@ -1858,7 +1855,7 @@ function computeTwoTrigramsInvalid(){
   const chars = Array.from({length:n}, (_,i)=>cellChar(i));
   const occ = { w1: [], w2: [] };
 
-  for(let s=0; s<=n-TR; s++){
+  for(let s=0; s<=n-3; s++){
     if(!chars[s] || !chars[s+1] || !chars[s+2]) continue;
     const tri = (chars[s] + chars[s+1] + chars[s+2]).toLowerCase();
     if(w1 && w1.includes(tri)) occ.w1.push({start:s, tri});
@@ -1885,7 +1882,7 @@ function computeHintExcludedTrigrams(){
   function scan(group, word, locked){
     const w = norm(word);
     if(!w) return;
-    for(let s=0; s<=n-TR; s++){
+    for(let s=0; s<=n-3; s++){
       if(!chars[s] || !chars[s+1] || !chars[s+2]) continue;
       const tri = (chars[s]+chars[s+1]+chars[s+2]).toLowerCase();
       if(locked && tri === locked) continue;
@@ -1908,11 +1905,11 @@ function computeHint3Letters(){
   const p = current();
   const ans = norm(p.answer);
   const covered = new Set();
-  const t1 = clamp(p.tri1_pos || 0, 0, n-TR);
-  const t2 = clamp(p.tri2_pos || 0, 0, n-TR);
+  const t1 = clamp(p.tri1_pos || 0, 0, n-3);
+  const t2 = clamp(p.tri2_pos || 0, 0, n-3);
 
-  for(let k=0;k<TR;k++) covered.add(t1 + k);
-  for(let k=0;k<TR;k++) covered.add(t2 + k);
+  for(let k=0;k<3;k++) covered.add(t1 + k);
+  for(let k=0;k<3;k++) covered.add(t2 + k);
 
   const leftover = [];
   for(let i=0;i<n;i++) if(!covered.has(i)) leftover.push(ans[i]);
@@ -1968,8 +1965,8 @@ function countTrigramsInWord(attempt, word){
   const w = norm(word);
   const found = [];
   if(!w) return found;
-  for(let s=0; s<=n-TR; s++){
-    const tri = attempt.slice(s, s+TR);
+  for(let s=0; s<=n-3; s++){
+    const tri = attempt.slice(s, s+3);
     if(w.includes(tri)) found.push(tri);
   }
   return found;
@@ -2267,8 +2264,8 @@ function renderHintTrack(){
 
           const n = getN();
           for(let i=0;i<n;i++){
-            if(state.placed.w1 && i>=state.placed.w1.start && i<state.placed.w1.start+TR) continue;
-            if(state.placed.w2 && i>=state.placed.w2.start && i<state.placed.w2.start+TR) continue;
+            if(state.placed.w1 && i>=state.placed.w1.start && i<state.placed.w1.start+3) continue;
+            if(state.placed.w2 && i>=state.placed.w2.start && i<state.placed.w2.start+3) continue;
             if(state.singles.find(s=>s.idx===i)) continue;
             state.singles.push({id: uid(), ch: tile.ch, idx: i});
             state.focusIdx = clamp(i+1,0,n-1);
@@ -2299,7 +2296,7 @@ function placeTrigram(group, tri){
 
   const n = getN();
   const t = norm(tri);
-  if(!t || t.length !== TR) return;
+  if(!t || t.length !== 3) return;
 
   const otherGroup = group === 'w1' ? 'w2' : 'w1';
   const other = state.placed[otherGroup];
@@ -2365,7 +2362,7 @@ function cyclePlacedTrigram(group){
 
   const p = current();
   const w = norm(group === 'w1' ? p.word1 : p.word2);
-  const maxStart = Math.max(0, w.length - TR);
+  const maxStart = Math.max(0, w.length - 3);
   if(maxStart === 0) return;
 
   const curTri = norm(pl.tri);
@@ -2383,14 +2380,14 @@ function cyclePlacedTrigram(group){
   s = (s + 1) % (maxStart + 1);
   if(group === 'w1') state.sel1 = s; else state.sel2 = s;
 
-  const tri = w.slice(s, s+TR);
+  const tri = w.slice(s, s+3);
   placeTrigram(group, tri);
 }
 function firstTrigramOfWord(group){
   const p = current();
   const w = norm(group === 'w1' ? p.word1 : p.word2);
-  if(w.length < TR) return null;
-  return w.slice(0, TR);
+  if(w.length < 3) return null;
+  return w.slice(0, 3);
 }
 
 /* =======================
@@ -2492,7 +2489,7 @@ function pairForDragPinnedThenPush(group, desiredStart, idxNow){
   const currO = other.start;
   const mineLeft = currM <= currO;
 
-  const pointerInsideOther = (idxNow >= currO && idxNow < currO + TR);
+  const pointerInsideOther = (idxNow >= currO && idxNow < currO + 3);
   const idxInto = idxNow - currO;
   const olNow = overlapCount(currM, currO);
 
@@ -2507,8 +2504,8 @@ function pairForDragPinnedThenPush(group, desiredStart, idxNow){
     const sO = currO;
 
     if(mineLeft){
-      const maxNoTouch = sO - TR;
-      const overlapStart = sO - (TR-1);
+      const maxNoTouch = sO - 3;
+      const overlapStart = sO - 2;
       if(sM > maxNoTouch){
         if(overlapStart >= 0 && overlapStart <= startMax() && overlapIsValid(overlapStart, mine.tri, sO, other.tri)){
           sM = overlapStart;
@@ -2519,8 +2516,8 @@ function pairForDragPinnedThenPush(group, desiredStart, idxNow){
         }
       }
     }else{
-      const minNoTouch = sO + TR;
-      const overlapStart = sO + (TR-1);
+      const minNoTouch = sO + 3;
+      const overlapStart = sO + 2;
       if(sM < minNoTouch){
         if(overlapStart >= 0 && overlapStart <= startMax() && overlapIsValid(overlapStart, mine.tri, sO, other.tri)){
           sM = overlapStart;
@@ -2637,7 +2634,7 @@ function inferredSingleTrigram(group){
   if(!w) return null;
 
   const found = [];
-  for(let s=0; s<=n-TR; s++){
+  for(let s=0; s<=n-3; s++){
     const a = cellChar(s), b = cellChar(s+1), c = cellChar(s+2);
     if(!a || !b || !c) continue;
     const tri = (a+b+c).toLowerCase();
@@ -2667,7 +2664,10 @@ function renderGrid(stealFocus=true){
   const n = getN();
   const f = flags();
 
-  if(f.allowAutoPromote){
+  // if answer revealed, force grid to plain (white) regardless of enhanced state
+  const revealed = state.finished;
+
+  if(!revealed && f.allowAutoPromote){
     for(let k=0;k<2;k++){
       if(!autoPromoteTypedTrigrams()) break;
     }
@@ -2677,7 +2677,7 @@ function renderGrid(stealFocus=true){
   computeTwoTrigramsInvalid();
   computeHintExcludedTrigrams();
 
-  const overlapSet = f.showGridColors ? computeOverlapIdxSet() : new Set();
+  const overlapSet = (!revealed && f.showGridColors) ? computeOverlapIdxSet() : new Set();
 
   el.grid.style.setProperty('--n', String(n));
   el.grid.innerHTML = "";
@@ -2687,21 +2687,22 @@ function renderGrid(stealFocus=true){
     cell.className = "cell";
     cell.dataset.idx = String(i);
 
-    if(!state.finished && i === clamp(state.focusIdx ?? 0, 0, n-1)){
+    if(!revealed && i === clamp(state.focusIdx ?? 0, 0, n-1)){
       cell.classList.add('active');
     }
 
     const tri = trigramAtIndex(i);
 
-    if(f.showGridColors && tri){
+    // ONLY color while playing (not after reveal)
+    if(!revealed && f.showGridColors && tri){
       if(overlapSet.has(i)) cell.classList.add('bg-ol');
       else cell.classList.add(tri.group==='w1' ? 'bg-w1' : 'bg-w2');
     }
-    if(f.showBadCellColor && (state.badSet.has(i) || state.twoSet.has(i) || state.exclSet.has(i))){
+    if(!revealed && f.showBadCellColor && (state.badSet.has(i) || state.twoSet.has(i) || state.exclSet.has(i))){
       cell.classList.add('bg-bad');
     }
 
-    if(f.allowDragTrigrams && tri){
+    if(!revealed && f.allowDragTrigrams && tri){
       cell.classList.add('grabbable');
     }
 
@@ -2718,14 +2719,14 @@ function renderGrid(stealFocus=true){
     input.name = "x-"+i;
     input.enterKeyHint = "done";
 
-    const ro = (!!tri && f.allowAutoPromote) || state.finished || state.useCustomKB;
+    const ro = (!!tri && f.allowAutoPromote) || revealed || state.useCustomKB;
     input.readOnly = ro;
     input.tabIndex = state.useCustomKB ? -1 : 0;
 
     input.addEventListener('focus', ()=>{ state.focusIdx = i; });
 
     input.addEventListener('keydown', (e)=>{
-      if(state.finished) return;
+      if(revealed) return;
       if(state.modalOpen){ e.preventDefault(); return; }
 
       if(e.key === " " || e.code === "Space" || e.key === "Spacebar"){
@@ -2792,7 +2793,7 @@ function renderGrid(stealFocus=true){
     }
 
     cell.addEventListener('pointerdown', (e)=>{
-      if(state.finished) return;
+      if(revealed) return;
       if(state.modalOpen) return;
 
       state.focusIdx = i;
@@ -2816,7 +2817,7 @@ function renderGrid(stealFocus=true){
     el.grid.appendChild(cell);
   }
 
-  if(stealFocus && !state.finished && !state.useCustomKB && !state.modalOpen){
+  if(stealFocus && !revealed && !state.useCustomKB && !state.modalOpen){
     requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
   }
 }
@@ -2902,9 +2903,7 @@ function applyHint(id){
 
   if(id === HINT_IDS.extras){
     if(state.hintsUsed.extras) return;
-    if(!extrasUnlocked()){
-      return;
-    }
+    if(!extrasUnlocked()) return;
     state.hintsUsed.extras = true;
     state.hintCount += 1;
     if(state.bank.length === 0) rebuildBank();
