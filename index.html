@@ -146,7 +146,7 @@
     .u-w2{ text-decoration-color: rgba(70,160,255,.92); }
     .u-red{ text-decoration-color: rgba(235,80,92,.92); }
 
-    /* ====== Grid dock (wraps grid + floating sparkle icon; does NOT affect flow) ====== */
+    /* ====== Grid dock (grid + floating sparkle) ====== */
     .gridDock{
       display:block;
       width:fit-content;
@@ -305,17 +305,21 @@
 
     html.has-kb .cell input{ pointer-events:none; }
 
-    /* ===== Enhanced sparkle icon (floats; takes ~0 layout space) ===== */
+    /* ===== Enhanced sparkle icon (BIGGER hit area + clearer ON state) ===== */
     .enhanceBtn{
       position:absolute;
-      right: 0px;               /* aligns under final cell pretty closely */
-      top: calc(100% + 6px);    /* just beneath the grid, without pushing layout */
-      width: 44px;
-      height: 44px;
-      padding: 9px;             /* generous hit area */
-      border-radius: 14px;
-      border:2px solid rgba(0,0,0,.14);
-      background: rgba(255,255,255,.10);
+      right: -2px;
+      /* Pull it up a little so it doesn’t intrude into message area too much */
+      top: calc(100% - 16px);
+
+      width: 48px;
+      height: 48px;
+      padding: 11px;
+      border-radius: 16px;
+
+      border:2px solid rgba(0,0,0,.16);
+      background: rgba(255,255,255,.08);
+
       cursor:pointer;
       display:grid;
       place-items:center;
@@ -323,25 +327,29 @@
       touch-action: manipulation;
       appearance:none;
       -webkit-appearance:none;
-      z-index: 10;
+      z-index: 30;
+      pointer-events:auto;
     }
     .enhanceBtn svg{
-      width: 20px;
-      height: 20px;
-      stroke: rgba(0,0,0,.32);
-      fill: rgba(0,0,0,.05);
-      stroke-width: 1.8;
+      width: 22px;
+      height: 22px;
+      stroke: rgba(0,0,0,.28);
+      fill: rgba(0,0,0,.03);
+      stroke-width: 2.0;
       transition: stroke .18s ease, fill .18s ease, transform .08s ease;
     }
     .enhanceBtn:active{ transform: translateY(1px); }
 
-    /* Enhanced ON */
+    /* Enhanced ON: very obvious */
     .enhanceBtn.is-on{
-      border-color: rgba(0,0,0,.26);
-      background: rgba(255,255,255,.55);
+      border-color: rgba(0,0,0,.34);
+      background: rgba(255,255,255,.72);
+      box-shadow:
+        0 0 0 5px rgba(0,0,0,.06),
+        0 10px 18px rgba(0,0,0,.14);
     }
     .enhanceBtn.is-on svg{
-      stroke: rgba(0,0,0,.92);
+      stroke: rgba(0,0,0,.94);
       fill: rgba(0,0,0,.12);
     }
 
@@ -351,13 +359,14 @@
       pointer-events:none;
     }
 
-    /* ===== Messages ===== */
+    /* ===== Messages (moved down + bigger help) ===== */
     .msgSlot{
       position:relative;
-      height:74px;
+      height: 98px; /* room for 4-line help */
       width:100%;
       max-width:760px;
-      margin: clamp(10px, 2.6vh, 18px) auto 0;
+      /* moved down a touch to clear the sparkle button */
+      margin: clamp(18px, 3.0vh, 28px) auto 0;
       user-select:none;
       flex:0 0 auto;
     }
@@ -365,7 +374,7 @@
       position:absolute;
       left:50%;
       transform:translateX(-50%);
-      top:12px;
+      top: 18px;       /* moved down a touch */
       margin:0;
       font-weight:900;
       opacity:0;
@@ -375,20 +384,21 @@
       pointer-events:none;
       width:max-content;
       max-width:min(92vw,760px);
-      white-space: pre-line; /* allow \n for 4-line Enhanced explainer */
+      white-space: pre-line; /* allow \n */
       line-height:1.15;
       text-align:center;
     }
     .msg.show{ opacity:.92; }
     .msg.warn{ opacity:.92; font-size:20px; }
-    .msg.result{ top:22px; }
+    .msg.result{ top: 28px; }
     .msg.help{
-      font-size:15px;
-      line-height:1.12;
-      top:10px;
+      font-size: 18px;   /* bigger than before */
+      line-height: 1.16;
+      top: 22px;         /* pushed down a bit more */
       opacity:.92;
-      font-weight:850;
+      font-weight:900;
       letter-spacing: .01em;
+      font-style: italic;
     }
 
     /* ===== Hint tracker ===== */
@@ -663,14 +673,24 @@
       }
       .cell input{ font-size:clamp(24px,6.05vw,36px); }
       .letter{ width:28px; height:28px; font-size:19px; }
-      .msgSlot{ height:74px; }
-      .msg{ font-size:20px; top:12px; }
+
+      .msgSlot{ height: 104px; }
+      .msg{ font-size:20px; top: 20px; }
       .msg.warn{ font-size:19px; }
-      .msg.help{ font-size:14px; line-height:1.12; top:10px; }
+      .msg.help{ font-size: 16.5px; top: 24px; line-height:1.14; }
+      .msg.result{ top: 30px; }
+
       .btn{ font-size:19px; padding:9px 15px; min-width:98px; }
       .kbKey{ height:46px; }
-      .enhanceBtn{ width:42px; height:42px; padding:8px; top: calc(100% + 5px); }
-      .enhanceBtn svg{ width:19px; height:19px; }
+
+      .enhanceBtn{
+        width: 46px;
+        height: 46px;
+        padding: 10px;
+        border-radius: 15px;
+        top: calc(100% - 16px);
+      }
+      .enhanceBtn svg{ width:21px; height:21px; }
     }
 
     /* ========= Modals ========= */
@@ -712,7 +732,6 @@
       text-overflow: ellipsis;
     }
 
-    /* subtle X, no iOS blue focus square */
     .modalX{
       border:0;
       background:transparent;
@@ -741,7 +760,6 @@
       padding: 12px 14px 14px;
     }
 
-    /* Cards inside hints modal */
     .hintCard{
       width:100%;
       border:2px solid rgba(0,0,0,.16);
@@ -778,7 +796,6 @@
       text-overflow:ellipsis;
     }
 
-    /* Inline (in-card) locked info message */
     .hintInlineMsg{
       margin-top: 9px;
       font-size: 13.6px;
@@ -831,7 +848,7 @@
 
     <div class="clue" id="clue"></div>
 
-    <!-- Grid + floating Enhanced sparkle (does not push message/hints down) -->
+    <!-- Grid + floating Enhanced sparkle (does NOT push layout much; icon is pulled up slightly) -->
     <div class="gridDock" id="gridDock">
       <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
         <div class="grid" id="grid" style="--n:7"></div>
@@ -924,8 +941,8 @@ const el = {
   enhanceBtn: document.getElementById('enhanceBtn'),
 };
 
-const ENHANCED_SESSION_KEY = "triDemoEnhanced_v1";
-const ENHANCED_HELP_SESSION_KEY = "triDemoEnhancedHelpShown_v1";
+const ENHANCED_SESSION_KEY = "triDemoEnhanced_v2";
+const ENHANCED_HELP_SESSION_KEY = "triDemoEnhancedHelpShown_v2";
 
 const TWOTRI_TEXT  = "Two trigrams from same word";
 const OVERLAP_TEXT = "1-letter overlap allowed ✓";
@@ -980,8 +997,7 @@ const state = {
   pendingFly: null,
   flyAttempts: 0,
 
-  // inline (in-card) locked hint message
-  hintInline: null,         // {id, text} | null
+  hintInline: null,
   hintInlineTimer: null,
 };
 
@@ -1062,7 +1078,7 @@ function clearHintInlineMsg(){
 function showHintInlineMsg(id, text){
   clearHintInlineMsg();
   state.hintInline = {id, text};
-  renderHintsModal(); // keep panel open, update only its body
+  renderHintsModal();
   state.hintInlineTimer = setTimeout(()=>{
     if(state.modalOpen && state.modalType === 'hints' && state.hintInline && state.hintInline.id === id){
       state.hintInline = null;
@@ -1084,17 +1100,14 @@ function loadEnhancedFromSession(){
   }
 }
 function saveEnhancedToSession(){
-  try{
-    sessionStorage.setItem(ENHANCED_SESSION_KEY, state.assist ? "1" : "0");
-  }catch{}
+  try{ sessionStorage.setItem(ENHANCED_SESSION_KEY, state.assist ? "1" : "0"); }catch{}
 }
 function enhancedHelpAlreadyShownThisSession(){
   try{ return sessionStorage.getItem(ENHANCED_HELP_SESSION_KEY) === "1"; }
   catch{ return false; }
 }
 function markEnhancedHelpShownThisSession(){
-  try{ sessionStorage.setItem(ENHANCED_HELP_SESSION_KEY, "1"); }
-  catch{}
+  try{ sessionStorage.setItem(ENHANCED_HELP_SESSION_KEY, "1"); }catch{}
 }
 function updateEnhancedButtonUI(){
   if(!el.enhanceBtn) return;
@@ -1111,7 +1124,7 @@ function showEnhancedHelpOnceIfNeeded(){
       "Drag trigram blocks to reposition",
       "Auto-highlighting of trigram blocks",
     ].join("\n"),
-    3200,
+    3600,
     "help"
   );
 }
@@ -1126,6 +1139,52 @@ function setEnhanced(on){
   if(state.assist) showEnhancedHelpOnceIfNeeded();
 
   renderSmart();
+}
+
+/* =======================
+   SUPER reliable tap binding (fixes “needs multiple taps”)
+   ======================= */
+function bindTapReliable(btn, fn){
+  if(!btn) return;
+  let last = 0;
+
+  const fire = (e)=>{
+    const now = performance.now();
+    if(now - last < 260) return;
+    last = now;
+    try{ fn(e); }catch(err){ console.error(err); }
+  };
+
+  // pointerup catches mouse + touch-pointer browsers
+  btn.addEventListener('pointerup', (e)=>{
+    // only primary
+    if(e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    fire(e);
+  }, {passive:false});
+
+  // iOS/Safari sometimes prefers click in certain edge cases
+  btn.addEventListener('click', (e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+    fire(e);
+  }, {passive:false});
+
+  // extra belt-and-suspenders for older iOS translations
+  btn.addEventListener('touchend', (e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+    fire(e);
+  }, {passive:false});
+
+  // keyboard accessibility
+  btn.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter' || e.key === ' '){
+      e.preventDefault();
+      fire(e);
+    }
+  });
 }
 
 /* =======================
@@ -2155,7 +2214,7 @@ function makeTrigramBlock(tri, cls, labelText, onClickMaybe, id){
 
   if(canClick){
     box.setAttribute("role","button");
-    box.addEventListener('click', onClickMaybe);
+    bindTapReliable(box, onClickMaybe);
   }
 
   for(let i=0;i<tri.length;i++){
@@ -2219,7 +2278,7 @@ function renderHintTrack(){
       d.textContent = tile.ch;
 
       if(canInsert){
-        d.addEventListener('click', ()=>{
+        bindTapReliable(d, ()=>{
           if(state.finished) return;
           if(state.modalOpen) return;
           clearTransientOnAnyChange();
@@ -2563,7 +2622,7 @@ function onDragEnd(e){
   try{ d.ghost.remove(); }catch{}
   state.drag = null;
 
-  const rect = el.gridWrap.getBoundingClientRect(); // keep logic tied to actual grid, not sparkle
+  const rect = el.gridWrap.getBoundingClientRect();
   const dist = rectDistance(e.clientX, e.clientY, rect);
   const REMOVE_DIST = 150;
   if(dist > REMOVE_DIST){
@@ -2827,15 +2886,8 @@ function makeHintCardTile({id, title, cls}){
 
   card.addEventListener('click', ()=>{
     if(state.finished) return;
-
-    if(status === 'avail'){
-      applyHint(id);
-      return;
-    }
-    if(status === 'locked'){
-      showHintInlineMsg(id, "Locked until other hints taken");
-      return;
-    }
+    if(status === 'avail'){ applyHint(id); return; }
+    if(status === 'locked'){ showHintInlineMsg(id, "Locked until other hints taken"); return; }
   });
 
   return card;
@@ -2848,7 +2900,7 @@ function renderHintsModal(){
 }
 
 /* =======================
-   Hint application (only 3 count)
+   Hint application
    ======================= */
 function applyHint(id){
   if(id === HINT_IDS.w1){
@@ -2923,7 +2975,8 @@ bindFastTap(el.hintsBtn, ()=>{
 
 bindFastTap(el.checkBtn, onCheck);
 
-bindFastTap(el.enhanceBtn, ()=>{
+/* ✅ sparkle: reliable tap + works on desktop (and obvious ON state) */
+bindTapReliable(el.enhanceBtn, ()=>{
   if(state.finished) return;
   if(state.modalOpen) return;
   setEnhanced(!state.assist);
