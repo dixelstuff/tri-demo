@@ -171,7 +171,7 @@
     /* Correct solve glow (NOT on give up) */
     .wrap.solved:not(.gaveup) .gridDock{
       pointer-events:none;
-      transform: translate3d(0,18px,0) scale(1.01);
+      transform: translate3d(0,24px,0) scale(1.01); /* moved down a touch more */
       box-shadow:
         0 0 0 7px rgba(200,247,210,.55),
         0 0 0 13px rgba(200,247,210,.22),
@@ -182,7 +182,7 @@
     }
     .wrap.gaveup .gridDock{
       pointer-events:none;
-      transform: translate3d(0,12px,0) scale(1.005);
+      transform: translate3d(0,16px,0) scale(1.005); /* moved down a touch more */
       box-shadow:
         0 0 0 6px rgba(0,0,0,.10),
         0 16px 28px rgba(0,0,0,.14);
@@ -190,9 +190,9 @@
     }
 
     @keyframes solvedPop{
-      0%{ transform: translate3d(0,8px,0) scale(.985); }
-      55%{ transform: translate3d(0,20px,0) scale(1.02); }
-      100%{ transform: translate3d(0,18px,0) scale(1.01); }
+      0%{ transform: translate3d(0,10px,0) scale(.985); }
+      55%{ transform: translate3d(0,30px,0) scale(1.02); }
+      100%{ transform: translate3d(0,24px,0) scale(1.01); }
     }
     @keyframes glowPulse{
       0%{
@@ -312,7 +312,6 @@
       height: 98px;
       width:100%;
       max-width:760px;
-      /* ↓ tightened gap now sparkle space is gone */
       margin: clamp(8px, 1.6vh, 14px) auto 0;
       user-select:none;
       flex:0 0 auto;
@@ -440,8 +439,9 @@
       display:inline-flex;
       align-items:center;
       justify-content:center;
+      /* keep an initial shadow, but we animate it down smoothly */
       filter: drop-shadow(0 18px 18px rgba(0,0,0,.24));
-      will-change: transform;
+      will-change: transform, filter;
     }
     .hintSpot .letter{
       width:58px;
@@ -752,7 +752,7 @@ const PUZZLES = [
   { clue:"Raccoon scuffle!",  word1:"raccoon", word2:"scuffle", answer:"buffoon",  tri1:"oon", tri2:"uff" },
   { clue:"Tidal tiptoes",     word1:"tidal",   word2:"tiptoes", answer:"riptide",  tri1:"tid", tri2:"ipt" },
   { clue:"Trusty boombox",    word1:"trusty",  word2:"boombox", answer:"combust",  tri1:"ust", tri2:"omb" },
-  { clue:"Wholly muscle?",    word1:"wholly",  word2:"muscle",  answer:"mollusc",  tri1:"oll", tri2:"usc" },
+  { clue:"Wholly muscle?",    word1:"wholly",  word2:"muscle", answer:"mollusc",  tri1:"oll", tri2:"usc" },
   { clue:"Juicy muscles",     word1:"juicy",   word2:"muscles", answer:"bicycle",  tri1:"icy", tri2:"cle" },
   { clue:"Perform, monkey!",  word1:"perform", word2:"monkey", answer:"hormones", tri1:"orm", tri2:"one" },
 ];
@@ -786,8 +786,6 @@ const el = {
   hintsModalClose: document.getElementById('hintsModalClose'),
 };
 
-const ENHANCED_SESSION_KEY = "triDemoEnhanced_v3";
-
 const TWOTRI_TEXT  = "Two trigrams from same word";
 const OVERLAP_TEXT = "1-letter overlap allowed ✓";
 
@@ -804,7 +802,8 @@ const state = {
   hintCount: 0,
   hintsUsed: { w1:false, w2:false, extras:false },
 
-  assist: false,
+  /* Enhanced mode: now defaults ON and does NOT persist */
+  assist: true,
 
   sel1: null,
   sel2: null,
@@ -908,26 +907,13 @@ document.addEventListener('contextmenu', (e)=>{
 });
 
 /* =======================
-   Enhanced persistence
+   Enhanced (no persistence)
    ======================= */
-function loadEnhancedFromSession(){
-  try{
-    const v = sessionStorage.getItem(ENHANCED_SESSION_KEY);
-    state.assist = (v === "1");
-  }catch{
-    state.assist = false;
-  }
-}
-function saveEnhancedToSession(){
-  try{ sessionStorage.setItem(ENHANCED_SESSION_KEY, state.assist ? "1" : "0"); }catch{}
-}
 function setEnhanced(on, renderNow=true){
   const next = !!on;
   if(state.assist === next) return;
 
   state.assist = next;
-  saveEnhancedToSession();
-
   if(!state.assist) abortDrag();
 
   if(renderNow) renderSmart();
@@ -1781,19 +1767,24 @@ function updateStatusMessages(){
   const hasMax3 = state.badSet && state.badSet.size > 0;
   const hasTwo  = state.twoSet && state.twoSet.size > 0;
   const hasExcluded = state.exclSet && state.exclSet.size > 0;
-  const hasOverlap = overlapActiveNow();
 
+  /* keep warnings always */
   if(hasMax3){ setMsg("Max 3 contiguous letters allowed", 'warn'); state.overlapMsgOn=false; return; }
   if(hasTwo){  setMsg(TWOTRI_TEXT, 'warn'); state.overlapMsgOn=false; return; }
   if(hasExcluded){ setMsg(excludedMsgText(), 'warn'); state.overlapMsgOn=false; return; }
 
   if(el.msg.classList.contains('warn')) setMsg("");
 
+  /* overlap message ONLY when Enhanced is ON */
+  const hasOverlap = state.assist && overlapActiveNow();
+
   if(hasOverlap){
     if(el.msg.textContent !== OVERLAP_TEXT || el.msg.classList.contains('warn')) setMsg(OVERLAP_TEXT);
     state.overlapMsgOn = true;
   }else{
     if(state.overlapMsgOn && el.msg.textContent === OVERLAP_TEXT) setMsg("");
+    /* also clear if user toggled enhanced off while message showing */
+    if(!state.assist && el.msg.textContent === OVERLAP_TEXT) setMsg("");
     state.overlapMsgOn = false;
   }
 }
@@ -1912,7 +1903,7 @@ function revealAnswerGiveUp(){
 }
 
 /* =======================
-   Spotlight fly animation
+   Spotlight fly animation (shadow fades down smoothly)
    ======================= */
 function makeSpotLettersHTML(chars, mode){
   const spot = document.createElement('div');
@@ -1976,14 +1967,17 @@ function runHintFly(kind){
   const sy = tr.height / sr.height;
   const scale = clamp(Math.min(sx, sy), 0.20, 0.95);
 
+  const SH0 = 'drop-shadow(0 18px 18px rgba(0,0,0,.24))';
+  const SH1 = 'drop-shadow(0 2px 2px rgba(0,0,0,0))'; /* fade to zero rather than snapping */
+
   const kf = [
-    { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, offset: 0.00 },
-    { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, offset: 0.40 },
-    { transform: `translate(-50%,-50%) scale(1) rotate(4deg)`,  offset: 0.50 },
-    { transform: `translate(-50%,-50%) scale(1) rotate(-3deg)`, offset: 0.58 },
-    { transform: `translate(-50%,-50%) scale(1) rotate(2deg)`,  offset: 0.64 },
-    { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`,  offset: 0.70 },
-    { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scale}) rotate(0deg)`, offset: 1.00 }
+    { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, filter: SH0, offset: 0.00 },
+    { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, filter: SH0, offset: 0.40 },
+    { transform: `translate(-50%,-50%) scale(1) rotate(4deg)`,  filter: SH0, offset: 0.50 },
+    { transform: `translate(-50%,-50%) scale(1) rotate(-3deg)`, filter: SH0, offset: 0.58 },
+    { transform: `translate(-50%,-50%) scale(1) rotate(2deg)`,  filter: SH0, offset: 0.64 },
+    { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`,  filter: SH0, offset: 0.70 },
+    { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scale}) rotate(0deg)`, filter: SH1, offset: 1.00 }
   ];
 
   const anim = spot.animate(kf, {
@@ -2505,7 +2499,7 @@ function renderHintTrack(){
 }
 
 /* =======================
-   Clue tap behavior (UPDATED):
+   Clue tap behavior:
    - If Enhanced is OFF: first tap anywhere in clue just turns it ON (no cycle/place).
    - Next tap on a word does the action.
    ======================= */
@@ -2540,7 +2534,6 @@ function onClueWordActivate(group){
     e.preventDefault();
     e.stopPropagation();
 
-    // First tap when enhanced is OFF: enable only, no action (and don't throttle the next tap)
     if(!state.assist){
       setEnhanced(true, true);
       lastActionAt = 0;
@@ -2561,7 +2554,6 @@ function onClueWordActivate(group){
   }, { passive:false });
 
   el.clue.addEventListener('click', (e)=>{
-    // Ignore click that follows our pointerdown
     if(Date.now() - handledPointerAt < 650){
       e.preventDefault();
       return;
@@ -2950,6 +2942,9 @@ function resetAllForPuzzle(){
   state.sel1 = null;
   state.sel2 = null;
 
+  /* Enhanced mode always ON on new puzzle */
+  state.assist = true;
+
   setMsg("");
   state.overlapMsgOn = false;
   state.lockMsg = false;
@@ -2964,7 +2959,6 @@ window.addEventListener('resize', ()=>{
 });
 
 /* init */
-loadEnhancedFromSession();
 setCustomKBEnabled(shouldUseCustomKB());
 resetAllForPuzzle();
 renderSmart();
