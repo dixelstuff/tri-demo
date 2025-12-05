@@ -1965,6 +1965,7 @@ function runHintFlyExtrasSequential(targetRow, chars){
     const ch = chars[idx];
     const tEl = targets[idx];
 
+    // Build 1-letter "spot"
     const spot = makeSpotLettersHTML([ch], 'hex');
     overlay.appendChild(spot);
 
@@ -1983,31 +1984,54 @@ function runHintFlyExtrasSequential(targetRow, chars){
     const sy = tr.height / sr.height;
     const scale = clamp(Math.min(sx, sy), 0.20, 0.95);
 
+    const DURATION = 700;
+    const FADE_MS = 140;               // crossfade window at the end
+    const fadeOffset = 1 - (FADE_MS / DURATION);
+
+    // Crossfade IN the real target letter (removes the 1-frame "flash")
+    // Use WAAPI so it's tied to timing rather than setTimeout jitter.
+    try{
+      tEl.animate(
+        [{opacity: 0}, {opacity: 1}],
+        {duration: FADE_MS, delay: DURATION - FADE_MS, easing: 'linear', fill: 'forwards'}
+      );
+    }catch{
+      // fallback: just show at the end
+    }
+
+    // Fade OUT the flying spot over the same final window
     const kf = [
-      { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, filter: SH0, offset: 0.00 },
-      { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`, filter: SH0, offset: 0.44 },
-      { transform: `translate(-50%,-50%) scale(1) rotate(3deg)`,  filter: SH0, offset: 0.54 },
-      { transform: `translate(-50%,-50%) scale(1) rotate(-2deg)`, filter: SH0, offset: 0.60 },
-      { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scale}) rotate(0deg)`, filter: SH1, offset: 1.00 }
+      { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`,  filter: SH0, opacity: 1, offset: 0.00 },
+      { transform: `translate(-50%,-50%) scale(1) rotate(0deg)`,  filter: SH0, opacity: 1, offset: 0.44 },
+      { transform: `translate(-50%,-50%) scale(1) rotate(3deg)`,   filter: SH0, opacity: 1, offset: 0.54 },
+      { transform: `translate(-50%,-50%) scale(1) rotate(-2deg)`,  filter: SH0, opacity: 1, offset: 0.60 },
+      { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scale}) rotate(0deg)`, filter: SH1, opacity: 1, offset: fadeOffset },
+      { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scale}) rotate(0deg)`, filter: SH1, opacity: 0, offset: 1.00 }
     ];
 
     const anim = spot.animate(kf, {
-      duration: 700,
+      duration: DURATION,
       easing: 'cubic-bezier(.16,.88,.22,1)',
       fill: 'forwards'
     });
 
     anim.onfinish = ()=>{
-      try{ spot.remove(); }catch{}
-      tEl.style.opacity = "";     // reveal this letter as it "lands"
-      idx++;
-      requestAnimationFrame(flyOne);
+      // Ensure the target is shown (even if WAAPI failed)
+      tEl.style.opacity = "";
+
+      // Remove the flying node on the next frame so there's never a blank tick
+      requestAnimationFrame(()=>{
+        try{ spot.remove(); }catch{}
+        idx++;
+        requestAnimationFrame(flyOne);
+      });
     };
   };
 
   requestAnimationFrame(flyOne);
   return true;
 }
+
 
 function runHintFly(kind){
   let target = null;
