@@ -157,6 +157,10 @@
       box-shadow:0 3px 8px rgba(0,0,0,.08);
       transition: box-shadow .45s ease;
       will-change: transform, box-shadow;
+
+      /* NEW: ensure sparkle always sits above whatever comes below (desktop “stuck” fix) */
+      z-index: 20;
+      isolation: isolate;
     }
     @media (pointer:coarse) and (max-width: 920px){
       .gridDock{ margin-top: clamp(36px, 6.1vh, 62px); }
@@ -305,14 +309,10 @@
 
     html.has-kb .cell input{ pointer-events:none; }
 
-    /* ===== Enhanced sparkle icon (moved DOWN ~20px, LEFT ~10px, slightly smaller) ===== */
+    /* ===== Enhanced sparkle icon ===== */
     .enhanceBtn{
       position:absolute;
-
-      /* moved 10px further left (via right +10) */
       right: 8px;
-
-      /* moved down ~20px from previous placement */
       top: calc(100% + 4px);
 
       width: 44px;
@@ -330,7 +330,9 @@
       touch-action: manipulation;
       appearance:none;
       -webkit-appearance:none;
-      z-index: 30;
+
+      /* NEW: make absolutely sure it’s on top (desktop “stuck” fix) */
+      z-index: 300;
       pointer-events:auto;
     }
     .enhanceBtn svg{
@@ -371,6 +373,9 @@
       margin: clamp(18px, 3.0vh, 28px) auto 0;
       user-select:none;
       flex:0 0 auto;
+
+      /* NEW: don’t ever block clicks on sparkle that sits “over” this zone */
+      pointer-events: none;
     }
     .msg{
       position:absolute;
@@ -826,9 +831,9 @@
     }
     .statusPill.used{ background: rgba(255,255,255,.78); }
 
-    /* Locked text for Extras: small and contained, no card expansion */
+    /* FIX: no weird left blank space; keep pill size (no expansion), use ellipsis */
     .statusPill.lockedNote{
-      min-width: 220px;
+      min-width: 116px;          /* keep same box size */
       font-size: 10px;
       letter-spacing: 0;
       text-transform: none;
@@ -836,8 +841,12 @@
       opacity: .82;
       background: rgba(0,0,0,.04);
       border-color: rgba(0,0,0,.14);
-      justify-content: flex-end;
-      padding: 0 12px;
+      justify-content: center;   /* <-- key fix */
+      text-align: center;
+      padding: 0 10px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   </style>
 </head>
@@ -911,7 +920,7 @@ const PUZZLES = [
   { clue:"Raccoon scuffle!",  word1:"raccoon", word2:"scuffle", answer:"buffoon",  tri1:"oon", tri2:"uff" },
   { clue:"Tidal tiptoes",     word1:"tidal",   word2:"tiptoes", answer:"riptide",  tri1:"tid", tri2:"ipt" },
   { clue:"Trusty boombox",    word1:"trusty",  word2:"boombox", answer:"combust",  tri1:"ust", tri2:"omb" },
-  { clue:"Wholly muscle?",    word1:"wholly",  word2:"muscle", answer:"mollusc",  tri1:"oll", tri2:"usc" },
+  { clue:"Wholly muscle?",    word1:"wholly",  word2:"muscle",  answer:"mollusc",  tri1:"oll", tri2:"usc" },
   { clue:"Juicy muscles",     word1:"juicy",   word2:"muscles", answer:"bicycle",  tri1:"icy", tri2:"cle" },
   { clue:"Perform, monkey!",  word1:"perform", word2:"monkey", answer:"hormones", tri1:"orm", tri2:"one" },
 ];
@@ -2856,7 +2865,6 @@ function makeHintCardTile({id, title, cls}){
   card.addEventListener('click', ()=>{
     if(state.finished) return;
     if(status === 'avail'){ applyHint(id); return; }
-    // locked/used: no-op (locked message is shown in the pill)
   });
 
   return card;
@@ -2895,7 +2903,6 @@ function applyHint(id){
   if(id === HINT_IDS.extras){
     if(state.hintsUsed.extras) return;
     if(!extrasUnlocked()){
-      // locked text is always shown in the right pill; do nothing here
       return;
     }
     state.hintsUsed.extras = true;
