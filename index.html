@@ -312,7 +312,8 @@
       height: 98px;
       width:100%;
       max-width:760px;
-      margin: clamp(18px, 3.0vh, 28px) auto 0;
+      /* ↓ tightened gap now sparkle space is gone */
+      margin: clamp(8px, 1.6vh, 14px) auto 0;
       user-select:none;
       flex:0 0 auto;
       pointer-events: none; /* don't block background taps */
@@ -617,7 +618,7 @@
       .cell input{ font-size:clamp(24px,6.05vw,36px); }
       .letter{ width:28px; height:28px; font-size:19px; }
 
-      .msgSlot{ height: 104px; }
+      .msgSlot{ height: 104px; margin-top: clamp(8px, 1.5vh, 14px); }
       .msg{ font-size:20px; top: 20px; }
       .msg.warn{ font-size:19px; }
       .msg.result{ top: 30px; }
@@ -907,7 +908,7 @@ document.addEventListener('contextmenu', (e)=>{
 });
 
 /* =======================
-   Enhanced persistence (NO help message ever)
+   Enhanced persistence
    ======================= */
 function loadEnhancedFromSession(){
   try{
@@ -974,17 +975,15 @@ function bindTapReliable(node, fn){
 }
 
 /* =======================
-   Background-tap toggles Enhanced (no button)
+   Background-tap toggles Enhanced (not on clue / buttons / keyboard)
    ======================= */
 function isBackgroundToggleTarget(t){
   if(!t) return false;
 
-  // must be "background": not a button/link, not clue, not grid, not hint track, not keyboard, not modal
   if(t.closest && t.closest(
     'button, a, #clue, #gridDock, #gridWrap, #grid, #hintTrack, #btnRow, #kbHost, #hintsModal'
   )) return false;
 
-  // allow only within the page "wrap" area (so clicks outside body margins don't misfire)
   if(t.closest && !t.closest('#wrap')) return false;
 
   return true;
@@ -1889,8 +1888,8 @@ function onCheck(){
 /* =======================
    Give up
    ======================= */
-function allHintsUsed(){
-  return !!(state.hintsUsed.w1 && state.hintsUsed.w2 && state.hintsUsed.extras);
+function extrasUnlocked(){
+  return state.hintsUsed.w1 && state.hintsUsed.w2;
 }
 function revealAnswerGiveUp(){
   if(state.finished) return;
@@ -2022,219 +2021,6 @@ function scheduleHintFly(kind){
     }
   };
   requestAnimationFrame(tryRun);
-}
-
-/* =======================
-   Placing / cycling (Enhanced-driven; will auto-enable when invoked)
-   ======================= */
-function placeTrigram(group, tri){
-  if(!flags().allowClueTapPlace && !flags().allowHintTapPlace) return;
-  if(state.finished) return;
-  clearTransientOnAnyChange();
-
-  const n = getN();
-  const t = norm(tri);
-  if(!t || t.length !== 3) return;
-
-  const otherGroup = group === 'w1' ? 'w2' : 'w1';
-  const other = state.placed[otherGroup];
-
-  let start = (state.placed[group] ? state.placed[group].start : null);
-  const focus = clamp(state.focusIdx ?? 0, 0, n-1);
-  const prefStart = clamp(focus, 0, startMax());
-
-  function tryStartsInOrder(){
-    const order = [];
-    order.push(prefStart);
-    for(let d=1; d<=startMax(); d++){
-      if(prefStart-d >= 0) order.push(prefStart-d);
-      if(prefStart+d <= startMax()) order.push(prefStart+d);
-    }
-    return order;
-  }
-
-  if(start == null){
-    start = null;
-    for(const s of tryStartsInOrder()){
-      if(other){
-        const ol = overlapCount(s, other.start);
-        if(ol > 1) continue;
-        if(ol === 1 && !overlapIsValid(s, t, other.start, other.tri)) continue;
-      }
-      start = s; break;
-    }
-    if(start == null){
-      setTransientMsg("can’t place", 1800);
-      return;
-    }
-  } else {
-    if(other){
-      const ol = overlapCount(start, other.start);
-      const ok = (ol <= 1) && (ol !== 1 || overlapIsValid(start, t, other.start, other.tri));
-      if(!ok){
-        start = null;
-        for(const s of tryStartsInOrder()){
-          const ol2 = overlapCount(s, other.start);
-          if(ol2 > 1) continue;
-          if(ol2 === 1 && !overlapIsValid(s, t, other.start, other.tri)) continue;
-          start = s; break;
-        }
-        if(start == null){
-          setTransientMsg("can’t place", 1800);
-          return;
-        }
-      }
-    }
-  }
-
-  state.placed[group] = {start, tri:t};
-  removeSinglesInCells(trigramCells(start));
-  setMiniHighlightToTri(group, t);
-}
-function cyclePlacedTrigram(group){
-  if(!flags().allowClueTapCycle) return;
-  if(state.finished) return;
-
-  const pl = state.placed[group];
-  if(!pl) return;
-
-  const p = current();
-  const w = norm(group === 'w1' ? p.word1 : p.word2);
-  const maxStart = Math.max(0, w.length - 3);
-  if(maxStart === 0) return;
-
-  const curTri = norm(pl.tri);
-  const curPos = w.indexOf(curTri);
-  if(curPos >= 0){
-    if(group === 'w1') state.sel1 = clamp(curPos, 0, maxStart);
-    else state.sel2 = clamp(curPos, 0, maxStart);
-  }else{
-    if(group === 'w1') state.sel1 = 0;
-    else state.sel2 = 0;
-  }
-
-  let s = (group === 'w1' ? state.sel1 : state.sel2);
-  if(s == null) s = 0;
-  s = (s + 1) % (maxStart + 1);
-  if(group === 'w1') state.sel1 = s; else state.sel2 = s;
-
-  const tri = w.slice(s, s+3);
-  placeTrigram(group, tri);
-}
-function firstTrigramOfWord(group){
-  const p = current();
-  const w = norm(group === 'w1' ? p.word1 : p.word2);
-  if(w.length < 3) return null;
-  return w.slice(0, 3);
-}
-
-/* =======================
-   Hint track UI (tap will auto-enable Enhanced if off)
-   ======================= */
-function makeTrigramBlock(tri, cls, labelText, onTap, id){
-  const block = document.createElement('div');
-  block.className = "trackBlock";
-
-  const box = document.createElement('div');
-  box.className = "letters clickable";
-  box.setAttribute("aria-label", labelText);
-  if(id) box.id = id;
-
-  if(typeof onTap === "function"){
-    bindTapReliable(box, onTap);
-  }
-
-  for(let i=0;i<tri.length;i++){
-    const d = document.createElement('div');
-    d.className = "letter " + cls;
-    d.textContent = tri[i];
-    box.appendChild(d);
-  }
-  block.appendChild(box);
-
-  return block;
-}
-function renderHintTrack(){
-  const p = current();
-
-  el.trackW1.innerHTML = "";
-  el.trackW2.innerHTML = "";
-  el.trackExtras.innerHTML = "";
-
-  el.trackW1.style.display = "none";
-  el.trackW2.style.display = "none";
-  el.trackExtras.style.display = "none";
-
-  if(state.hintsUsed.w1){
-    el.trackW1.appendChild(
-      makeTrigramBlock(norm(p.tri1), "sel-w1", "word 1 trigram", ()=>{
-        if(state.finished || state.modalOpen) return;
-        if(!state.assist) setEnhanced(true, false);
-        placeTrigram('w1', norm(p.tri1));
-        renderSmart();
-      }, "trackBox-w1")
-    );
-    el.trackW1.style.display = "";
-  }
-
-  if(state.hintsUsed.w2){
-    el.trackW2.appendChild(
-      makeTrigramBlock(norm(p.tri2), "sel-w2", "word 2 trigram", ()=>{
-        if(state.finished || state.modalOpen) return;
-        if(!state.assist) setEnhanced(true, false);
-        placeTrigram('w2', norm(p.tri2));
-        renderSmart();
-      }, "trackBox-w2")
-    );
-    el.trackW2.style.display = "";
-  }
-
-  if(state.hintsUsed.extras){
-    if(state.bank.length === 0) rebuildBank();
-
-    const block = document.createElement('div');
-    block.className = "trackBlock";
-
-    const row = document.createElement('div');
-    row.className = "extrasRow";
-    row.id = "trackBox-extras";
-
-    for(const tile of state.bank){
-      const box = document.createElement('div');
-      box.className = "letters clickable";
-
-      const d = document.createElement('div');
-      d.className = "letter extra";
-      d.textContent = tile.ch;
-
-      bindTapReliable(d, ()=>{
-        if(state.finished) return;
-        if(state.modalOpen) return;
-        clearTransientOnAnyChange();
-
-        if(!state.assist) setEnhanced(true, false);
-
-        const n = getN();
-        for(let i=0;i<n;i++){
-          if(state.placed.w1 && i>=state.placed.w1.start && i<state.placed.w1.start+3) continue;
-          if(state.placed.w2 && i>=state.placed.w2.start && i<state.placed.w2.start+3) continue;
-          if(state.singles.find(s=>s.idx===i)) continue;
-          state.singles.push({id: uid(), ch: tile.ch, idx: i});
-          state.focusIdx = clamp(i+1,0,n-1);
-          renderSmart();
-          return;
-        }
-        setTransientMsg("No blank spot", 2000);
-      });
-
-      box.appendChild(d);
-      row.appendChild(box);
-    }
-
-    block.appendChild(row);
-    el.trackExtras.appendChild(block);
-    el.trackExtras.style.display = "";
-  }
 }
 
 /* =======================
@@ -2506,6 +2292,302 @@ function triForClue(group){
 }
 
 /* =======================
+   Placing / cycling
+   ======================= */
+function placeTrigram(group, tri){
+  if(!flags().allowClueTapPlace && !flags().allowHintTapPlace) return;
+  if(state.finished) return;
+  clearTransientOnAnyChange();
+
+  const n = getN();
+  const t = norm(tri);
+  if(!t || t.length !== 3) return;
+
+  const otherGroup = group === 'w1' ? 'w2' : 'w1';
+  const other = state.placed[otherGroup];
+
+  let start = (state.placed[group] ? state.placed[group].start : null);
+  const focus = clamp(state.focusIdx ?? 0, 0, n-1);
+  const prefStart = clamp(focus, 0, startMax());
+
+  function tryStartsInOrder(){
+    const order = [];
+    order.push(prefStart);
+    for(let d=1; d<=startMax(); d++){
+      if(prefStart-d >= 0) order.push(prefStart-d);
+      if(prefStart+d <= startMax()) order.push(prefStart+d);
+    }
+    return order;
+  }
+
+  if(start == null){
+    start = null;
+    for(const s of tryStartsInOrder()){
+      if(other){
+        const ol = overlapCount(s, other.start);
+        if(ol > 1) continue;
+        if(ol === 1 && !overlapIsValid(s, t, other.start, other.tri)) continue;
+      }
+      start = s; break;
+    }
+    if(start == null){
+      setTransientMsg("can’t place", 1800);
+      return;
+    }
+  } else {
+    if(other){
+      const ol = overlapCount(start, other.start);
+      const ok = (ol <= 1) && (ol !== 1 || overlapIsValid(start, t, other.start, other.tri));
+      if(!ok){
+        start = null;
+        for(const s of tryStartsInOrder()){
+          const ol2 = overlapCount(s, other.start);
+          if(ol2 > 1) continue;
+          if(ol2 === 1 && !overlapIsValid(s, t, other.start, other.tri)) continue;
+          start = s; break;
+        }
+        if(start == null){
+          setTransientMsg("can’t place", 1800);
+          return;
+        }
+      }
+    }
+  }
+
+  state.placed[group] = {start, tri:t};
+  removeSinglesInCells(trigramCells(start));
+  setMiniHighlightToTri(group, t);
+}
+function cyclePlacedTrigram(group){
+  if(!flags().allowClueTapCycle) return;
+  if(state.finished) return;
+
+  const pl = state.placed[group];
+  if(!pl) return;
+
+  const p = current();
+  const w = norm(group === 'w1' ? p.word1 : p.word2);
+  const maxStart = Math.max(0, w.length - 3);
+  if(maxStart === 0) return;
+
+  const curTri = norm(pl.tri);
+  const curPos = w.indexOf(curTri);
+  if(curPos >= 0){
+    if(group === 'w1') state.sel1 = clamp(curPos, 0, maxStart);
+    else state.sel2 = clamp(curPos, 0, maxStart);
+  }else{
+    if(group === 'w1') state.sel1 = 0;
+    else state.sel2 = 0;
+  }
+
+  let s = (group === 'w1' ? state.sel1 : state.sel2);
+  if(s == null) s = 0;
+  s = (s + 1) % (maxStart + 1);
+  if(group === 'w1') state.sel1 = s; else state.sel2 = s;
+
+  const tri = w.slice(s, s+3);
+  placeTrigram(group, tri);
+}
+function firstTrigramOfWord(group){
+  const p = current();
+  const w = norm(group === 'w1' ? p.word1 : p.word2);
+  if(w.length < 3) return null;
+  return w.slice(0, 3);
+}
+
+/* =======================
+   Hint track UI
+   ======================= */
+function makeTrigramBlock(tri, cls, labelText, onTap, id){
+  const block = document.createElement('div');
+  block.className = "trackBlock";
+
+  const box = document.createElement('div');
+  box.className = "letters clickable";
+  box.setAttribute("aria-label", labelText);
+  if(id) box.id = id;
+
+  if(typeof onTap === "function"){
+    bindTapReliable(box, onTap);
+  }
+
+  for(let i=0;i<tri.length;i++){
+    const d = document.createElement('div');
+    d.className = "letter " + cls;
+    d.textContent = tri[i];
+    box.appendChild(d);
+  }
+  block.appendChild(box);
+
+  return block;
+}
+function renderHintTrack(){
+  const p = current();
+
+  el.trackW1.innerHTML = "";
+  el.trackW2.innerHTML = "";
+  el.trackExtras.innerHTML = "";
+
+  el.trackW1.style.display = "none";
+  el.trackW2.style.display = "none";
+  el.trackExtras.style.display = "none";
+
+  if(state.hintsUsed.w1){
+    el.trackW1.appendChild(
+      makeTrigramBlock(norm(p.tri1), "sel-w1", "word 1 trigram", ()=>{
+        if(state.finished || state.modalOpen) return;
+        if(!state.assist) setEnhanced(true, false);
+        placeTrigram('w1', norm(p.tri1));
+        renderSmart();
+      }, "trackBox-w1")
+    );
+    el.trackW1.style.display = "";
+  }
+
+  if(state.hintsUsed.w2){
+    el.trackW2.appendChild(
+      makeTrigramBlock(norm(p.tri2), "sel-w2", "word 2 trigram", ()=>{
+        if(state.finished || state.modalOpen) return;
+        if(!state.assist) setEnhanced(true, false);
+        placeTrigram('w2', norm(p.tri2));
+        renderSmart();
+      }, "trackBox-w2")
+    );
+    el.trackW2.style.display = "";
+  }
+
+  if(state.hintsUsed.extras){
+    if(state.bank.length === 0) rebuildBank();
+
+    const block = document.createElement('div');
+    block.className = "trackBlock";
+
+    const row = document.createElement('div');
+    row.className = "extrasRow";
+    row.id = "trackBox-extras";
+
+    for(const tile of state.bank){
+      const box = document.createElement('div');
+      box.className = "letters clickable";
+
+      const d = document.createElement('div');
+      d.className = "letter extra";
+      d.textContent = tile.ch;
+
+      bindTapReliable(d, ()=>{
+        if(state.finished) return;
+        if(state.modalOpen) return;
+        clearTransientOnAnyChange();
+
+        if(!state.assist) setEnhanced(true, false);
+
+        const n = getN();
+        for(let i=0;i<n;i++){
+          if(state.placed.w1 && i>=state.placed.w1.start && i<state.placed.w1.start+3) continue;
+          if(state.placed.w2 && i>=state.placed.w2.start && i<state.placed.w2.start+3) continue;
+          if(state.singles.find(s=>s.idx===i)) continue;
+          state.singles.push({id: uid(), ch: tile.ch, idx: i});
+          state.focusIdx = clamp(i+1,0,n-1);
+          renderSmart();
+          return;
+        }
+        setTransientMsg("No blank spot", 2000);
+      });
+
+      box.appendChild(d);
+      row.appendChild(box);
+    }
+
+    block.appendChild(row);
+    el.trackExtras.appendChild(block);
+    el.trackExtras.style.display = "";
+  }
+}
+
+/* =======================
+   Clue tap behavior (UPDATED):
+   - If Enhanced is OFF: first tap anywhere in clue just turns it ON (no cycle/place).
+   - Next tap on a word does the action.
+   ======================= */
+function onClueWordActivate(group){
+  if(state.finished) return;
+  if(state.modalOpen) return;
+  if(group !== 'w1' && group !== 'w2') return;
+
+  clearTransientOnAnyChange();
+
+  if(state.placed[group]){
+    cyclePlacedTrigram(group);
+  }else{
+    let tri = null;
+    if(group === 'w1' && state.hintsUsed.w1) tri = norm(current().tri1);
+    if(group === 'w2' && state.hintsUsed.w2) tri = norm(current().tri2);
+    if(!tri) tri = firstTrigramOfWord(group);
+    if(tri) placeTrigram(group, tri);
+  }
+
+  renderSmart();
+}
+
+(function bindClueFastTap(){
+  let lastActionAt = 0;
+  let handledPointerAt = 0;
+
+  el.clue.addEventListener('pointerdown', (e)=>{
+    if(state.finished || state.modalOpen) return;
+
+    handledPointerAt = Date.now();
+    e.preventDefault();
+    e.stopPropagation();
+
+    // First tap when enhanced is OFF: enable only, no action (and don't throttle the next tap)
+    if(!state.assist){
+      setEnhanced(true, true);
+      lastActionAt = 0;
+      if(!state.useCustomKB){
+        requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
+      }
+      return;
+    }
+
+    const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
+    if(!w) return;
+
+    const now = Date.now();
+    if(now - lastActionAt < 220) return;
+    lastActionAt = now;
+
+    onClueWordActivate(w.dataset.group);
+  }, { passive:false });
+
+  el.clue.addEventListener('click', (e)=>{
+    // Ignore click that follows our pointerdown
+    if(Date.now() - handledPointerAt < 650){
+      e.preventDefault();
+      return;
+    }
+    if(state.finished || state.modalOpen) return;
+
+    e.preventDefault();
+
+    if(!state.assist){
+      setEnhanced(true, true);
+      lastActionAt = 0;
+      return;
+    }
+
+    const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
+    if(!w) return;
+
+    const now = Date.now();
+    if(now - lastActionAt < 220) return;
+    lastActionAt = now;
+
+    onClueWordActivate(w.dataset.group);
+  });
+})();
+
+/* =======================
    Render grid
    ======================= */
 function renderGrid(stealFocus=true){
@@ -2670,9 +2752,6 @@ function renderGrid(stealFocus=true){
 /* =======================
    Hints: sequential button (hint 1 → hint 2 → hint 3 → give up)
    ======================= */
-function extrasUnlocked(){
-  return state.hintsUsed.w1 && state.hintsUsed.w2;
-}
 function nextHintStage(){
   if(!state.hintsUsed.w1) return 1;
   if(!state.hintsUsed.w2) return 2;
@@ -2772,65 +2851,6 @@ el.nextBtn.addEventListener('click', (e)=>{
   renderSmart();
 });
 
-/* =======================
-   Clue tap: if Enhanced is off, turn on + do action
-   ======================= */
-function onClueWordActivate(group){
-  if(state.finished) return;
-  if(state.modalOpen) return;
-  if(group !== 'w1' && group !== 'w2') return;
-
-  clearTransientOnAnyChange();
-
-  if(!state.assist){
-    setEnhanced(true, false);
-  }
-
-  if(state.placed[group]){
-    cyclePlacedTrigram(group);
-  }else{
-    let tri = null;
-    if(group === 'w1' && state.hintsUsed.w1) tri = norm(current().tri1);
-    if(group === 'w2' && state.hintsUsed.w2) tri = norm(current().tri2);
-    if(!tri) tri = firstTrigramOfWord(group);
-    if(tri) placeTrigram(group, tri);
-  }
-
-  renderSmart();
-}
-
-(function bindClueFastTap(){
-  let last = 0;
-
-  el.clue.addEventListener('pointerdown', (e)=>{
-    if(state.finished || state.modalOpen) return;
-
-    const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
-    if(!w) return;
-    e.preventDefault();
-    e.stopPropagation();
-
-    const now = Date.now();
-    if(now - last < 250) return;
-    last = now;
-
-    onClueWordActivate(w.dataset.group);
-  }, { passive:false });
-
-  el.clue.addEventListener('click', (e)=>{
-    if(state.modalOpen) return;
-
-    const now = Date.now();
-    if(now - last < 400){ e.preventDefault(); return; }
-
-    const w = e.target && e.target.closest ? e.target.closest('.clueWord') : null;
-    if(!w) return;
-    e.preventDefault();
-
-    onClueWordActivate(w.dataset.group);
-  });
-})();
-
 /* Always-active typing outside grid */
 document.addEventListener('keydown', (e)=>{
   if(state.finished) return;
@@ -2913,17 +2933,6 @@ function render(stealFocus=true){
 /* =======================
    Resets + init
    ======================= */
-function resetMainGridOnly(){
-  state.placed = {w1:null, w2:null};
-  state.singles = [];
-  state.focusIdx = 0;
-  state.sel1 = null;
-  state.sel2 = null;
-  setMsg("");
-  state.overlapMsgOn = false;
-  state.lockMsg = false;
-  abortDrag();
-}
 function resetAllForPuzzle(){
   state.finished = false;
   state.gaveUp = false;
@@ -2935,7 +2944,16 @@ function resetAllForPuzzle(){
   state.pendingFly = null;
   state.flyAttempts = 0;
 
-  resetMainGridOnly();
+  state.placed = {w1:null, w2:null};
+  state.singles = [];
+  state.focusIdx = 0;
+  state.sel1 = null;
+  state.sel2 = null;
+
+  setMsg("");
+  state.overlapMsgOn = false;
+  state.lockMsg = false;
+  abortDrag();
 }
 
 window.addEventListener('resize', ()=>{
