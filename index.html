@@ -445,6 +445,9 @@
       pointer-events:none;
       display:block;
     }
+
+    /* UPDATED: spotlight uses the SAME base sizing as the final track letters.
+       We animate scale down to 1.0, so end-state matches perfectly (no font pop). */
     .hintSpot{
       position:fixed;
       left:50%;
@@ -453,29 +456,14 @@
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      filter: drop-shadow(0 18px 18px rgba(0,0,0,.24));
-      will-change: transform, filter;
-    }
-    .hintSpot .letter{
-      width:58px;
-      height:58px;
-      font-size:36px;
-      border-width:2px;
-      border-color: rgba(0,0,0,.22);
-      background: #fff;
+      will-change: transform, filter, opacity;
     }
     .hintSpot.h1 .letter{ background: var(--w1); }
     .hintSpot.h2 .letter{ background: var(--w2); }
     .hintSpot.hex .letter{ background: rgba(255,255,255,.97); }
-    .hintSpot .letter + .letter{ margin-left:-2px; }
 
     @media (max-width:520px){
       .hintSpot{ top:40%; }
-      .hintSpot .letter{
-        width:54px;
-        height:54px;
-        font-size:34px;
-      }
     }
 
     .btnRow{
@@ -1177,7 +1165,7 @@ function excludedMsgText(){
 }
 
 /* =======================
-   Modal control (kept for later)
+   Modal (kept)
    ======================= */
 function closeModal(){
   if(!state.modalOpen) return;
@@ -1902,35 +1890,56 @@ function revealAnswerGiveUp(){
 }
 
 /* =======================
-   Spotlight fly animation
-   - unified style for trigram + single letters
-   - removed all jiggle/rotate
+   Spotlight fly animation (UPDATED)
+   - shadow fades progressively all the way to the end
+   - end-state scale is 1.0 matching the final hint tiles exactly
+   - no blank frame: we reveal target BEFORE removing the overlay
    ======================= */
 function makeSpotLettersHTML(chars, mode){
   const spot = document.createElement('div');
   spot.className = `hintSpot ${mode}`;
+
   const wrap = document.createElement('div');
   wrap.className = "letters";
+
+  let perLetterClass = "";
+  if(mode === "h1") perLetterClass = "sel-w1";
+  else if(mode === "h2") perLetterClass = "sel-w2";
+  else if(mode === "hex") perLetterClass = "extra";
+
   for(const ch of chars){
     const d = document.createElement('div');
-    d.className = "letter";
+    d.className = `letter ${perLetterClass}`.trim();
     d.textContent = ch;
     wrap.appendChild(d);
   }
+
   spot.appendChild(wrap);
   return spot;
 }
 
-function hintFlyKeyframes(dx, dy, scale){
-  const SH0 = 'drop-shadow(0 18px 18px rgba(0,0,0,.24))';
-  const SHM = 'drop-shadow(0 10px 10px rgba(0,0,0,.12))';
-  const SH1 = 'drop-shadow(0 2px 2px rgba(0,0,0,0))';
+function hintFlyKeyframes(dx, dy, startScale){
+  // Keep the same filter function across frames so it interpolates smoothly.
+  const SH0 = 'drop-shadow(0 22px 22px rgba(0,0,0,.26))';
+  const SH1 = 'drop-shadow(0 14px 14px rgba(0,0,0,.18))';
+  const SH2 = 'drop-shadow(0 7px 7px rgba(0,0,0,.11))';
+  const SH3 = 'drop-shadow(0 3px 3px rgba(0,0,0,.08))';
+  const SH4 = 'drop-shadow(0 0 0 rgba(0,0,0,0))';
+
+  const dx1 = dx * 0.78;
+  const dy1 = dy * 0.78;
+  const dx2 = dx * 0.93;
+  const dy2 = dy * 0.93;
 
   return [
-    { transform: `translate(-50%,-50%) scale(1)`, filter: SH0, offset: 0.00 },
-    { transform: `translate(-50%,-50%) scale(1)`, filter: SH0, offset: 0.58 },
-    { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scale})`, filter: SHM, offset: 0.88 },
-    { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scale})`, filter: SH1, offset: 1.00 }
+    { transform: `translate(-50%,-50%) scale(${startScale})`, filter: SH0, opacity: 1, offset: 0.00 },
+    { transform: `translate(-50%,-50%) scale(${startScale})`, filter: SH0, opacity: 1, offset: 0.56 },
+
+    { transform: `translate(-50%,-50%) translate3d(${dx1}px, ${dy1}px, 0) scale(1.14)`, filter: SH1, opacity: 1, offset: 0.82 },
+    { transform: `translate(-50%,-50%) translate3d(${dx2}px, ${dy2}px, 0) scale(1.03)`, filter: SH2, opacity: 1, offset: 0.92 },
+    { transform: `translate(-50%,-50%) translate3d(${dx}px, ${dy}px, 0) scale(1.00)`, filter: SH3, opacity: 1, offset: 0.975 },
+
+    { transform: `translate(-50%,-50%) translate3d(${dx}px, ${dy}px, 0) scale(1.00)`, filter: SH4, opacity: 1, offset: 1.00 }
   ];
 }
 
@@ -1939,6 +1948,7 @@ function runHintFlyExtrasSequential(targetRow, chars){
   const targets = Array.from(targetRow.querySelectorAll('.letter'));
   if(!targets.length) return false;
 
+  // Hide all final tiles up-front, but bring each one back BEFORE removing the flying tile.
   for(const t of targets) t.style.opacity = "0";
 
   const overlay = document.createElement('div');
@@ -1950,8 +1960,9 @@ function runHintFlyExtrasSequential(targetRow, chars){
 
   const flyOne = ()=>{
     if(idx >= total){
-      try{ overlay.remove(); }catch{}
-      for(const t of targets) t.style.opacity = "";
+      // Ensure all tiles are visible, then remove overlay.
+      for(const t of targets) t.style.opacity = "1";
+      requestAnimationFrame(()=> { try{ overlay.remove(); }catch{} });
       return;
     }
 
@@ -1972,21 +1983,23 @@ function runHintFlyExtrasSequential(targetRow, chars){
     const dx = tcx - scx;
     const dy = tcy - scy;
 
-    const sx = tr.width / sr.width;
-    const sy = tr.height / sr.height;
-    const scale = clamp(Math.min(sx, sy), 0.20, 0.95);
+    const coarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+    const startScale = coarse ? 2.05 : 2.15;
 
-    const anim = spot.animate(hintFlyKeyframes(dx, dy, scale), {
-      duration: 820,
-      easing: 'cubic-bezier(.16,.88,.22,1)',
+    const anim = spot.animate(hintFlyKeyframes(dx, dy, startScale), {
+      duration: 860,
+      easing: 'cubic-bezier(.14,.88,.22,1)',
       fill: 'forwards'
     });
 
     anim.onfinish = ()=>{
-      try{ spot.remove(); }catch{}
-      tEl.style.opacity = "";
-      idx++;
-      requestAnimationFrame(flyOne);
+      // Critical: reveal the final tile first, then remove the flyer on the next frame.
+      tEl.style.opacity = "1";
+      requestAnimationFrame(()=>{
+        try{ spot.remove(); }catch{}
+        idx++;
+        requestAnimationFrame(flyOne);
+      });
     };
   };
 
@@ -2018,6 +2031,7 @@ function runHintFly(kind){
 
   if(!target || !chars.length) return false;
 
+  // Hide final target (no gap: we bring it back before removing overlay)
   target.style.opacity = "0";
 
   const overlay = document.createElement('div');
@@ -2038,19 +2052,20 @@ function runHintFly(kind){
   const dx = tcx - scx;
   const dy = tcy - scy;
 
-  const sx = tr.width / sr.width;
-  const sy = tr.height / sr.height;
-  const scale = clamp(Math.min(sx, sy), 0.20, 0.95);
+  const coarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+  const startScale = coarse ? 2.05 : 2.15;
 
-  const anim = spot.animate(hintFlyKeyframes(dx, dy, scale), {
-    duration: 820,
-    easing: 'cubic-bezier(.16,.88,.22,1)',
+  const anim = spot.animate(hintFlyKeyframes(dx, dy, startScale), {
+    duration: 860,
+    easing: 'cubic-bezier(.14,.88,.22,1)',
     fill: 'forwards'
   });
 
   anim.onfinish = ()=>{
-    try{ overlay.remove(); }catch{}
-    target.style.opacity = "";
+    target.style.opacity = "1";
+    requestAnimationFrame(()=>{
+      try{ overlay.remove(); }catch{}
+    });
   };
 
   return true;
@@ -2072,7 +2087,7 @@ function scheduleHintFly(kind){
     }else{
       const map = {w1:'trackBox-w1', w2:'trackBox-w2', extras:'trackBox-extras'};
       const t = document.getElementById(map[state.pendingFly]||"");
-      if(t) t.style.opacity = "";
+      if(t) t.style.opacity = "1";
       state.pendingFly = null;
       state.flyAttempts = 0;
     }
@@ -2304,7 +2319,7 @@ function onDragEnd(e){
 }
 
 /* =======================
-   Underline logic
+   Underline logic (unchanged)
    ======================= */
 function errorItemsForGroup(group){
   if(state.badRuns[group] && state.badRuns[group].length){
