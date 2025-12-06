@@ -446,8 +446,6 @@
       display:block;
     }
 
-    /* UPDATED: spotlight uses the SAME base sizing as the final track letters.
-       We animate scale down to 1.0, so end-state matches perfectly (no font pop). */
     .hintSpot{
       position:fixed;
       left:50%;
@@ -461,6 +459,11 @@
     .hintSpot.h1 .letter{ background: var(--w1); }
     .hintSpot.h2 .letter{ background: var(--w2); }
     .hintSpot.hex .letter{ background: rgba(255,255,255,.97); }
+
+    /* NEW: nudge the FLYING letters up 1px so the landing matches the track tiles */
+    .hintSpot .letter{
+      top:-1px;
+    }
 
     @media (max-width:520px){
       .hintSpot{ top:40%; }
@@ -1866,6 +1869,14 @@ function onCheck(){
 function extrasUnlocked(){
   return state.hintsUsed.w1 && state.hintsUsed.w2;
 }
+function abortDrag(){
+  if(!state.drag) return;
+  try{ state.drag.ghost?.remove(); }catch{}
+  state.drag = null;
+}
+window.addEventListener('blur', abortDrag);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) abortDrag(); });
+
 function revealAnswerGiveUp(){
   if(state.finished) return;
   const p = current();
@@ -1890,10 +1901,9 @@ function revealAnswerGiveUp(){
 }
 
 /* =======================
-   Spotlight fly animation (UPDATED)
-   - shadow fades progressively all the way to the end
-   - end-state scale is 1.0 matching the final hint tiles exactly
-   - no blank frame: we reveal target BEFORE removing the overlay
+   Spotlight fly animation
+   - NEW: for single-letter targets, show them a touch earlier AND instantly (no fade),
+          to prevent any blank flash.
    ======================= */
 function makeSpotLettersHTML(chars, mode){
   const spot = document.createElement('div');
@@ -1919,7 +1929,6 @@ function makeSpotLettersHTML(chars, mode){
 }
 
 function hintFlyKeyframes(dx, dy, startScale){
-  // Keep the same filter function across frames so it interpolates smoothly.
   const SH0 = 'drop-shadow(0 22px 22px rgba(0,0,0,.26))';
   const SH1 = 'drop-shadow(0 14px 14px rgba(0,0,0,.18))';
   const SH2 = 'drop-shadow(0 7px 7px rgba(0,0,0,.11))';
@@ -1943,12 +1952,19 @@ function hintFlyKeyframes(dx, dy, startScale){
   ];
 }
 
+// NEW: make a tile appear immediately (no opacity transition frame)
+function revealTargetInstant(tEl){
+  if(!tEl) return;
+  tEl.style.transition = 'none';
+  tEl.style.opacity = '1';
+  requestAnimationFrame(()=> requestAnimationFrame(()=>{ tEl.style.transition = ''; }));
+}
+
 function runHintFlyExtrasSequential(targetRow, chars){
   if(!targetRow) return false;
   const targets = Array.from(targetRow.querySelectorAll('.letter'));
   if(!targets.length) return false;
 
-  // Hide all final tiles up-front, but bring each one back BEFORE removing the flying tile.
   for(const t of targets) t.style.opacity = "0";
 
   const overlay = document.createElement('div');
@@ -1960,8 +1976,7 @@ function runHintFlyExtrasSequential(targetRow, chars){
 
   const flyOne = ()=>{
     if(idx >= total){
-      // Ensure all tiles are visible, then remove overlay.
-      for(const t of targets) t.style.opacity = "1";
+      for(const t of targets) revealTargetInstant(t);
       requestAnimationFrame(()=> { try{ overlay.remove(); }catch{} });
       return;
     }
@@ -1986,15 +2001,21 @@ function runHintFlyExtrasSequential(targetRow, chars){
     const coarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
     const startScale = coarse ? 2.05 : 2.15;
 
+    const DURATION = 860;
     const anim = spot.animate(hintFlyKeyframes(dx, dy, startScale), {
-      duration: 860,
+      duration: DURATION,
       easing: 'cubic-bezier(.14,.88,.22,1)',
       fill: 'forwards'
     });
 
+    // NEW: reveal the final letter a hair BEFORE finish to avoid any blank flash
+    const early = setTimeout(()=> revealTargetInstant(tEl), DURATION - 34);
+
     anim.onfinish = ()=>{
-      // Critical: reveal the final tile first, then remove the flyer on the next frame.
-      tEl.style.opacity = "1";
+      clearTimeout(early);
+      // ensure it's visible even if the timeout missed (background tab etc.)
+      revealTargetInstant(tEl);
+
       requestAnimationFrame(()=>{
         try{ spot.remove(); }catch{}
         idx++;
@@ -2031,7 +2052,6 @@ function runHintFly(kind){
 
   if(!target || !chars.length) return false;
 
-  // Hide final target (no gap: we bring it back before removing overlay)
   target.style.opacity = "0";
 
   const overlay = document.createElement('div');
@@ -2123,14 +2143,6 @@ function makeGhostBox(text, bg){
   document.body.appendChild(ghost);
   return ghost;
 }
-function abortDrag(){
-  if(!state.drag) return;
-  try{ state.drag.ghost?.remove(); }catch{}
-  state.drag = null;
-}
-window.addEventListener('blur', abortDrag);
-document.addEventListener('visibilitychange', ()=>{ if(document.hidden) abortDrag(); });
-
 function moveGhost(e){
   if(!state.drag) return;
   state.drag.ghost.style.left = e.clientX + "px";
@@ -2319,7 +2331,7 @@ function onDragEnd(e){
 }
 
 /* =======================
-   Underline logic (unchanged)
+   Underline logic
    ======================= */
 function errorItemsForGroup(group){
   if(state.badRuns[group] && state.badRuns[group].length){
@@ -2366,6 +2378,19 @@ function triForClue(group){
 /* =======================
    Placing / cycling
    ======================= */
+function setMiniHighlightToTri(group, tri){
+  const p = current();
+  const w = norm(group==='w1' ? p.word1 : p.word2);
+  const pos = w.indexOf(tri);
+  const maxStart = Math.max(0, w.length - TR);
+  if(pos >= 0) {
+    if(group==='w1') state.sel1 = clamp(pos, 0, maxStart);
+    else state.sel2 = clamp(pos, 0, maxStart);
+  } else {
+    if(group==='w1') state.sel1 = 0;
+    else state.sel2 = 0;
+  }
+}
 function placeTrigram(group, tri){
   if(!flags().allowClueTapPlace && !flags().allowHintTapPlace) return;
   if(state.finished) return;
