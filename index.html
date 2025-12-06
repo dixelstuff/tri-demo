@@ -1925,10 +1925,11 @@ function makeSpotLettersHTML(chars, mode){
 }
 
 function hintFlyKeyframes(dx, dy, startScale){
+  // Strong -> medium -> very light -> none (and it reaches “none” BEFORE the final frame)
   const SH0 = 'drop-shadow(0 22px 22px rgba(0,0,0,.26))';
   const SH1 = 'drop-shadow(0 14px 14px rgba(0,0,0,.18))';
   const SH2 = 'drop-shadow(0 7px 7px rgba(0,0,0,.11))';
-  const SH3 = 'drop-shadow(0 3px 3px rgba(0,0,0,.08))';
+  const SH3 = 'drop-shadow(0 2px 2px rgba(0,0,0,.06))';
   const SH4 = 'drop-shadow(0 0 0 rgba(0,0,0,0))';
 
   const dx1 = dx * 0.78;
@@ -1942,11 +1943,14 @@ function hintFlyKeyframes(dx, dy, startScale){
 
     { transform: `translate(-50%,-50%) translate3d(${dx1}px, ${dy1}px, 0) scale(1.14)`, filter: SH1, opacity: 1, offset: 0.82 },
     { transform: `translate(-50%,-50%) translate3d(${dx2}px, ${dy2}px, 0) scale(1.03)`, filter: SH2, opacity: 1, offset: 0.92 },
-    { transform: `translate(-50%,-50%) translate3d(${dx}px, ${dy}px, 0) scale(1.00)`, filter: SH3, opacity: 1, offset: 0.975 },
 
+    // End segment: fade shadow further and hit “none” a hair before landing
+    { transform: `translate(-50%,-50%) translate3d(${dx}px, ${dy}px, 0) scale(1.00)`, filter: SH3, opacity: 1, offset: 0.965 },
+    { transform: `translate(-50%,-50%) translate3d(${dx}px, ${dy}px, 0) scale(1.00)`, filter: SH4, opacity: 1, offset: 0.992 },
     { transform: `translate(-50%,-50%) translate3d(${dx}px, ${dy}px, 0) scale(1.00)`, filter: SH4, opacity: 1, offset: 1.00 }
   ];
 }
+
 
 // make a tile appear immediately (no opacity transition frame)
 function revealTargetInstant(tEl){
