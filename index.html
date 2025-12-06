@@ -640,6 +640,23 @@
       .msg.warn{ font-size:19px; }
       .msg.result{ top: 30px; }
       .wrap.solved .msg.result{ top: 36px; }
+      /* Final result message: lower + slightly larger */
+.msg.result{
+  top: 28px; /* keep your existing top */
+  transform: translateX(-50%) translateY(6px); /* move DOWN ~5–6px */
+  font-size: 24px;                             /* slightly larger */
+}
+.wrap.solved .msg.result{
+  top: 34px; /* keep your existing top */
+}
+
+@media (max-width:520px){
+  .msg.result{
+    transform: translateX(-50%) translateY(7px);
+    font-size: 22px;
+  }
+}
+
 
       .btn{ font-size:19px; padding:9px 15px; min-width:98px; }
       .kbKey{ height:46px; }
