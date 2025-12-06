@@ -1991,10 +1991,11 @@ function onCheck(){
   shakeGrid();
 
   if(flags().checkFeedback === "minimal"){
-    setTransientMsg("Not quite", 1300);
-    renderSmart();
-    return;
-  }
+  // no “Not quite” message in minimal mode
+  renderSmart();
+  return;
+}
+
 
   if(state.badSet.size){ setMsg("Max 3 contiguous letters allowed", "warn"); renderSmart(); return; }
   if(state.twoSet.size){ setMsg(TWOTRI_TEXT, "warn"); renderSmart(); return; }
