@@ -729,6 +729,58 @@
     .modalX::-moz-focus-inner{ border:0; }
     .modalX:active{ transform: translateY(1px); background:transparent; }
     .modalBody{ padding: 12px 14px 14px; }
+    /* =========================
+   Small-landscape “rotate” overlay
+   ========================= */
+#rotateOverlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:25000;
+  background: rgba(169,205,243,.98); /* matches your --bg vibe */
+  padding:
+    calc(18px + env(safe-area-inset-top))
+    16px
+    calc(18px + env(safe-area-inset-bottom));
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+
+#rotateOverlay .card{
+  width: min(560px, 92vw);
+  background: rgba(255,255,255,.92);
+  border: 2px solid rgba(0,0,0,.16);
+  border-radius: 18px;
+  padding: 18px 16px;
+  box-shadow: 0 10px 26px rgba(0,0,0,.18);
+}
+
+#rotateOverlay .title{
+  margin: 0 0 10px;
+  font-weight: 950;
+  font-style: italic;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+#rotateOverlay .body{
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+/* Show overlay only on small-ish phones in LANDSCAPE.
+   Tweak 430px if you want it more/less aggressive. */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 430px){
+  #rotateOverlay{ display:flex; }
+
+  /* freeze underlying UI */
+  #wrap{ pointer-events:none; opacity:.25; filter: blur(2px); }
+  #kbHost{ display:none !important; }
+  #hintsModal{ display:none !important; }
+}
+
   </style>
 </head>
 
@@ -779,6 +831,12 @@
   </div>
 
   <div class="kbHost" id="kbHost" aria-label="On-screen keyboard"></div>
+<div id="rotateOverlay" aria-hidden="true">
+  <div class="card" role="alert">
+    <div class="title">Oops! We can't fit everything on your screen.</div>
+    <p class="body"><b>Please rotate your device.</b></p>
+  </div>
+</div>
 
 <script>
 /* =======================
