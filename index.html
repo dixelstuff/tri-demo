@@ -460,11 +460,6 @@
     .hintSpot.h2 .letter{ background: var(--w2); }
     .hintSpot.hex .letter{ background: rgba(255,255,255,.97); }
 
-    /* NEW: nudge the FLYING letters up 1px so the landing matches the track tiles */
-    .hintSpot .letter{
-      top:-1px;
-    }
-
     @media (max-width:520px){
       .hintSpot{ top:40%; }
     }
@@ -1902,8 +1897,9 @@ function revealAnswerGiveUp(){
 
 /* =======================
    Spotlight fly animation
-   - NEW: for single-letter targets, show them a touch earlier AND instantly (no fade),
-          to prevent any blank flash.
+   - Keeps early target reveal for single letters (no blank flash)
+   - Removes the inner-letter nudge (reverted as requested)
+   - Adds tiny rounding of dx/dy to reduce sub-pixel landing jitter
    ======================= */
 function makeSpotLettersHTML(chars, mode){
   const spot = document.createElement('div');
@@ -1952,7 +1948,7 @@ function hintFlyKeyframes(dx, dy, startScale){
   ];
 }
 
-// NEW: make a tile appear immediately (no opacity transition frame)
+// make a tile appear immediately (no opacity transition frame)
 function revealTargetInstant(tEl){
   if(!tEl) return;
   tEl.style.transition = 'none';
@@ -1995,8 +1991,10 @@ function runHintFlyExtrasSequential(targetRow, chars){
     const tcx = tr.left + tr.width/2;
     const tcy = tr.top + tr.height/2;
 
-    const dx = tcx - scx;
-    const dy = tcy - scy;
+    let dx = tcx - scx;
+    let dy = tcy - scy;
+    dx = Math.round(dx * 2) / 2;
+    dy = Math.round(dy * 2) / 2;
 
     const coarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
     const startScale = coarse ? 2.05 : 2.15;
@@ -2008,12 +2006,10 @@ function runHintFlyExtrasSequential(targetRow, chars){
       fill: 'forwards'
     });
 
-    // NEW: reveal the final letter a hair BEFORE finish to avoid any blank flash
     const early = setTimeout(()=> revealTargetInstant(tEl), DURATION - 34);
 
     anim.onfinish = ()=>{
       clearTimeout(early);
-      // ensure it's visible even if the timeout missed (background tab etc.)
       revealTargetInstant(tEl);
 
       requestAnimationFrame(()=>{
@@ -2069,8 +2065,10 @@ function runHintFly(kind){
   const tcx = tr.left + tr.width/2;
   const tcy = tr.top + tr.height/2;
 
-  const dx = tcx - scx;
-  const dy = tcy - scy;
+  let dx = tcx - scx;
+  let dy = tcy - scy;
+  dx = Math.round(dx * 2) / 2;
+  dy = Math.round(dy * 2) / 2;
 
   const coarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
   const startScale = coarse ? 2.05 : 2.15;
