@@ -371,6 +371,25 @@
       user-select:none;
       flex:0 0 auto;
     }
+    /* Lift message + hint grids slightly (does NOT affect button position) */
+:root{
+  --lift-msg: 8px;
+  --lift-hints: 10px;
+}
+@media (max-width:520px){
+  :root{
+    --lift-msg: 10px;
+    --lift-hints: 14px;
+  }
+}
+
+.msgSlot{
+  transform: translateY(calc(-1 * var(--lift-msg)));
+}
+.hintTrack{
+  transform: translateY(calc(-1 * var(--lift-hints)));
+}
+
     .wrap.solved .hintTrack{
       opacity: .16;
       pointer-events:none;
