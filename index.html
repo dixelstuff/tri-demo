@@ -357,7 +357,13 @@
     .msg.show{ opacity:.92; }
     .msg.warn{ opacity:.92; font-size:20px; }
     .msg.result{ top: 28px; }
-    .wrap.solved .msg.result{ top: 34px; }
+    /* Desktop: push ONLY the final “Correct — …” result down a touch */
+@media (min-width: 521px){
+  .wrap.solved:not(.gaveup) .msg.result{
+    top: 40px; /* try 39–44px */
+  }
+}
+
 
     .hintTrack{
       margin: clamp(14px, 3.4vh, 24px) auto 0;
