@@ -757,18 +757,24 @@
 }
 
 #rotateOverlay .title{
-  margin: 0 0 10px;
-  font-weight: 950;
-  font-style: italic;
-  font-size: 22px;
-  line-height: 1.1;
+  margin: 0 0 8px;
+  font-weight: 600;       /* smaller + less bold */
+  font-style: normal;
+  font-size: 16px;
+  line-height: 1.2;
+  opacity: .78;
 }
 
 #rotateOverlay .body{
   margin: 0;
-  font-size: 18px;
-  line-height: 1.25;
+  font-weight: 950;       /* big + bold */
+  font-size: 24px;
+  line-height: 1.15;
 }
+
+/* make the <b> match the body weight/size cleanly */
+#rotateOverlay .body b{ font-weight: inherit; }
+
 
 /* Show overlay only on small-ish phones in LANDSCAPE.
    Tweak 430px if you want it more/less aggressive. */
