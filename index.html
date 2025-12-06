@@ -530,7 +530,7 @@
       bottom:0;
       z-index:9996;
       display:none;
-      padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+      padding:10px 10px calc(20px + env(safe-area-inset-bottom));
       background:rgba(255,255,255,.90);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
@@ -1086,6 +1086,10 @@ function isBackgroundToggleTarget(t){
     if(performance.now() - (state.justDraggedAt||0) < 350) return;
 
     const t = e.target;
+    // Don’t allow background toggles from the top of the Hint/Check row downwards
+const br = el.btnRow && el.btnRow.getBoundingClientRect();
+if(br && e.clientY >= (br.top - 6)) return;
+
     if(!isBackgroundToggleTarget(t)) return;
 
     const now = performance.now();
