@@ -344,6 +344,16 @@
     .wrap.solved .msgSlot{
       margin-top: clamp(10px, 1.9vh, 16px);
     }
+.msg .msgLine{ display:block; }
+.msg.result .msgLine.score{
+  font-size: 26px;
+  margin-top: 6px;
+}
+.msg.result .msgLine.meta{
+  font-size: 14px;
+  opacity: .55;
+  margin-top: 4px;
+}
 
     .msg{
       position:absolute;
@@ -1116,6 +1126,16 @@ function setEnhanced(on, renderNow=true){
   if(!state.assist) abortDrag();
 
   if(renderNow) renderSmart();
+}
+function setResultScoreMsg(line1, score, tags){
+  clearMsgTimer();
+  el.msg.classList.remove('show','warn','result');
+  el.msg.innerHTML =
+    `<div class="msgLine">${escapeHtml(line1)}</div>` +
+    `<div class="msgLine score">Score ${score}</div>` +
+    `<div class="msgLine meta">${escapeHtml(tags)}</div>`;
+  void el.msg.offsetWidth;
+  el.msg.classList.add('show','result');
 }
 
 /* =======================
@@ -2047,14 +2067,15 @@ function onCheck(){
   const p = current();
   const ans = norm(p.answer);
 
-    if(attempt === ans){
-    const bd = scoreBreakdown();
-    setMsg(`Score: ${bd.score}\n${bd.line}\n${bd.tags}`, 'result');
-    state.finished = true;
-    state.gaveUp = false;
-    renderSmart();
-    return;
-  }
+   if(attempt === ans){
+  const bd = scoreBreakdown();
+  setResultScoreMsg(`Correct - ${hintPhraseText(state.hintCount)}!`, bd.score, bd.tags);
+  state.finished = true;
+  state.gaveUp = false;
+  renderSmart();
+  return;
+}
+
 
   // wrong answer (grid is full if we got here)
   state.wrongCheckCount = (state.wrongCheckCount || 0) + 1;
@@ -2701,14 +2722,18 @@ function placeTrigram(group, tri){
   removeSinglesInCells(trigramCells(start));
   setMiniHighlightToTri(group, t);
 }
-function cyclePlacedTrigram(group){
+function cyclePlacedTrigram(group, opts = {}){
   if(!flags().allowClueTapCycle) return;
   if(state.finished) return;
 
   const pl = state.placed[group];
   if(!pl) return;
-    state.cycleCount = (state.cycleCount || 0) + 1;
 
+  // Count this cycle only if allowed (default true)
+  const countCycle = (opts.countCycle !== false);
+  if(countCycle){
+    state.cycleCount = (state.cycleCount || 0) + 1;
+  }
 
   const p = current();
   const w = norm(group === 'w1' ? p.word1 : p.word2);
@@ -2733,6 +2758,7 @@ function cyclePlacedTrigram(group){
   const tri = w.slice(s, s+3);
   placeTrigram(group, tri);
 }
+
 function firstTrigramOfWord(group){
   const p = current();
   const w = norm(group === 'w1' ? p.word1 : p.word2);
@@ -2875,7 +2901,8 @@ function onClueWordActivate(group){
   clearTransientOnAnyChange();
 
   if(state.placed[group]){
-    cyclePlacedTrigram(group);
+    cyclePlacedTrigram(group, { countCycle: !state.hintsUsed[group] });
+
   }else{
     let tri = null;
     if(group === 'w1' && state.hintsUsed.w1) tri = norm(current().tri1);
