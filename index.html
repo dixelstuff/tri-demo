@@ -20,6 +20,15 @@
       --kb-h: 260px;
       --caret: rgba(0,0,0,.18);
     }
+.kbKey .kbIcon{
+  width: 22px;
+  height: 22px;
+  display: block;
+  margin: 0 auto;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
 
     *{ box-sizing:border-box; }
     html, body{
@@ -1256,9 +1265,20 @@ function makeKey(label, aria, cls, kind, val){
   b.type = "button";
   b.className = `kbKey ${cls||""}`.trim();
   b.setAttribute('aria-label', aria || label);
-  if(kind === 'letter') b.textContent = label;
-  else if(kind === 'enter') b.textContent = "CHECK";
-  else b.textContent = "DEL";
+
+  if(kind === 'letter'){
+    b.textContent = label;
+  }else if(kind === 'enter'){
+    b.textContent = "CHECK";
+  }else if(kind === 'delete'){
+    const img = document.createElement('img');
+    img.src = 'delete-.svg';   // <- path relative to index.html
+    img.alt = '';
+    img.className = 'kbIcon';
+    img.setAttribute('aria-hidden', 'true');
+    img.draggable = false;
+    b.appendChild(img);
+  }
 
   b.addEventListener('pointerdown', (e)=>{
     e.preventDefault();
@@ -1269,6 +1289,7 @@ function makeKey(label, aria, cls, kind, val){
 
   return b;
 }
+
 function buildKeyboard(){
   el.kbHost.innerHTML = "";
   if(!state.useCustomKB) return;
