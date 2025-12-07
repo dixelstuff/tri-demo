@@ -654,6 +654,10 @@
       .msg{ font-size:20px; top: 20px; }
       .msg.warn{ font-size:19px; }
       .msg.result{ top: 30px; }
+      .msg.result::first-line{
+  font-size: clamp(24px, 6vw, 30px);
+}
+
       .wrap.solved .msg.result{ top: 36px; }
       /* Final result message: lower + slightly larger */
 .msg.result{
@@ -995,6 +999,10 @@ const state = {
   msgTransient: false,
   lockMsg: false,
 
+  cycleCount: 0,
+  wrongCheckCount: 0,
+
+
   badSet: new Set(),
   badTris: { w1: new Set(), w2: new Set() },
   badRuns: { w1: [], w2: [] },
@@ -1064,7 +1072,23 @@ function getN(){
 }
 function startMax(){ return Math.max(0, getN() - TR); }
 function renderSmart(){ render(!state.useCustomKB); }
+function hintsUsedCount(){
+  return state.hintCount || 0; // you already increment hintCount per hint
+}
 
+function scoreBreakdown(){
+  const h = hintsUsedCount();
+  const c = state.cycleCount || 0;
+  const w = state.wrongCheckCount || 0;
+  const score = Math.max(0, 100 - 20*h - c - w);
+  return {
+    score,
+    line: `Hints −${20*h} · Cycles −${c} · Wrong checks −${w}`,
+    tags: `H${h} C${c} W${w}`
+  };
+}
+
+  
 function shakeGrid(){
   el.gridDock.classList.remove('shake');
   void el.gridDock.offsetWidth;
@@ -1072,6 +1096,7 @@ function shakeGrid(){
   setTimeout(()=> el.gridDock.classList.remove('shake'), 420);
 }
 
+  
 /* prevent context menu on interactive surface */
 document.addEventListener('contextmenu', (e)=>{
   const t = e.target;
@@ -2022,13 +2047,18 @@ function onCheck(){
   const p = current();
   const ans = norm(p.answer);
 
-  if(attempt === ans){
-    setMsg(`Correct — ${hintPhraseText(state.hintCount)}!`, 'result');
+    if(attempt === ans){
+    const bd = scoreBreakdown();
+    setMsg(`Score: ${bd.score}\n${bd.line}\n${bd.tags}`, 'result');
     state.finished = true;
     state.gaveUp = false;
     renderSmart();
     return;
   }
+
+  // wrong answer (grid is full if we got here)
+  state.wrongCheckCount = (state.wrongCheckCount || 0) + 1;
+
 
   shakeGrid();
 
@@ -2677,6 +2707,8 @@ function cyclePlacedTrigram(group){
 
   const pl = state.placed[group];
   if(!pl) return;
+    state.cycleCount = (state.cycleCount || 0) + 1;
+
 
   const p = current();
   const w = norm(group === 'w1' ? p.word1 : p.word2);
@@ -3293,6 +3325,9 @@ function render(stealFocus=true){
 function resetAllForPuzzle(){
   state.finished = false;
   state.gaveUp = false;
+  state.cycleCount = 0;
+  state.wrongCheckCount = 0;
+
 
   state.hintCount = 0;
   state.hintsUsed = { w1:false, w2:false, extras:false };
