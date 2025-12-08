@@ -415,17 +415,124 @@
   transform: translateY(calc(-1 * var(--lift-hints)));
 }
 
-    .wrap.solved .hintTrack{
-      opacity: .16;
-      pointer-events:none;
-    }
-    .trackRow{
-      display:flex;
-      align-items:flex-start;
-      justify-content:center;
-      gap:18px;
-      flex-wrap:nowrap;
-    }
+   /* Keep hintTrack as the layout “slot”, but fade the mini-grid out completely on solve */
+#hintTrack{ position:relative; } /* so the badge can sit in the same spot */
+
+.wrap.solved .hintTrack{
+  pointer-events:none;
+  opacity: 1; /* don't fade the container; we fade the mini-grid row only */
+}
+
+.trackRow{
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  gap:18px;
+  flex-wrap:nowrap;
+  transition: opacity .35s ease;
+}
+.wrap.solved .trackRow{
+  opacity: 0;
+}
+
+/* Golden shining badge (appears where the mini-grid was) */
+.skillBadge{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%) scale(.985);
+  opacity:0;
+  pointer-events:none;
+  transition: opacity .35s ease, transform .35s ease;
+}
+.wrap.solved .skillBadge{
+  opacity:1;
+  transform:translate(-50%,-50%) scale(1);
+  transition-delay: .06s;
+}
+
+.skillBadgeInner{
+  position:relative;
+  min-width: 170px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  text-align:center;
+
+  color:#2a1a00;
+  border: 1px solid rgba(255, 220, 130, .65);
+  background: linear-gradient(135deg,
+    rgba(255, 235, 180, .95) 0%,
+    rgba(255, 200, 90, .92) 35%,
+    rgba(255, 240, 200, .96) 70%,
+    rgba(255, 190, 70, .92) 100%);
+  box-shadow:
+    0 12px 26px rgba(255, 200, 80, .16),
+    0 3px 10px rgba(0,0,0,.22);
+}
+
+.skillBadgeLabel{
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  opacity: .75;
+}
+.skillBadgeValue{
+  font-size: 34px;
+  font-weight: 950;
+  line-height: 1;
+  margin-top: 2px;
+  text-shadow: 0 1px 0 rgba(255,255,255,.45);
+}
+
+/* Sparkle layer */
+.skillBadgeInner::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 18% 28%, rgba(255,255,255,.85), transparent 38%),
+    radial-gradient(circle at 78% 42%, rgba(255,255,255,.55), transparent 42%),
+    radial-gradient(circle at 54% 86%, rgba(255,255,255,.35), transparent 48%);
+  opacity:.55;
+  pointer-events:none;
+}
+
+/* Shine sweep */
+.skillBadgeInner::after{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  border-radius: inherit;
+  background: linear-gradient(110deg,
+    transparent 0%,
+    rgba(255,255,255,.65) 45%,
+    transparent 60%);
+  transform: translateX(-140%) skewX(-18deg);
+  opacity: 0;
+  pointer-events:none;
+  mix-blend-mode: soft-light;
+  animation: skillShine 1.7s ease-in-out infinite;
+}
+
+@keyframes skillShine{
+  0%   { transform: translateX(-140%) skewX(-18deg); opacity:0; }
+  18%  { opacity:.55; }
+  55%  { opacity:.55; }
+  100% { transform: translateX(140%)  skewX(-18deg); opacity:0; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .skillBadgeInner::after{ animation:none; opacity:.35; }
+}
+
+/* Make the "Correct - ..." line a bit smaller without affecting other messages */
+.msg.result .msgLine{ font-size: 19px; }
+@media (max-width:520px){
+  .msg.result .msgLine{ font-size: 18px; }
+}
+
     .trackBlock{
       display:flex;
       flex-direction:column;
@@ -841,6 +948,13 @@
         <div class="trackBlock" id="trackW2"></div>
         <div class="trackBlock" id="trackExtras"></div>
       </div>
+        <div class="skillBadge" id="skillBadge" aria-hidden="true">
+    <div class="skillBadgeInner">
+      <div class="skillBadgeLabel">Skill</div>
+      <div class="skillBadgeValue" id="skillBadgeValue">—</div>
+    </div>
+  </div>
+
     </div>
 
     <div class="btnRow" id="btnRow">
@@ -1335,12 +1449,21 @@ function setEnhanced(on, renderNow=true){
 function setResultSkillMsg(line1, skill){
   clearMsgTimer();
   el.msg.classList.remove('show','warn','result');
-  el.msg.innerHTML =
-    `<div class="msgLine">${escapeHtml(line1)}</div>` +
-    `<div class="msgLine score">Skill ${skill}</div>`;
+
+  // Only show the "Correct - ..." (or "Gave up.") line in the message slot
+  el.msg.innerHTML = `<div class="msgLine">${escapeHtml(line1)}</div>`;
+
+  // Put Skill into the golden badge (in the hint-track slot)
+  const badgeVal = document.getElementById('skillBadgeValue');
+  if(badgeVal) badgeVal.textContent = String(skill);
+
+  const badge = document.getElementById('skillBadge');
+  if(badge) badge.setAttribute('aria-label', `Skill ${skill}`);
+
   void el.msg.offsetWidth;
   el.msg.classList.add('show','result');
 }
+
 
 
 /* =======================
@@ -3651,6 +3774,10 @@ function render(stealFocus=true){
 function resetAllForPuzzle(){
   state.finished = false;
   state.gaveUp = false;
+  el.wrap.classList.remove('solved','gaveup');
+const badgeVal = document.getElementById('skillBadgeValue');
+if(badgeVal) badgeVal.textContent = "—";
+
   state.cycleCount = 0;
   state.wrongCheckCount = 0;
   state.preHint1Cycles = 0;
