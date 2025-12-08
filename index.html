@@ -384,56 +384,186 @@
 }
 
 
-    .hintTrack{
-      margin: clamp(14px, 3.4vh, 24px) auto 0;
-      width:fit-content;
-      max-width:min(920px,96vw);
-      min-height:78px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      transition:opacity .35s ease;
-      user-select:none;
-      flex:0 0 auto;
-    }
-    /* Lift message + hint grids slightly (does NOT affect button position) */
-:root{
-  --lift-msg: 8px;
-  --lift-hints: 10px;
-}
-@media (max-width:520px){
-  :root{
-    --lift-msg: 10px;
-    --lift-hints: 14px;
-  }
-}
-
-.msgSlot{
-  transform: translateY(calc(-1 * var(--lift-msg)));
-}
+/* --- Hint track + result badge takeover --- */
 .hintTrack{
-  transform: translateY(calc(-1 * var(--lift-hints)));
+  margin: clamp(14px, 3.4vh, 24px) auto 0;
+  width: fit-content;
+  max-width: min(920px, 96vw);
+  min-height: 78px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  user-select:none;
+  flex:0 0 auto;
+
+  position: relative; /* anchor the badge */
 }
 
-   /* Keep hintTrack as the layout “slot”, but fade the mini-grid out completely on solve */
-#hintTrack{ position:relative; } /* so the badge can sit in the same spot */
-
-.wrap.solved .hintTrack{
-  pointer-events:none;
-  opacity: 1; /* don't fade the container; we fade the mini-grid row only */
+/* Don't dim the whole hintTrack anymore (badge needs full strength) */
+.wrap.solved .hintTrack,
+.wrap.gaveup .hintTrack{
+  opacity: 1;
+  pointer-events: auto;
 }
 
+/* Fade mini-grid row away on finish */
 .trackRow{
   display:flex;
   align-items:flex-start;
   justify-content:center;
   gap:18px;
   flex-wrap:nowrap;
-  transition: opacity .35s ease;
+  transition: opacity .28s ease, transform .28s ease;
 }
-.wrap.solved .trackRow{
+
+.wrap.solved .trackRow,
+.wrap.gaveup .trackRow{
   opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
 }
+
+/* Result badge overlay (sits where mini-grid was) */
+.resultBadge{
+  position:absolute;
+  inset: 0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  opacity:0;
+  transform: translateY(6px) scale(.98);
+  pointer-events:none;
+  transition: opacity .28s ease, transform .28s ease;
+}
+
+.wrap.solved .resultBadge,
+.wrap.gaveup .resultBadge{
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events:none;
+}
+
+.resultBadgeInner{
+  width: min(420px, 92vw);
+  border-radius: 22px;
+  border: 3px solid rgba(0,0,0,.28);
+  box-shadow: 0 16px 30px rgba(0,0,0,.20);
+  padding: 14px 16px 12px;
+  text-align:center;
+  position:relative;
+  overflow:hidden;                 /* CLIPS the shine to the badge */
+  transform: translateZ(0);        /* helps desktop rendering */
+  will-change: transform;
+}
+
+/* Medal tiers by skill */
+.resultBadgeInner.tier-gold{
+  background: linear-gradient(180deg, rgba(255,247,200,.98), rgba(255,214,120,.98));
+}
+.resultBadgeInner.tier-silver{
+  background: linear-gradient(180deg, rgba(245,245,245,.98), rgba(210,210,210,.98));
+}
+.resultBadgeInner.tier-bronze{
+  background: linear-gradient(180deg, rgba(255,230,210,.98), rgba(210,150,110,.98));
+}
+.resultBadgeInner.tier-plain{
+  background: rgba(255,255,255,.92);
+}
+
+/* Shine overlay (desktop-safe, clipped) */
+.resultBadgeInner::after{
+  content:"";
+  position:absolute;
+  top:0; bottom:0;
+  width: 55%;
+  left: -70%;
+  transform: skewX(-18deg);
+  background: linear-gradient(120deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,.55) 45%,
+    rgba(255,255,255,0) 75%
+  );
+  opacity: 0;
+  animation: badgeShine 2.4s ease-in-out infinite;
+  pointer-events:none;
+}
+
+@keyframes badgeShine{
+  0%   { left:-70%; opacity:0; }
+  12%  { opacity:.35; }
+  40%  { opacity:.35; }
+  100% { left:120%; opacity:0; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .resultBadgeInner::after{ animation:none; }
+}
+
+.resultBadgeTop{
+  font-weight: 950;
+  font-style: italic;
+  font-size: 22px;
+  line-height: 1.1;
+  margin-bottom: 10px;
+  opacity: .95;
+}
+
+.resultBadgeStats{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap: 14px;
+}
+
+.badgeStat{
+  min-width: 110px;
+}
+
+.badgeLabel{
+  font-size: 12px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  opacity: .60;
+  margin-bottom: 2px;
+}
+
+.badgeValue{
+  font-size: 28px;
+  font-weight: 950;
+  font-style: italic;
+  line-height: 1.05;
+}
+
+.badgeRule{
+  width: 1px;
+  height: 44px;
+  background: rgba(0,0,0,.18);
+  border-radius: 999px;
+}
+
+/* Make the “Correct!” line a touch smaller now that the badge is the hero */
+.msg.result{
+  font-size: 20px;
+}
+
+/* Hide Hint/Check buttons when finished so the badge stands out */
+.btnRow{
+  transition: opacity .22s ease, transform .22s ease;
+}
+.wrap.solved .btnRow,
+.wrap.gaveup .btnRow{
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+}
+
+/* Also kill fixed-position row in custom keyboard mode */
+html.has-kb .wrap.solved .btnRow,
+html.has-kb .wrap.gaveup .btnRow{
+  opacity: 0;
+  pointer-events:none;
+}
+
 
 /* Golden shining badge (appears where the mini-grid was) */
 .skillBadge{
@@ -942,18 +1072,35 @@
       <div class="msg" id="msg"></div>
     </div>
 
-    <div class="hintTrack" id="hintTrack" aria-label="Hint tracker">
-      <div class="trackRow" id="trackRow">
-        <div class="trackBlock" id="trackW1"></div>
-        <div class="trackBlock" id="trackW2"></div>
-        <div class="trackBlock" id="trackExtras"></div>
+<div class="hintTrack" id="hintTrack" aria-label="Hint tracker">
+  <div class="trackRow" id="trackRow">
+    <div class="trackBlock" id="trackW1"></div>
+    <div class="trackBlock" id="trackW2"></div>
+    <div class="trackBlock" id="trackExtras"></div>
+  </div>
+
+  <!-- Result badge (appears on solved / gave up) -->
+  <div class="resultBadge" id="resultBadge" aria-hidden="true">
+    <div class="resultBadgeInner" id="resultBadgeInner">
+      <div class="resultBadgeTop" id="resultBadgeTop">Correct!</div>
+
+      <div class="resultBadgeStats">
+        <div class="badgeStat">
+          <div class="badgeLabel">Hints</div>
+          <div class="badgeValue" id="badgeHintsVal">0</div>
+        </div>
+
+        <div class="badgeRule"></div>
+
+        <div class="badgeStat">
+          <div class="badgeLabel">Skill</div>
+          <div class="badgeValue" id="badgeSkillVal">—</div>
+        </div>
       </div>
-        <div class="skillBadge" id="skillBadge" aria-hidden="true">
-    <div class="skillBadgeInner">
-      <div class="skillBadgeLabel">Skill</div>
-      <div class="skillBadgeValue" id="skillBadgeValue">—</div>
     </div>
   </div>
+</div>
+
 
     </div>
 
@@ -1073,6 +1220,11 @@ const el = {
   trackW1: document.getElementById('trackW1'),
   trackW2: document.getElementById('trackW2'),
   trackExtras: document.getElementById('trackExtras'),
+  resultBadge: document.getElementById('resultBadge'),
+  resultBadgeInner: document.getElementById('resultBadgeInner'),
+  resultBadgeTop: document.getElementById('resultBadgeTop'),
+  badgeHintsVal: document.getElementById('badgeHintsVal'),
+  badgeSkillVal: document.getElementById('badgeSkillVal'),
 
   hintsBtn: document.getElementById('hintsBtn'),
   checkBtn: document.getElementById('checkBtn'),
@@ -1446,23 +1598,38 @@ function setEnhanced(on, renderNow=true){
 
   if(renderNow) renderSmart();
 }
+function badgeTierForSkill(skill){
+  // tweak thresholds anytime
+  if(skill >= 85) return "tier-gold";
+  if(skill >= 70) return "tier-silver";
+  if(skill >= 55) return "tier-bronze";
+  return "tier-plain";
+}
+
 function setResultSkillMsg(line1, skill){
   clearMsgTimer();
   el.msg.classList.remove('show','warn','result');
 
-  // Only show the "Correct - ..." (or "Gave up.") line in the message slot
+  // simple message (badge is the main event now)
   el.msg.innerHTML = `<div class="msgLine">${escapeHtml(line1)}</div>`;
-
-  // Put Skill into the golden badge (in the hint-track slot)
-  const badgeVal = document.getElementById('skillBadgeValue');
-  if(badgeVal) badgeVal.textContent = String(skill);
-
-  const badge = document.getElementById('skillBadge');
-  if(badge) badge.setAttribute('aria-label', `Skill ${skill}`);
-
   void el.msg.offsetWidth;
   el.msg.classList.add('show','result');
+
+  // badge content
+  if(el.resultBadge){
+    el.resultBadge.setAttribute("aria-hidden", "false");
+  }
+  if(el.resultBadgeTop) el.resultBadgeTop.textContent = line1;
+  if(el.badgeHintsVal) el.badgeHintsVal.textContent = String(state.hintCount || 0);
+  if(el.badgeSkillVal) el.badgeSkillVal.textContent = String(skill);
+
+  // medal tier class
+  if(el.resultBadgeInner){
+    el.resultBadgeInner.classList.remove('tier-gold','tier-silver','tier-bronze','tier-plain');
+    el.resultBadgeInner.classList.add(badgeTierForSkill(skill));
+  }
 }
+
 
 
 
@@ -2420,7 +2587,8 @@ function onCheck(){
 
    if(attempt === ans){
   const res = computeFinalSkill(false);
-setResultSkillMsg(`Correct - ${hintPhraseText(state.hintCount)}!`, res.skill);
+setResultSkillMsg("Correct!", res.skill);
+
 
   state.finished = true;
   state.gaveUp = false;
@@ -2521,7 +2689,7 @@ function revealAnswerGiveUp(){
   clearMsgTimer();
   setMsg("");
 
-  setResultSkillMsg("Gave up :(", res.skill);
+  setResultSkillMsg("Gave up", res.skill);
 
   renderSmart();
 }
