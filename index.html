@@ -1011,6 +1011,14 @@ const state = {
 
   cycleCount: 0,
   wrongCheckCount: 0,
+  // --- Skill scoring ---
+  preHint1Cycles: 0,
+  postHint1Cycles: 0,
+  effortUnits: 0,
+
+  activeMs: 0,
+  _skillLastTs: 0,
+  _skillPaused: false,
 
 
   badSet: new Set(),
@@ -1086,17 +1094,137 @@ function hintsUsedCount(){
   return state.hintCount || 0; // you already increment hintCount per hint
 }
 
-function scoreBreakdown(){
-  const h = hintsUsedCount();
-  const c = state.cycleCount || 0;
-  const w = state.wrongCheckCount || 0;
-  const score = Math.max(0, 100 - 20*h - c - w);
+/* =======================
+   Skill scoring (single puzzle)
+   ======================= */
+
+// Idle-capped “active” time: on each action we add min(delta, cap).
+const SKILL_IDLE_CAP_MS = 10000;
+
+function skillResetForPuzzle(){
+  state.activeMs = 0;
+  state._skillPaused = false;
+  state._skillLastTs = performance.now();
+}
+
+function skillPause(){
+  state._skillPaused = true;
+  state._skillLastTs = performance.now();
+}
+
+function skillResume(){
+  if(!state._skillPaused) return;
+  state._skillPaused = false;
+  state._skillLastTs = performance.now();
+}
+
+// Call this on user actions
+function skillTouch(){
+  if(state.finished) return;
+  if(state._skillPaused) return;
+
+  const now = performance.now();
+  const last = (typeof state._skillLastTs === "number" && state._skillLastTs > 0) ? state._skillLastTs : now;
+  const dt = now - last;
+
+  if(dt > 0){
+    state.activeMs = (state.activeMs || 0) + Math.min(dt, SKILL_IDLE_CAP_MS);
+  }
+  state._skillLastTs = now;
+}
+
+function addEffort(units){
+  state.effortUnits = (state.effortUnits || 0) + (units || 0);
+}
+
+function hintCosts(){
+  const p = current();
+  ensurePuzzleDerived(p);
+
+  // Overlap puzzle == Hint 3 would reveal TWO leftover letters.
+  const overlapPuzzle = (computeHint3Letters().length === 2);
+
+  const B12 = overlapPuzzle ? 27 : 30;
+  const H3  = overlapPuzzle ? 18 : 15;
+
+  const w1len = norm(p.word1).length;
+  const w2len = norm(p.word2).length;
+
+  const n1 = Math.max(1, w1len - 2);
+  const n2 = Math.max(1, w2len - 2);
+
+  const lw1 = Math.log2(n1);
+  const lw2 = Math.log2(n2);
+
+  const denom = lw1 + lw2;
+  const share1 = (denom > 0) ? (lw1 / denom) : 0.5;
+
+  const hint1Cost = B12 * share1;
+  const hint2Cost = B12 - hint1Cost;
+
+  return { overlapPuzzle, B12, H3, hint1Cost, hint2Cost };
+}
+
+function hintPenalty(){
+  const h = hintsUsedCount(); // 0..3 sequential
+  if(h <= 0) return 0;
+
+  const {B12, H3, hint1Cost} = hintCosts();
+
+  if(h === 1) return hint1Cost;
+  if(h === 2) return B12;
+  return (B12 + H3);
+}
+
+function otherPenalty(){
+  // Cycle penalty
+  const pre  = state.preHint1Cycles || 0;
+  const post = state.postHint1Cycles || 0;
+
+  let effectiveCycles = pre + post;
+  if(hintsUsedCount() >= 1){
+    effectiveCycles = 0.4 * pre + post; // 60% forgiven pre-hint1
+  }
+  const cyclePenalty = 0.8 * effectiveCycles;
+
+  // Wrong checks
+  const wrongPenalty = (state.wrongCheckCount || 0);
+
+  // Time penalty (active time only)
+  const t = (state.activeMs || 0) / 1000;
+  const timePenalty =
+    (t < 30) ? 0 :
+    (t <= 60) ? 1 : 2;
+
+  // Effort penalty
+  const effortPenalty = (state.effortUnits || 0) / 20;
+
   return {
-    score,
-    line: `Hints −${20*h} · Cycles −${c} · Wrong checks −${w}`,
-    tags: `H${h} C${c} W${w}`
+    cyclePenalty,
+    wrongPenalty,
+    timePenalty,
+    effortPenalty,
+    total: (cyclePenalty + wrongPenalty + timePenalty + effortPenalty)
   };
 }
+
+function computeFinalSkill(gaveUp){
+  // finalise time up to this moment
+  skillTouch();
+
+  if(gaveUp){
+    return { skillRaw: 25, skill: 25 };
+  }
+
+  const hp = hintPenalty();
+  const op = otherPenalty();
+
+  const skillRaw = 100 - hp - op.total;
+  const skill = Math.max(30, Math.round(skillRaw));
+
+  return { skillRaw, skill };
+}
+
 
   
 function shakeGrid(){
@@ -1127,16 +1255,16 @@ function setEnhanced(on, renderNow=true){
 
   if(renderNow) renderSmart();
 }
-function setResultScoreMsg(line1, score, tags){
+function setResultSkillMsg(line1, skill){
   clearMsgTimer();
   el.msg.classList.remove('show','warn','result');
   el.msg.innerHTML =
     `<div class="msgLine">${escapeHtml(line1)}</div>` +
-    `<div class="msgLine score">Score ${score}</div>` +
-    `<div class="msgLine meta">${escapeHtml(tags)}</div>`;
+    `<div class="msgLine score">Skill ${skill}</div>`;
   void el.msg.offsetWidth;
   el.msg.classList.add('show','result');
 }
+
 
 /* =======================
    SUPER reliable tap binding
@@ -1386,6 +1514,7 @@ function setTransientMsg(text, ms=2400, kind=null){
   }, ms);
 }
 function clearTransientOnAnyChange(){
+  skillTouch(); 
   if(state.lockMsg){
     state.lockMsg = false;
     setMsg("");
@@ -1600,6 +1729,7 @@ function nextEditableFrom(startIdx, dir){
 function typeLetterAtIndex(idx, ch){
   const n = getN();
   const lower = ch.toLowerCase();
+  addEffort(1);
   state.singles = state.singles.filter(x => x.idx !== idx);
   state.singles.push({id: uid(), ch: lower, idx});
   const next = nextEditableFrom(idx + 1, +1);
@@ -2089,8 +2219,9 @@ function onCheck(){
   const ans = norm(p.answer);
 
    if(attempt === ans){
-  const bd = scoreBreakdown();
-  setResultScoreMsg(`Correct - ${hintPhraseText(state.hintCount)}!`, bd.score, bd.tags);
+  const res = computeFinalSkill(false);
+setResultSkillMsg(`Correct - ${hintPhraseText(state.hintCount)}!`, res.skill);
+
   state.finished = true;
   state.gaveUp = false;
   renderSmart();
@@ -2150,11 +2281,25 @@ function abortDrag(){
   try{ state.drag.ghost?.remove(); }catch{}
   state.drag = null;
 }
-window.addEventListener('blur', abortDrag);
-document.addEventListener('visibilitychange', ()=>{ if(document.hidden) abortDrag(); });
+window.addEventListener('blur', ()=>{ skillPause(); abortDrag(); });
+window.addEventListener('focus', ()=>{ skillResume(); });
+
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){
+    skillPause();
+    abortDrag();
+  }else{
+    skillResume();
+  }
+});
+
 
 function revealAnswerGiveUp(){
   if(state.finished) return;
+
+  // Count the give-up tap as activity
+  skillTouch();
+
   const p = current();
   const ans = norm(p.answer);
   const n = getN();
@@ -2166,12 +2311,17 @@ function revealAnswerGiveUp(){
     state.singles.push({id: uid(), ch: ans[i] || "", idx:i});
   }
   state.focusIdx = 0;
+
+  const res = computeFinalSkill(true);
+
   state.finished = true;
   state.gaveUp = true;
 
   state.lockMsg = false;
   clearMsgTimer();
   setMsg("");
+
+  setResultSkillMsg("Gave up.", res.skill);
 
   renderSmart();
 }
@@ -2605,6 +2755,7 @@ function onDragEnd(e){
   const d = state.drag;
   try{ d.ghost.remove(); }catch{}
   state.drag = null;
+  addEffort(2);
   state.justDraggedAt = performance.now();
 
   const rect = el.gridWrap.getBoundingClientRect();
@@ -2750,16 +2901,21 @@ function cyclePlacedTrigram(group, opts = {}){
   const pl = state.placed[group];
   if(!pl) return;
 
-  // Count this cycle only if allowed (default true)
-  const countCycle = (opts.countCycle !== false);
-  if(countCycle){
-    state.cycleCount = (state.cycleCount || 0) + 1;
-  }
-
   const p = current();
   const w = norm(group === 'w1' ? p.word1 : p.word2);
   const maxStart = Math.max(0, w.length - 3);
   if(maxStart === 0) return;
+
+  // Count ONLY if it's a "real" cycle (not locked/revealed by hint)
+  const countCycle = (opts.countCycle !== false);
+  if(countCycle){
+    state.cycleCount = (state.cycleCount || 0) + 1;
+    if(state.hintsUsed.w1){
+      state.postHint1Cycles = (state.postHint1Cycles || 0) + 1;
+    }else{
+      state.preHint1Cycles = (state.preHint1Cycles || 0) + 1;
+    }
+  }
 
   const curTri = norm(pl.tri);
   const curPos = w.indexOf(curTri);
@@ -2779,6 +2935,7 @@ function cyclePlacedTrigram(group, opts = {}){
   const tri = w.slice(s, s+3);
   placeTrigram(group, tri);
 }
+
 
 function firstTrigramOfWord(group){
   const p = current();
@@ -2829,6 +2986,7 @@ function renderHintTrack(){
       makeTrigramBlock(norm(p.tri1), "sel-w1", "word 1 trigram", ()=>{
         if(state.finished || state.modalOpen) return;
         if(!state.assist) setEnhanced(true, false);
+        addEffort(2);
         placeTrigram('w1', norm(p.tri1));
         renderSmart();
       }, "trackBox-w1")
@@ -2847,6 +3005,7 @@ function renderHintTrack(){
       makeTrigramBlock(norm(p.tri2), "sel-w2", "word 2 trigram", ()=>{
         if(state.finished || state.modalOpen) return;
         if(!state.assist) setEnhanced(true, false);
+        addEffort(2);
         placeTrigram('w2', norm(p.tri2));
         renderSmart();
       }, "trackBox-w2")
@@ -2893,6 +3052,7 @@ function renderHintTrack(){
           if(state.placed.w1 && i>=state.placed.w1.start && i<state.placed.w1.start+3) continue;
           if(state.placed.w2 && i>=state.placed.w2.start && i<state.placed.w2.start+3) continue;
           if(state.singles.find(s=>s.idx===i)) continue;
+           addEffort(1);
           state.singles.push({id: uid(), ch: tile.ch, idx: i});
           state.focusIdx = clamp(i+1,0,n-1);
           renderSmart();
@@ -2929,7 +3089,11 @@ function onClueWordActivate(group){
     if(group === 'w1' && state.hintsUsed.w1) tri = norm(current().tri1);
     if(group === 'w2' && state.hintsUsed.w2) tri = norm(current().tri2);
     if(!tri) tri = firstTrigramOfWord(group);
-    if(tri) placeTrigram(group, tri);
+    if(tri){
+  addEffort(2);
+  placeTrigram(group, tri);
+}
+
   }
 
   renderSmart();
@@ -3397,6 +3561,10 @@ function resetAllForPuzzle(){
   state.gaveUp = false;
   state.cycleCount = 0;
   state.wrongCheckCount = 0;
+  state.preHint1Cycles = 0;
+  state.postHint1Cycles = 0;
+  state.effortUnits = 0;
+  skillResetForPuzzle();
 
 
   state.hintCount = 0;
