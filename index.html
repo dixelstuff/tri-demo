@@ -1095,48 +1095,75 @@ function hintsUsedCount(){
 }
 
 /* =======================
-   Skill scoring (single puzzle)
+   Skill scoring (single puzzle) — UPDATED (final spec incl. hint-haste)
    ======================= */
 
-// Idle-capped “active” time: on each action we add min(delta, cap).
-const SKILL_IDLE_CAP_MS = 10000;
+/* ---- Visible-time stopwatch (global; pauses ONLY when document.hidden) ---- */
+let _visibleMsTotal = 0;
+let _visibleStartTs = document.hidden ? null : performance.now();
 
+function _visibleOnHide(){
+  const now = performance.now();
+  if(_visibleStartTs != null){
+    _visibleMsTotal += (now - _visibleStartTs);
+    _visibleStartTs = null;
+  }
+}
+function _visibleOnShow(){
+  if(_visibleStartTs == null){
+    _visibleStartTs = performance.now();
+  }
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden) _visibleOnHide();
+  else _visibleOnShow();
+}, { passive:true });
+
+function getVisibleMsNow(){
+  const now = performance.now();
+  return _visibleMsTotal + (_visibleStartTs != null ? (now - _visibleStartTs) : 0);
+}
+
+/* ---- Legacy active-time hooks (still called elsewhere; now NOT used for scoring) ---- */
 function skillResetForPuzzle(){
+  // keep legacy fields stable (harmless)
   state.activeMs = 0;
   state._skillPaused = false;
   state._skillLastTs = performance.now();
-}
 
+  // new fields for scoring
+  const vNow = getVisibleMsNow();
+  state.visibleMsAtPuzzleStart = vNow;
+  state.visibleMsAtLastHint = vNow;
+  state.visibleMsAtHint1 = null;
+
+  state.effortAtLastHint = (state.effortUnits || 0);
+  state.realCyclesAtLastHint = (state.cycleCount || 0);
+
+  state.hastePenalty = 0;
+}
 function skillPause(){
   state._skillPaused = true;
   state._skillLastTs = performance.now();
 }
-
 function skillResume(){
   if(!state._skillPaused) return;
   state._skillPaused = false;
   state._skillLastTs = performance.now();
 }
-
-// Call this on user actions
 function skillTouch(){
+  // legacy no-op-ish; activeMs no longer used for scoring
   if(state.finished) return;
   if(state._skillPaused) return;
-
-  const now = performance.now();
-  const last = (typeof state._skillLastTs === "number" && state._skillLastTs > 0) ? state._skillLastTs : now;
-  const dt = now - last;
-
-  if(dt > 0){
-    state.activeMs = (state.activeMs || 0) + Math.min(dt, SKILL_IDLE_CAP_MS);
-  }
-  state._skillLastTs = now;
+  state._skillLastTs = performance.now();
 }
 
+/* ---- Effort accumulator (unchanged) ---- */
 function addEffort(units){
   state.effortUnits = (state.effortUnits || 0) + (units || 0);
 }
 
+/* ---- Hint budgets + hint penalty (sequential only; unchanged maths) ---- */
 function hintCosts(){
   const p = current();
   ensurePuzzleDerived(p);
@@ -1176,8 +1203,51 @@ function hintPenalty(){
   return (B12 + H3);
 }
 
+/* ---- NEW: hint-haste penalty (phase-based) ---- */
+function applyHintHasteForStep(step){
+  // step: 1,2,3
+  const params =
+    (step === 1) ? {E:6,  T:20, P:6} :
+    (step === 2) ? {E:8,  T:25, P:8} :
+                  {E:10, T:30, P:10};
+
+  const vNow = getVisibleMsNow();
+
+  const vLast =
+    (typeof state.visibleMsAtLastHint === "number") ? state.visibleMsAtLastHint :
+    (typeof state.visibleMsAtPuzzleStart === "number") ? state.visibleMsAtPuzzleStart :
+    vNow;
+
+  const dt = Math.max(0, (vNow - vLast) / 1000);
+
+  const effNow  = (state.effortUnits || 0);
+  const effLast = (state.effortAtLastHint || 0);
+  const effPhase = Math.max(0, effNow - effLast);
+
+  const cycNow  = (state.cycleCount || 0);              // already “real cycles only”
+  const cycLast = (state.realCyclesAtLastHint || 0);
+  const cycPhase = Math.max(0, cycNow - cycLast);
+
+  const k = 0.5;
+  const effectiveEffortPhase = effPhase + k * cycPhase;
+
+  const engagement = Math.min(1, Math.max(effectiveEffortPhase / params.E, dt / params.T));
+  const add = (1 - engagement) * params.P;
+
+  state.hastePenalty = (state.hastePenalty || 0) + add;
+
+  // phase markers update (start→H1, H1→H2, H2→H3)
+  state.visibleMsAtLastHint = vNow;
+  state.effortAtLastHint = effNow;
+  state.realCyclesAtLastHint = cycNow;
+
+  // record Hint 1 timepoint (not strictly needed for timePenalty now, but useful to keep)
+  if(step === 1) state.visibleMsAtHint1 = vNow;
+}
+
+/* ---- Other penalty components (cycle + wrong + time + effort) ---- */
 function otherPenalty(){
-  // Cycle penalty
+  // Cycle penalty (0.8 each; pre-hint discount if any hint used)
   const pre  = state.preHint1Cycles || 0;
   const post = state.postHint1Cycles || 0;
 
@@ -1187,16 +1257,21 @@ function otherPenalty(){
   }
   const cyclePenalty = 0.8 * effectiveCycles;
 
-  // Wrong checks
+  // Wrong checks (+1 each)
   const wrongPenalty = (state.wrongCheckCount || 0);
 
-  // Time penalty (active time only)
-  const t = (state.activeMs || 0) / 1000;
-  const timePenalty =
-    (t < 30) ? 0 :
-    (t <= 60) ? 1 : 2;
+  // Time penalty (VISIBLE time only; ONLY if Hint 1 was never taken)
+  let timePenalty = 0;
+  if(hintsUsedCount() === 0){
+    const vStart = (typeof state.visibleMsAtPuzzleStart === "number") ? state.visibleMsAtPuzzleStart : getVisibleMsNow();
+    const t = (getVisibleMsNow() - vStart) / 1000;
 
-  // Effort penalty
+    timePenalty =
+      (t < 30) ? 0 :
+      (t <= 60) ? 1 : 2;
+  }
+
+  // Effort penalty (continuous)
   const effortPenalty = (state.effortUnits || 0) / 20;
 
   return {
@@ -1208,8 +1283,9 @@ function otherPenalty(){
   };
 }
 
+/* ---- Final skill ---- */
 function computeFinalSkill(gaveUp){
-  // finalise time up to this moment
+  // legacy hook (does not affect visible-time scoring)
   skillTouch();
 
   if(gaveUp){
@@ -1218,8 +1294,9 @@ function computeFinalSkill(gaveUp){
 
   const hp = hintPenalty();
   const op = otherPenalty();
+  const hastePenalty = (state.hastePenalty || 0);
 
-  const skillRaw = 100 - hp - op.total;
+  const skillRaw = 100 - hp - op.total - hastePenalty;
   const skill = Math.max(30, Math.round(skillRaw));
 
   return { skillRaw, skill };
@@ -3388,6 +3465,10 @@ function applyHint(id){
 
   if(id === HINT_IDS.w1){
     if(state.hintsUsed.w1) return;
+
+    // Hint-haste penalty for step 1 (start → Hint1)
+    applyHintHasteForStep(1);
+
     state.hintsUsed.w1 = true;
     state.hintCount += 1;
 
@@ -3399,6 +3480,13 @@ function applyHint(id){
 
   if(id === HINT_IDS.w2){
     if(state.hintsUsed.w2) return;
+
+    // (Should be sequential anyway, but keep this safe)
+    if(!state.hintsUsed.w1) return;
+
+    // Hint-haste penalty for step 2 (Hint1 → Hint2)
+    applyHintHasteForStep(2);
+
     state.hintsUsed.w2 = true;
     state.hintCount += 1;
 
@@ -3411,11 +3499,15 @@ function applyHint(id){
   if(id === HINT_IDS.extras){
     if(state.hintsUsed.extras) return;
     if(!extrasUnlocked()) return;
+
+    // Hint-haste penalty for step 3 (Hint2 → Hint3)
+    applyHintHasteForStep(3);
+
     state.hintsUsed.extras = true;
     state.hintCount += 1;
     if(state.bank.length === 0) rebuildBank();
 
-    scheduleHintFly('extras');           // moved BEFORE render
+    scheduleHintFly('extras');          // moved BEFORE render
     renderSmart();
     return;
   }
