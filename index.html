@@ -1638,12 +1638,33 @@ function kbBackspace(){
   const n = getN();
   const idx = clamp(state.focusIdx ?? 0, 0, n-1);
 
-  const tHere = trigramAtIndex(idx);
-  if(tHere){
-    deleteTrigramGroup(tHere.group);
+ const tHere = trigramAtIndex(idx);
+if(tHere){
+  // If we're on the FIRST cell of a trigram (and it's not at the very start),
+  // treat backspace as acting on the cell to the LEFT of the trigram.
+  if(idx === tHere.start && tHere.start > 0){
+    const left = tHere.start - 1;
+
+    const tLeft = trigramAtIndex(left);
+    if(tLeft){
+      deleteTrigramGroup(tLeft.group);
+    }else if(singleAt(left)){
+      deleteAtIndex(left);
+    }else{
+      // empty: just move focus left
+      state.focusIdx = left;
+    }
+
     renderSmart();
     return;
   }
+
+  // Default: delete the trigram you're in
+  deleteTrigramGroup(tHere.group);
+  renderSmart();
+  return;
+}
+
   if(singleAt(idx)){
     deleteAtIndex(idx);
     renderSmart();
@@ -3081,11 +3102,33 @@ function renderGrid(stealFocus=true){
         clearTransientOnAnyChange();
 
         const tHere = trigramAtIndex(i);
-        if(tHere){
-          deleteTrigramGroup(tHere.group);
-          renderSmart();
-          return;
-        }
+if(tHere){
+  if(i === tHere.start && tHere.start > 0){
+    const left = tHere.start - 1;
+
+    const tLeft = trigramAtIndex(left);
+    if(tLeft){
+      deleteTrigramGroup(tLeft.group);
+      renderSmart();
+      return;
+    }
+    if(singleAt(left)){
+      deleteAtIndex(left);
+      renderSmart();
+      return;
+    }
+
+    // empty: move caret left
+    focusCell(left);
+    renderSmart();
+    return;
+  }
+
+  deleteTrigramGroup(tHere.group);
+  renderSmart();
+  return;
+}
+
         if(singleAt(i)){
           deleteAtIndex(i);
           renderSmart();
