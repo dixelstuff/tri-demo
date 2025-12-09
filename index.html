@@ -735,17 +735,52 @@
       box-shadow: 0 7px 0 rgba(0,0,0,.10);
     }
 
-    html.has-kb .btnRow{
-      position:fixed;
-      left:0; right:0;
-      bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 36px);
-      margin:0;
-      z-index:9997;
-    }
-    /* Keep the hint mini-grid above the fixed bottom buttons */
-html.has-kb .hintTrack{
-  margin-bottom: calc(var(--btnrow-h, 68px) + 22px);
+   /* =========================
+   Mobile dock: hintTrack sits ABOVE the fixed buttons (no overlap)
+   ========================= */
+
+:root{
+  --dock-pad: clamp(12px, 3.2vh, 40px);
+  --dock-gap: 10px;   /* gap between buttons and hintTrack */
 }
+
+/* Buttons docked above the keyboard */
+html.has-kb .btnRow{
+  position:fixed;
+  left:0; right:0;
+  bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + var(--dock-pad));
+  margin:0;
+  z-index:9997;
+}
+
+/* Hint track docked above the buttons */
+html.has-kb .hintTrack{
+  position:fixed;
+  left:0; right:0;
+  bottom: calc(
+    var(--kb-h) + env(safe-area-inset-bottom) + var(--dock-pad)
+    + var(--btnrow-h, 64px) + var(--dock-gap)
+  );
+  margin:0 auto;
+  width: fit-content;
+  max-width: min(920px, 96vw);
+  z-index:9996;
+}
+
+/* Reserve vertical space so the grid/message never sit under the dock */
+html.has-kb .wrap{
+  padding-bottom: calc(
+    14px +                          /* your existing bottom padding */
+    var(--kb-h) +
+    env(safe-area-inset-bottom) +
+    var(--dock-pad) +
+    var(--btnrow-h, 64px) +
+    var(--dock-gap) +
+    var(--hinttrack-h, 88px) +
+    10px
+  );
+}
+
 
     html.has-kb .btn{ border-width:3px; }
 
@@ -1657,16 +1692,25 @@ function setCustomKBEnabled(on){
 function updateKeyboardHeightVar(){
   if(!state.useCustomKB) return;
 
+  // Measure keyboard height
   const kbRect = el.kbHost.getBoundingClientRect();
   if(kbRect && kbRect.height){
     document.documentElement.style.setProperty('--kb-h', `${Math.ceil(kbRect.height)}px`);
   }
 
+  // Measure fixed button row height
   const brRect = el.btnRow.getBoundingClientRect();
   if(brRect && brRect.height){
     document.documentElement.style.setProperty('--btnrow-h', `${Math.ceil(brRect.height)}px`);
   }
+
+  // Measure hint track height (badge + minigrid area)
+  const htRect = el.hintTrack.getBoundingClientRect();
+  if(htRect && htRect.height){
+    document.documentElement.style.setProperty('--hinttrack-h', `${Math.ceil(htRect.height)}px`);
+  }
 }
+
 
 function pressKeyAction(kind, val){
   if(state.finished) return;
