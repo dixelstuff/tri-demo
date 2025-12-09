@@ -19,6 +19,9 @@
 
       --kb-h: 260px;
       --caret: rgba(0,0,0,.18);
+        --kb-gap: 24px;        /* gap between top of keyboard and buttons */
+  --reserve-gap: 4px;    /* gap between buttons and content above */
+
     }
 .kbKey .kbIcon{
   width: 24px;
@@ -1007,21 +1010,25 @@
   width:100%;
   max-width:760px;
   margin: 10px auto 0;
-  min-height: 28px;
+  min-height: 34px;            /* gives the coach message real room */
   display:flex;
   align-items:center;
   justify-content:center;
   pointer-events:none;
+  flex:0 0 auto;
 }
-.coachSlot:empty{ display:none; } /* no space until you use it */
+/* keep the space even when empty (prevents everything feeling “cramped”) */
+.coachSlot:empty{ visibility:hidden; }
+
 
 /* Ensure buttons sit above if anything ever visually overlaps */
 .btnRow{ position:relative; z-index:50; }
 
 /* IMPORTANT: reduce the “floating gap” above the keyboard a bit (helps SE a lot) */
 html.has-kb .btnRow{
-  bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 14px); /* was +36px */
+  bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + var(--kb-gap));
 }
+
 
 /* Tight-mode: applied by JS if hintTrack would overlap btnRow */
 html.tight{
@@ -1085,13 +1092,18 @@ html.has-kb.tight .btnRow{
 html.has-kb .wrap{
   height: calc(var(--vvh) - var(--kb-h) - env(safe-area-inset-bottom));
   max-height: calc(var(--vvh) - var(--kb-h) - env(safe-area-inset-bottom));
-  padding-bottom: calc(var(--btnrow-h) + 10px);
+  /* reserve space for: buttons height + how far they float above keyboard */
+  padding-bottom: calc(var(--btnrow-h) + var(--kb-gap) + var(--reserve-gap));
 }
+
 
 /* Kill the transform “lift” on small screens (it creates visual overlap without changing layout) */
 @media (pointer: coarse) and (max-width: 520px){
   .msgSlot{ transform:none !important; }
   .hintTrack{ transform:none !important; }
+}
+@media (pointer: coarse) and (max-width: 520px){
+  .msgSlot{ flex: 1 0 auto !important; }  /* uses spare space -> pushes hintTrack down */
 }
 
 /* Replace all the vh-based vertical spacing with fixed px on small/coarse screens
