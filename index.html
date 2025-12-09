@@ -537,8 +537,12 @@
 
 
 @media (prefers-reduced-motion: reduce){
-  .skillBadgeInner::after{ animation:none; opacity:.35; }
+  .skillBadgeInner::after{
+    animation-duration: 4.5s;   /* slower */
+    opacity: .25;              /* subtler */
+  }
 }
+
 
 /* Make the "Correct - ..." line a bit smaller without affecting other messages */
 .msg.result .msgLine{ font-size: 19px; }
@@ -2534,7 +2538,7 @@ function revealAnswerGiveUp(){
   clearMsgTimer();
   setMsg("");
 
-  setResultSkillMsg("You gave up", res.skill);
+  setResultSkillMsg("Gave up", res.skill);
 
   renderSmart();
 }
