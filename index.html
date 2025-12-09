@@ -267,7 +267,11 @@
       grid-template-columns:repeat(var(--n), 1fr);
       gap: var(--gap);
       background: var(--ink);
-      width: min(calc(var(--n) * var(--cell) + (var(--n) - 1) * var(--gap)), 92vw);
+      width: min(
+  calc(var(--n) * var(--cell) + (var(--n) - 1) * var(--gap)),
+  calc(100vw - 36px) /* ~14px+14px padding + 8px border */
+);
+
     }
     .cell{
       aspect-ratio:1/1;
@@ -839,7 +843,11 @@
       }
       .grid{
         --cell: 43px;
-        width: min(calc(var(--n) * var(--cell) + (var(--n) - 1) * var(--gap)), 94vw);
+       width: min(
+  calc(var(--n) * var(--cell) + (var(--n) - 1) * var(--gap)),
+  calc(100vw - 36px) 
+);
+
       }
       .cell input{ font-size:clamp(24px,6.05vw,36px); }
       .letter{ width:28px; height:28px; font-size:19px; }
@@ -1017,9 +1025,11 @@ html.has-kb .btnRow{
 
 /* Tight-mode: applied by JS if hintTrack would overlap btnRow */
 html.tight{
-  --lift-msg: 0px;
-  --lift-hints: 0px;
+  --lift-msg: 8px;
+  --lift-hints: 10px;
 }
+
+
 html.tight .wrap{ padding: 10px 12px 12px; }
 
 html.tight .clue{
@@ -1038,8 +1048,8 @@ html.tight .hintTrack{ margin-top: 10px; }
 
 /* Extra-tight (if still overlapping after tight) */
 html.tight2{
-  --lift-msg: 0px;
-  --lift-hints: 0px;
+  --lift-msg: 10px;
+  --lift-hints: 14px;
 }
 html.tight2 .clue{
   margin-top: 8px;
@@ -1234,31 +1244,44 @@ function scheduleLayoutTune(){
   });
 }
 
+let _layoutMode = 0; // 0 = normal, 1 = tight, 2 = tight2
+
 function tuneLayoutNow(){
   const html = document.documentElement;
-  if(!el.hintTrack) return;
+  if(!state.useCustomKB || !el.btnRow || !el.hintTrack){
+    _layoutMode = 0;
+    html.classList.remove('tight','tight2');
+    return;
+  }
 
-  const hasKB = html.classList.contains('has-kb');
-  const btnTop = (hasKB && el.btnRow)
-    ? el.btnRow.getBoundingClientRect().top
-    : window.innerHeight;
-
+  const btnTop = el.btnRow.getBoundingClientRect().top;
   const hintBottom = el.hintTrack.getBoundingClientRect().bottom;
 
-  // If the hint track would run into the buttons, enable tight mode
-  const needTight = hintBottom > (btnTop - 8);
-  html.classList.toggle('tight', needTight);
+  // +ve means overlapping the buttons
+  const overlap = hintBottom - (btnTop - 10);
 
-  // Second pass for extra-tight
-  requestAnimationFrame(()=>{
-    const btnTop2 = (hasKB && el.btnRow)
-      ? el.btnRow.getBoundingClientRect().top
-      : window.innerHeight;
+  const ON1 = 6;     // turn tight on
+  const ON2 = 26;    // turn tight2 on
+  const OFF = -22;   // only turn off when there's real spare space (hysteresis)
 
-    const hintBottom2 = el.hintTrack.getBoundingClientRect().bottom;
-    html.classList.toggle('tight2', hintBottom2 > (btnTop2 - 8));
-  });
+  let want = _layoutMode;
+
+  if(overlap > ON2) want = 2;
+  else if(overlap > ON1) want = 1;
+  else if(overlap < OFF) want = 0; // plenty of room
+  // else keep existing mode (prevents flicker)
+
+  if(want !== _layoutMode){
+    _layoutMode = want;
+    html.classList.toggle('tight', want >= 1);
+    html.classList.toggle('tight2', want >= 2);
+  }
 }
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', scheduleLayoutTune, {passive:true});
+  window.visualViewport.addEventListener('scroll', scheduleLayoutTune, {passive:true});
+}
+
 
 window.addEventListener('resize', scheduleLayoutTune, {passive:true});
 
@@ -1656,29 +1679,28 @@ function setResultSkillMsg(line1, skill){
    ======================= */
 function bindTapReliable(node, fn){
   if(!node) return;
+
   let last = 0;
+  let sawPointer = false;
 
   const fire = (e)=>{
     const now = performance.now();
-    if(now - last < 260) return;
+    // iOS can delay click ~300ms; use a wider guard
+    if(now - last < 450) return;
     last = now;
     try{ fn(e); }catch(err){ console.error(err); }
   };
 
   node.addEventListener('pointerup', (e)=>{
     if(e.pointerType === 'mouse' && e.button !== 0) return;
+    sawPointer = true;
     e.preventDefault();
     e.stopPropagation();
     fire(e);
   }, {passive:false});
 
   node.addEventListener('click', (e)=>{
-    e.preventDefault();
-    e.stopPropagation();
-    fire(e);
-  }, {passive:false});
-
-  node.addEventListener('touchend', (e)=>{
+    if(sawPointer) return; // ignore synthetic click after pointerup
     e.preventDefault();
     e.stopPropagation();
     fire(e);
@@ -3565,6 +3587,8 @@ function onClueWordActivate(group){
    ======================= */
 function renderGrid(stealFocus=true){
   const n = getN();
+el.grid.style.setProperty('--n', n);
+
   const f = flags();
   const revealed = state.finished;
 
