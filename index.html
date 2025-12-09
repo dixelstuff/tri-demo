@@ -1063,6 +1063,73 @@ html.tight2 .hintTrack{ margin-top: 8px; }
 html.has-kb.tight .btnRow{
   bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 10px);
 }
+/* =========================
+   STABLE MOBILE LAYOUT (no vh-jitter)
+   ========================= */
+
+/* JS will keep these up to date */
+:root{
+  --vvh: 100dvh;          /* px from visualViewport */
+  --btnrow-h: 70px;       /* measured by JS */
+}
+
+/* Use stable viewport height (px) so iOS address-bar changes don't reflow margins via vh clamps */
+.wrap{
+  height: var(--vvh);
+  max-height: var(--vvh);
+}
+
+/* When the custom keyboard is showing:
+   - constrain the play area to the visible space ABOVE the keyboard
+   - reserve space for the fixed Hint/Check row so hintTrack never slides under it */
+html.has-kb .wrap{
+  height: calc(var(--vvh) - var(--kb-h) - env(safe-area-inset-bottom));
+  max-height: calc(var(--vvh) - var(--kb-h) - env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--btnrow-h) + 10px);
+}
+
+/* Kill the transform “lift” on small screens (it creates visual overlap without changing layout) */
+@media (pointer: coarse) and (max-width: 520px){
+  .msgSlot{ transform:none !important; }
+  .hintTrack{ transform:none !important; }
+}
+
+/* Replace all the vh-based vertical spacing with fixed px on small/coarse screens
+   (this removes the bounce when Safari bars expand/contract) */
+@media (pointer: coarse) and (max-width: 520px){
+  .clue{
+    margin: 12px auto 0 !important;
+  }
+  .gridDock{
+    margin: 14px auto 0 !important;
+  }
+  html.has-kb .gridDock{
+    margin: 14px auto 0 !important; /* override your vh-based has-kb rule */
+  }
+
+  .msgSlot{
+    margin: 8px auto 0 !important;
+    height: 92px !important;
+  }
+  .hintTrack{
+    margin: 10px auto 0 !important;
+    min-height: 72px !important;
+  }
+
+  .btnRow{
+    margin-top: 12px !important;
+  }
+}
+
+/* Slight safety buffer so the last grid cell never clips on very narrow widths */
+@media (max-width: 380px){
+  .grid{
+    width: min(
+      calc(var(--n) * var(--cell) + (var(--n) - 1) * var(--gap)),
+      calc(100vw - 44px) /* was 36px; gives 8px extra safety */
+    ) !important;
+  }
+}
 
 
   </style>
@@ -1234,56 +1301,46 @@ const el = {
   hintsModalBody: document.getElementById('hintsModalBody'),
   hintsModalClose: document.getElementById('hintsModalClose'),
 };
-let _layoutTuneRAF = 0;
 
-function scheduleLayoutTune(){
-  if(_layoutTuneRAF) cancelAnimationFrame(_layoutTuneRAF);
-  _layoutTuneRAF = requestAnimationFrame(()=>{
-    _layoutTuneRAF = 0;
-    tuneLayoutNow();
-  });
-}
 
-let _layoutMode = 0; // 0 = normal, 1 = tight, 2 = tight2
+/* =======================
+   Stable viewport sizing (no tight/tight2 flipping)
+   ======================= */
 
-function tuneLayoutNow(){
+function syncViewportVars(){
   const html = document.documentElement;
-  if(!state.useCustomKB || !el.btnRow || !el.hintTrack){
-    _layoutMode = 0;
-    html.classList.remove('tight','tight2');
-    return;
-  }
-
-  const btnTop = el.btnRow.getBoundingClientRect().top;
-  const hintBottom = el.hintTrack.getBoundingClientRect().bottom;
-
-  // +ve means overlapping the buttons
-  const overlap = hintBottom - (btnTop - 10);
-
-  const ON1 = 6;     // turn tight on
-  const ON2 = 26;    // turn tight2 on
-  const OFF = -22;   // only turn off when there's real spare space (hysteresis)
-
-  let want = _layoutMode;
-
-  if(overlap > ON2) want = 2;
-  else if(overlap > ON1) want = 1;
-  else if(overlap < OFF) want = 0; // plenty of room
-  // else keep existing mode (prevents flicker)
-
-  if(want !== _layoutMode){
-    _layoutMode = want;
-    html.classList.toggle('tight', want >= 1);
-    html.classList.toggle('tight2', want >= 2);
-  }
+  const vv = window.visualViewport;
+  const h = vv ? vv.height : window.innerHeight;
+  html.style.setProperty('--vvh', `${Math.round(h)}px`);
 }
+
+function syncBtnRowVar(){
+  const html = document.documentElement;
+  const r = el.btnRow?.getBoundingClientRect();
+  if(r && r.height) html.style.setProperty('--btnrow-h', `${Math.ceil(r.height)}px`);
+}
+
+function syncLayoutVars(){
+  syncViewportVars();
+  syncBtnRowVar();
+}
+
+/* Only listen to *resize* (NOT visualViewport.scroll) to avoid tap-jitter */
 if(window.visualViewport){
-  window.visualViewport.addEventListener('resize', scheduleLayoutTune, {passive:true});
-  window.visualViewport.addEventListener('scroll', scheduleLayoutTune, {passive:true});
+  window.visualViewport.addEventListener('resize', syncViewportVars, {passive:true});
+}
+window.addEventListener('resize', syncLayoutVars, {passive:true});
+window.addEventListener('orientationchange', syncLayoutVars, {passive:true});
+
+/* Keep btnRow height current (it changes when “solved” fades it, etc.) */
+if('ResizeObserver' in window && el.btnRow){
+  const ro = new ResizeObserver(()=> syncBtnRowVar());
+  ro.observe(el.btnRow);
 }
 
+/* Run once on load */
+requestAnimationFrame(syncLayoutVars);
 
-window.addEventListener('resize', scheduleLayoutTune, {passive:true});
 
 const TWOTRI_TEXT  = "Two trigrams from same word";
 const OVERLAP_TEXT = "1-letter overlap allowed ✓";
@@ -1775,6 +1832,7 @@ function setCustomKBEnabled(on){
   state.useCustomKB = !!on;
   document.documentElement.classList.toggle('has-kb', state.useCustomKB);
   buildKeyboard();
+  requestAnimationFrame(syncLayoutVars);
   requestAnimationFrame(()=> updateKeyboardHeightVar());
 }
 function updateKeyboardHeightVar(){
@@ -1782,9 +1840,10 @@ function updateKeyboardHeightVar(){
   const rect = el.kbHost.getBoundingClientRect();
   if(rect && rect.height){
     document.documentElement.style.setProperty('--kb-h', `${Math.ceil(rect.height)}px`);
-    scheduleLayoutTune(); // <- add this
+    syncLayoutVars();
   }
 }
+
 
 function pressKeyAction(kind, val){
   if(state.finished) return;
