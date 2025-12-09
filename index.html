@@ -45,13 +45,14 @@
       -webkit-text-size-adjust: 100%;
     }
 
-    #clue, #clue *,
-    #gridDock, #gridDock *,
-    #gridWrap, #gridWrap *,
-    #hintTrack, #hintTrack *,
-    #btnRow, #btnRow *,
-    #kbHost, #kbHost *,
-    #hintsModal, #hintsModal *{
+#clue, #clue *,
+#extrasFloat, #extrasFloat *,
+#gridDock, #gridDock *,
+#gridWrap, #gridWrap *,
+#btnRow, #btnRow *,
+#kbHost, #kbHost *,
+#hintsModal, #hintsModal *{
+
       -webkit-user-select:none;
       user-select:none;
       -webkit-touch-callout:none;
@@ -140,6 +141,25 @@
       font-variant-ligatures: none;
       font-feature-settings: "kern" 0, "liga" 0, "clig" 0;
     }
+/* =========================
+   Hint 3 “extra letters” — fixed slot under clue (no layout jump)
+   ========================= */
+.extrasFloat{
+  margin: 10px auto 0;
+  width: fit-content;
+  max-width: min(920px,96vw);
+  min-height: 44px;              /* reserves space even before hint 3 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  visibility: hidden;
+  pointer-events: none;
+}
+.extrasFloat[aria-hidden="false"]{
+  visibility: visible;
+  pointer-events: auto;
+}
 
     .u-w1, .u-w2, .u-red{
       text-decoration: underline;
@@ -384,18 +404,7 @@
 }
 
 
-    .hintTrack{
-      margin: clamp(14px, 3.4vh, 24px) auto 0;
-      width:fit-content;
-      max-width:min(920px,96vw);
-      min-height:78px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      transition:opacity .35s ease;
-      user-select:none;
-      flex:0 0 auto;
-    }
+   
     /* Lift message + hint grids slightly (does NOT affect button position) */
 :root{
   --lift-msg: 8px;
@@ -411,45 +420,26 @@
 .msgSlot{
   transform: translateY(calc(-1 * var(--lift-msg)));
 }
-.hintTrack{
-  transform: translateY(calc(-1 * var(--lift-hints)));
-}
 
-   /* Keep hintTrack as the layout “slot”, but fade the mini-grid out completely on solve */
-#hintTrack{ position:relative; } /* so the badge can sit in the same spot */
 
-.wrap.solved .hintTrack{
-  pointer-events:none;
-  opacity: 1; /* don't fade the container; we fade the mini-grid row only */
-}
 
-.trackRow{
-  display:flex;
-  align-items:flex-start;
-  justify-content:center;
-  gap:18px;
-  flex-wrap:nowrap;
-  transition: opacity .35s ease;
-}
-.wrap.solved .trackRow{
-  opacity: 0;
-}
+
+
+
+
 
 /* Golden shining badge (appears where the mini-grid was) */
 /* =========================
    Skill badge (tiered) + shine
    ========================= */
 
-#hintTrack{ position:relative; } /* badge sits “in” the hint track slot */
 
-/* Mini-grid fades away on reveal (keep your existing rules if you already have them) */
-.wrap.solved .trackRow{ opacity:0; transition: opacity .35s ease; }
 
 /* Badge container */
 .skillBadge{
   position:absolute;
   left:50%;
-  top:70%;
+  top:78%;
   transform:translate(-50%,-50%) scale(.985);
   opacity:0;
   pointer-events:none;
@@ -611,13 +601,7 @@
 }
 
 
-    .trackBlock{
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      gap:6px;
-      min-width:0;
-    }
+   
 
     .letters{
       display:inline-flex;
@@ -1008,7 +992,9 @@
       </div>
     </div>
 
-    <div class="clue" id="clue"></div>
+<div class="clue" id="clue"></div>
+<div class="extrasFloat" id="extrasFloat" aria-hidden="true"></div>
+
 
     <div class="gridDock" id="gridDock">
       <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
@@ -1016,24 +1002,19 @@
       </div>
     </div>
 
-    <div class="msgSlot" id="msgSlot" aria-live="polite">
-      <div class="msg" id="msg"></div>
-    </div>
+<div class="msgSlot" id="msgSlot" aria-live="polite">
+  <div class="msg" id="msg"></div>
 
-    <div class="hintTrack" id="hintTrack" aria-label="Hint tracker">
-      <div class="trackRow" id="trackRow">
-        <div class="trackBlock" id="trackW1"></div>
-        <div class="trackBlock" id="trackW2"></div>
-        <div class="trackBlock" id="trackExtras"></div>
-      </div>
-        <div class="skillBadge" id="skillBadge" aria-hidden="true">
+  <div class="skillBadge" id="skillBadge" aria-hidden="true">
     <div class="skillBadgeInner">
       <div class="skillBadgeLabel">Skill</div>
       <div class="skillBadgeValue" id="skillBadgeValue">—</div>
     </div>
   </div>
+</div>
 
-    </div>
+
+
 
     <div class="btnRow" id="btnRow">
       <button class="btn hints" id="hintsBtn" type="button">hint 1</button>
@@ -1144,10 +1125,8 @@ const el = {
   grid: document.getElementById('grid'),
   msg: document.getElementById('msg'),
 
-  hintTrack: document.getElementById('hintTrack'),
-  trackW1: document.getElementById('trackW1'),
-  trackW2: document.getElementById('trackW2'),
-  trackExtras: document.getElementById('trackExtras'),
+  extrasFloat: document.getElementById('extrasFloat'),
+
 
   hintsBtn: document.getElementById('hintsBtn'),
   checkBtn: document.getElementById('checkBtn'),
@@ -1504,7 +1483,7 @@ function shakeGrid(){
 /* prevent context menu on interactive surface */
 document.addEventListener('contextmenu', (e)=>{
   const t = e.target;
-  if(t && t.closest && t.closest('#clue, #gridDock, #gridWrap, #hintTrack, #btnRow, #kbHost, #hintsModal')){
+  if(t && t.closest && t.closest('#clue, #extrasFloat, #gridDock, #gridWrap, #btnRow, #kbHost, #hintsModal')){
     e.preventDefault();
   }
 });
@@ -1597,7 +1576,7 @@ function isBackgroundToggleTarget(t){
   if(!t) return false;
 
   if(t.closest && t.closest(
-    'button, a, #clue, #gridDock, #gridWrap, #grid, #hintTrack, #btnRow, #kbHost, #hintsModal'
+    'button, a, #clue, #extrasFloat, #gridDock, #gridWrap, #grid, #btnRow, #kbHost, #hintsModal'
   )) return false;
 
   if(t.closest && !t.closest('#wrap')) return false;
@@ -3092,10 +3071,13 @@ function inferredSingleTrigram(group){
   return (uniq.length === 1) ? uniq[0] : null;
 }
 function triForClue(group){
-  const pl = state.placed[group];
-  if(pl && pl.tri) return pl.tri;
-  return inferredSingleTrigram(group);
+  const p = current();
+  // Only reveal/highlight the trigram in the clue word AFTER that hint is taken
+  if(group === 'w1' && state.hintsUsed.w1) return norm(p.tri1);
+  if(group === 'w2' && state.hintsUsed.w2) return norm(p.tri2);
+  return null;
 }
+
 
 /* =======================
    Placing / cycling
@@ -3228,131 +3210,62 @@ function firstTrigramOfWord(group){
 }
 
 /* =======================
-   Hint track UI
+   Hint 3 “extra letters” — floats under the clue
    ======================= */
-function makeTrigramBlock(tri, cls, labelText, onTap, id){
-  const block = document.createElement('div');
-  block.className = "trackBlock";
+function renderExtrasFloat(){
+  if(!el.extrasFloat) return;
 
-  const box = document.createElement('div');
-  box.className = "letters clickable";
-  box.setAttribute("aria-label", labelText);
-  if(id) box.id = id;
+  el.extrasFloat.innerHTML = "";
 
-  if(typeof onTap === "function"){
-    bindTapReliable(box, onTap);
+  if(!state.hintsUsed.extras){
+    el.extrasFloat.setAttribute('aria-hidden', 'true');
+    return;
   }
 
-  for(let i=0;i<tri.length;i++){
+  el.extrasFloat.setAttribute('aria-hidden', 'false');
+
+  if(state.bank.length === 0) rebuildBank();
+
+  const row = document.createElement('div');
+  row.className = "extrasRow";
+
+  for(const tile of state.bank){
+    const box = document.createElement('div');
+    box.className = "letters clickable";
+
     const d = document.createElement('div');
-    d.className = "letter " + cls;
-    d.textContent = tri[i];
+    d.className = "letter extra";
+    d.textContent = tile.ch;
+
+    bindTapReliable(d, ()=>{
+      if(state.finished) return;
+      if(state.modalOpen) return;
+      clearTransientOnAnyChange();
+
+      if(!state.assist) setEnhanced(true, false);
+
+      const n = getN();
+      for(let i=0;i<n;i++){
+        if(state.placed.w1 && i>=state.placed.w1.start && i<state.placed.w1.start+3) continue;
+        if(state.placed.w2 && i>=state.placed.w2.start && i<state.placed.w2.start+3) continue;
+        if(state.singles.find(s=>s.idx===i)) continue;
+
+        addEffort(1);
+        state.singles.push({id: uid(), ch: tile.ch, idx: i});
+        state.focusIdx = clamp(i+1,0,n-1);
+        renderSmart();
+        return;
+      }
+      setTransientMsg("No blank spot", 2000);
+    });
+
     box.appendChild(d);
+    row.appendChild(box);
   }
-  block.appendChild(box);
 
-  return block;
+  el.extrasFloat.appendChild(row);
 }
-function renderHintTrack(){
-  const p = current();
 
-  el.trackW1.innerHTML = "";
-  el.trackW2.innerHTML = "";
-  el.trackExtras.innerHTML = "";
-
-  el.trackW1.style.display = "none";
-  el.trackW2.style.display = "none";
-  el.trackExtras.style.display = "none";
-
-  if(state.hintsUsed.w1){
-    el.trackW1.appendChild(
-      makeTrigramBlock(norm(p.tri1), "sel-w1", "word 1 trigram", ()=>{
-        if(state.finished || state.modalOpen) return;
-        if(!state.assist) setEnhanced(true, false);
-        addEffort(2);
-        placeTrigram('w1', norm(p.tri1));
-        renderSmart();
-      }, "trackBox-w1")
-    );
-    el.trackW1.style.display = "";
-
-    // PRE-HIDE during pending fly (prevents flash before overlay animation starts)
-    if(state.pendingFly === 'w1'){
-      const bx = el.trackW1.querySelector('#trackBox-w1');
-      if(bx) bx.style.opacity = "0";
-    }
-  }
-
-  if(state.hintsUsed.w2){
-    el.trackW2.appendChild(
-      makeTrigramBlock(norm(p.tri2), "sel-w2", "word 2 trigram", ()=>{
-        if(state.finished || state.modalOpen) return;
-        if(!state.assist) setEnhanced(true, false);
-        addEffort(2);
-        placeTrigram('w2', norm(p.tri2));
-        renderSmart();
-      }, "trackBox-w2")
-    );
-    el.trackW2.style.display = "";
-
-    // PRE-HIDE during pending fly
-    if(state.pendingFly === 'w2'){
-      const bx = el.trackW2.querySelector('#trackBox-w2');
-      if(bx) bx.style.opacity = "0";
-    }
-  }
-
-  if(state.hintsUsed.extras){
-    if(state.bank.length === 0) rebuildBank();
-
-    const block = document.createElement('div');
-    block.className = "trackBlock";
-
-    const row = document.createElement('div');
-    row.className = "extrasRow";
-    row.id = "trackBox-extras";
-
-    for(const tile of state.bank){
-      const box = document.createElement('div');
-      box.className = "letters clickable";
-
-      const d = document.createElement('div');
-      d.className = "letter extra";
-      d.textContent = tile.ch;
-
-      // PRE-HIDE during pending fly (prevents a single-frame flash)
-      if(state.pendingFly === 'extras') d.style.opacity = "0";
-
-      bindTapReliable(d, ()=>{
-        if(state.finished) return;
-        if(state.modalOpen) return;
-        clearTransientOnAnyChange();
-
-        if(!state.assist) setEnhanced(true, false);
-
-        const n = getN();
-        for(let i=0;i<n;i++){
-          if(state.placed.w1 && i>=state.placed.w1.start && i<state.placed.w1.start+3) continue;
-          if(state.placed.w2 && i>=state.placed.w2.start && i<state.placed.w2.start+3) continue;
-          if(state.singles.find(s=>s.idx===i)) continue;
-           addEffort(1);
-          state.singles.push({id: uid(), ch: tile.ch, idx: i});
-          state.focusIdx = clamp(i+1,0,n-1);
-          renderSmart();
-          return;
-        }
-        setTransientMsg("No blank spot", 2000);
-      });
-
-      box.appendChild(d);
-      row.appendChild(box);
-    }
-
-    block.appendChild(row);
-    el.trackExtras.appendChild(block);
-    el.trackExtras.style.display = "";
-  }
-}
 
 /* =======================
    Clue tap behavior
@@ -3678,7 +3591,7 @@ function applyHint(id){
     state.hintsUsed.w1 = true;
     state.hintCount += 1;
 
-    scheduleHintFly('w1');              // moved BEFORE render
+   
     maybeAutoEnableEnhancedForExcluded();
     renderSmart();
     return;
@@ -3696,7 +3609,7 @@ function applyHint(id){
     state.hintsUsed.w2 = true;
     state.hintCount += 1;
 
-    scheduleHintFly('w2');              // moved BEFORE render
+
     maybeAutoEnableEnhancedForExcluded();
     renderSmart();
     return;
@@ -3713,7 +3626,7 @@ function applyHint(id){
     state.hintCount += 1;
     if(state.bank.length === 0) rebuildBank();
 
-    scheduleHintFly('extras');          // moved BEFORE render
+
     renderSmart();
     return;
   }
@@ -3839,7 +3752,8 @@ function render(stealFocus=true){
     `<span class="clueWord" data-group="w2">${b}</span>` +
     `<span class="len">(${n})</span>`;
 
-  renderHintTrack();
+renderExtrasFloat();
+
 
   el.checkBtn.classList.toggle('ready', canEnableCheckNow());
   el.checkBtn.disabled = state.finished;
