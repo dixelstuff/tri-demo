@@ -841,9 +841,10 @@
     @media (max-width:520px){
       .nav a, .nav button{ padding:4px 9px; }
       .clue{
-        font-size:clamp(32px,6.6vw,38px);
-        margin-top: clamp(16px, 3.4vh, 28px);
-      }
+  font-size: clamp(24px, 6.0vw, 32px);
+  padding: 11px 12px 12px 16px;
+}
+
       .grid{
         --cell: 43px;
        width: min(
@@ -1090,10 +1091,18 @@ html.has-kb.tight .btnRow{
    - constrain the play area to the visible space ABOVE the keyboard
    - reserve space for the fixed Hint/Check row so hintTrack never slides under it */
 html.has-kb .wrap{
-  height: calc(var(--vvh) - var(--kb-h) - env(safe-area-inset-bottom));
-  max-height: calc(var(--vvh) - var(--kb-h) - env(safe-area-inset-bottom));
-  /* reserve space for: buttons height + how far they float above keyboard */
-  padding-bottom: calc(var(--btnrow-h) + var(--kb-gap) + var(--reserve-gap));
+  /* End the play area ABOVE the fixed button row */
+  height: calc(
+    var(--vvh) - var(--kb-h) - env(safe-area-inset-bottom)
+    - var(--btnrow-h) - var(--kb-gap) - var(--reserve-gap)
+  );
+  max-height: calc(
+    var(--vvh) - var(--kb-h) - env(safe-area-inset-bottom)
+    - var(--btnrow-h) - var(--kb-gap) - var(--reserve-gap)
+  );
+
+  /* back to normal padding; we no longer “reserve” with padding-bottom */
+  padding-bottom: 14px;
 }
 
 
@@ -1101,9 +1110,6 @@ html.has-kb .wrap{
 @media (pointer: coarse) and (max-width: 520px){
   .msgSlot{ transform:none !important; }
   .hintTrack{ transform:none !important; }
-}
-@media (pointer: coarse) and (max-width: 520px){
-  .msgSlot{ flex: 1 0 auto !important; }  /* uses spare space -> pushes hintTrack down */
 }
 
 /* Replace all the vh-based vertical spacing with fixed px on small/coarse screens
