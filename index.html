@@ -735,53 +735,13 @@
       box-shadow: 0 7px 0 rgba(0,0,0,.10);
     }
 
-   /* =========================
-   Mobile dock: hintTrack sits ABOVE the fixed buttons (no overlap)
-   ========================= */
-
-:root{
-  --dock-pad: clamp(12px, 3.2vh, 40px);
-  --dock-gap: -300px;   /* gap between buttons and hintTrack */
-}
-
-/* Buttons docked above the keyboard */
-html.has-kb .btnRow{
-  position:fixed;
-  left:0; right:0;
-  bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + var(--dock-pad));
-  margin:0;
-  z-index:9997;
-}
-
-/* Hint track docked above the buttons */
-html.has-kb .hintTrack{
-  position:fixed;
-  left:0; right:0;
-  bottom: calc(
-    var(--kb-h) + env(safe-area-inset-bottom) + var(--dock-pad)
-    + var(--btnrow-h, 64px) + var(--dock-gap)
-  );
-  margin:0 auto;
-  width: fit-content;
-  max-width: min(920px, 96vw);
-  z-index:9996;
-}
-
-/* Reserve vertical space so the grid/message never sit under the dock */
-html.has-kb .wrap{
-  padding-bottom: calc(
-    14px +                          /* your existing bottom padding */
-    var(--kb-h) +
-    env(safe-area-inset-bottom) +
-    var(--dock-pad) +
-    var(--btnrow-h, 64px) +
-    var(--dock-gap) +
-    var(--hinttrack-h, 88px) +
-    10px
-  );
-}
-
-
+    html.has-kb .btnRow{
+      position:fixed;
+      left:0; right:0;
+      bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 36px);
+      margin:0;
+      z-index:9997;
+    }
     html.has-kb .btn{ border-width:3px; }
 
     .ghost{
@@ -1108,6 +1068,8 @@ const PUZZLES = [
 { clue:"Danger mishaps", word1:"danger", word2:"mishaps", answer:"anguish", tri1:"ang", tri2:"ish" },
 { clue:"Lavish phonons", word1:"lavish", word2:"phonons", answer:"visions", tri1:"vis", tri2:"ons" },
 { clue:"Horizon swifter", word1:"horizon", word2:"swifter", answer:"shorter", tri1:"hor", tri2:"ter" },
+{ clue:"Muscle voter", word1:"muscle", word2:"voter", answer:"musters", tri1:"mus", tri2:"ter" },
+{ clue:"Greater harken", word1:"greater", word2:"harken", answer:"charter", tri1:"ter", tri2:"har" },
 { clue:"Blast updraft", word1:"blast", word2:"updraft", answer:"drastic", tri1:"ast", tri2:"dra" },
 { clue:"Fairy drafter", word1:"fairy", word2:"drafter", answer:"fainter", tri1:"fai", tri2:"ter" },
 { clue:"Ultra tinned", word1:"ultra", word2:"tinned", answer:"trained", tri1:"tra", tri2:"ned" },
@@ -1116,6 +1078,7 @@ const PUZZLES = [
 { clue:"Flower grieve", word1:"flower", word2:"grieve", answer:"however", tri1:"owe", tri2:"eve" },
 { clue:"Carrot chords", word1:"carrot", word2:"chords", answer:"horrors", tri1:"rro", tri2:"hor" },
 { clue:"Chimps dacha", word1:"chimps", word2:"dacha", answer:"impeach", tri1:"imp", tri2:"ach" },
+{ clue:"Spikes ralphs", word1:"spikes", word2:"ralphs", answer:"spirals", tri1:"spi", tri2:"ral" },
 { clue:"Larger caption", word1:"larger", word2:"caption", answer:"clarion", tri1:"lar", tri2:"ion" },
 { clue:"Bruise purport", word1:"bruise", word2:"purport", answer:"mortise", tri1:"ise", tri2:"ort" },
 { clue:"Kitten suppose", word1:"kitten", word2:"suppose", answer:"rosette", tri1:"tte", tri2:"ose" },
@@ -1123,6 +1086,7 @@ const PUZZLES = [
 { clue:"Final uniform", word1:"final", word2:"uniform", answer:"knifing", tri1:"fin", tri2:"nif" },
 { clue:"Changed similar", word1:"changed", word2:"similar", answer:"angular", tri1:"ang", tri2:"lar" },
 { clue:"Firefly clotted", word1:"firefly", word2:"clotted", answer:"refuted", tri1:"ref", tri2:"ted" },
+{ clue:"Token angels", word1:"token", word2:"angels", answer:"kennels", tri1:"ken", tri2:"els" },
 { clue:"Disco recess", word1:"disco", word2:"recess", answer:"sconces", tri1:"sco", tri2:"ces" },
 { clue:"Scones rowboat", word1:"scones", word2:"rowboat", answer:"jawbone", tri1:"one", tri2:"wbo" },
 { clue:"Orange museums", word1:"orange", word2:"museums", answer:"mustang", tri1:"ang", tri2:"mus" },
@@ -1153,8 +1117,8 @@ const PUZZLES = [
 { clue:"Pains mudder", word1:"pains", word2:"mudder", answer:"insider", tri1:"ins", tri2:"der" },
 { clue:"Shame redrawn", word1:"shame", word2:"redrawn", answer:"dramedy", tri1:"ame", tri2:"dra" },
 { clue:"Aliens butch", word1:"aliens", word2:"butch", answer:"halibut", tri1:"ali", tri2:"but" },
+{ clue:"Layers exempts", word1:"layers", word2:"exempts", answer:"tempers", tri1:"ers", tri2:"emp" },
 { clue:"Pride earths", word1:"pride", word2:"earths", answer:"sidearm", tri1:"ide", tri2:"ear" },
-{ clue:"Earache fridges", word1:"earache", word2:"fridges", answer:"garages", tri1:"ara", tri2:"ges" },
 { clue:"Space archer", word1:"space", word2:"archer", answer:"apaches", tri1:"pac", tri2:"che" },
 { clue:"Dweeb riddles", word1:"dweeb", word2:"riddles", answer:"tweedle", tri1:"wee", tri2:"dle" },
 { clue:"Lakes martyr", word1:"lakes", word2:"martyr", answer:"partake", tri1:"ake", tri2:"art" },
@@ -1691,27 +1655,11 @@ function setCustomKBEnabled(on){
 }
 function updateKeyboardHeightVar(){
   if(!state.useCustomKB) return;
-
-  // Measure keyboard height
-  const kbRect = el.kbHost.getBoundingClientRect();
-  if(kbRect && kbRect.height){
-    document.documentElement.style.setProperty('--kb-h', `${Math.ceil(kbRect.height)}px`);
-  }
-
-  // Measure fixed button row height
-  const brRect = el.btnRow.getBoundingClientRect();
-  if(brRect && brRect.height){
-    document.documentElement.style.setProperty('--btnrow-h', `${Math.ceil(brRect.height)}px`);
-  }
-
-  // Measure hint track height (badge + minigrid area)
-  const htRect = el.hintTrack.getBoundingClientRect();
-  if(htRect && htRect.height){
-    document.documentElement.style.setProperty('--hinttrack-h', `${Math.ceil(htRect.height)}px`);
+  const rect = el.kbHost.getBoundingClientRect();
+  if(rect && rect.height){
+    document.documentElement.style.setProperty('--kb-h', `${Math.ceil(rect.height)}px`);
   }
 }
-
-
 function pressKeyAction(kind, val){
   if(state.finished) return;
   if(state.modalOpen) return;
