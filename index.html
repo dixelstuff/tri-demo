@@ -449,7 +449,7 @@
 .skillBadge{
   position:absolute;
   left:50%;
-  top:65%;
+  top:70%;
   transform:translate(-50%,-50%) scale(.985);
   opacity:0;
   pointer-events:none;
@@ -465,9 +465,9 @@
 .skillBadgeInner{
   position:relative;
   overflow:hidden;          /* CLIPS the shine to the badge */
-  min-width:170px;
-  padding:12px 16px;
-  border-radius:18px;
+  min-width:140px;     /* narrower */
+  padding:10px 14px;   /* slightly tighter */
+  border-radius:16px;  /* slightly smaller rounding */
   text-align:center;
 
   /* tier variables */
@@ -605,10 +605,11 @@
 
 
 /* Make the "Correct - ..." line a bit smaller without affecting other messages */
-.msg.result .msgLine{ font-size: 17px; }
+.msg.result .msgLine{ font-size: 24px; }   /* desktop */
 @media (max-width:520px){
-  .msg.result .msgLine{ font-size: 14px; }
+  .msg.result .msgLine{ font-size: 14px; } /* mobile */
 }
+
 
     .trackBlock{
       display:flex;
