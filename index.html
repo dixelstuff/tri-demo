@@ -19,9 +19,6 @@
 
       --kb-h: 260px;
       --caret: rgba(0,0,0,.18);
-        --kb-gap: 24px;        /* gap between top of keyboard and buttons */
-  --reserve-gap: 4px;    /* gap between buttons and content above */
-
     }
 .kbKey .kbIcon{
   width: 24px;
@@ -270,11 +267,7 @@
       grid-template-columns:repeat(var(--n), 1fr);
       gap: var(--gap);
       background: var(--ink);
-      width: min(
-  calc(var(--n) * var(--cell) + (var(--n) - 1) * var(--gap)),
-  calc(100vw - 36px) /* ~14px+14px padding + 8px border */
-);
-
+      width: min(calc(var(--n) * var(--cell) + (var(--n) - 1) * var(--gap)), 92vw);
     }
     .cell{
       aspect-ratio:1/1;
@@ -841,17 +834,12 @@
     @media (max-width:520px){
       .nav a, .nav button{ padding:4px 9px; }
       .clue{
-  font-size: clamp(24px, 6.0vw, 32px);
-  padding: 11px 12px 12px 16px;
-}
-
+        font-size:clamp(32px,6.6vw,38px);
+        margin-top: clamp(16px, 3.4vh, 28px);
+      }
       .grid{
         --cell: 43px;
-       width: min(
-  calc(var(--n) * var(--cell) + (var(--n) - 1) * var(--gap)),
-  calc(100vw - 36px) 
-);
-
+        width: min(calc(var(--n) * var(--cell) + (var(--n) - 1) * var(--gap)), 94vw);
       }
       .cell input{ font-size:clamp(24px,6.05vw,36px); }
       .letter{ width:28px; height:28px; font-size:19px; }
@@ -1006,149 +994,6 @@
   #kbHost{ display:none !important; }
   #hintsModal{ display:none !important; }
 }
-    /* Coach zone (between clue and grid) */
-.coachSlot{
-  width:100%;
-  max-width:760px;
-  margin: 10px auto 0;
-  min-height: 34px;            /* gives the coach message real room */
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  pointer-events:none;
-  flex:0 0 auto;
-}
-/* keep the space even when empty (prevents everything feeling “cramped”) */
-.coachSlot:empty{ visibility:hidden; }
-
-
-/* Ensure buttons sit above if anything ever visually overlaps */
-.btnRow{ position:relative; z-index:50; }
-
-/* IMPORTANT: reduce the “floating gap” above the keyboard a bit (helps SE a lot) */
-html.has-kb .btnRow{
-  bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + var(--kb-gap));
-}
-
-
-/* Tight-mode: applied by JS if hintTrack would overlap btnRow */
-html.tight{
-  --lift-msg: 8px;
-  --lift-hints: 10px;
-}
-
-
-html.tight .wrap{ padding: 10px 12px 12px; }
-
-html.tight .clue{
-  margin-top: clamp(10px, 2.2vh, 18px);
-  padding: 11px 12px 12px 16px;
-  font-size: clamp(26px, 6.0vw, 34px);
-}
-html.tight html.has-kb .gridDock,
-html.has-kb.tight .gridDock{
-  margin: clamp(22px, 3.0vh, 40px) auto 0;
-}
-html.tight .grid{ --cell: 40px !important; }
-
-html.tight .msgSlot{ height: 84px; }
-html.tight .hintTrack{ margin-top: 10px; }
-
-/* Extra-tight (if still overlapping after tight) */
-html.tight2{
-  --lift-msg: 10px;
-  --lift-hints: 14px;
-}
-html.tight2 .clue{
-  margin-top: 8px;
-  font-size: clamp(24px, 5.8vw, 32px);
-}
-html.tight2 .grid{ --cell: 38px !important; }
-html.tight2 .msgSlot{ height: 74px; }
-html.tight2 .hintTrack{ margin-top: 8px; }
-
-/* In tight modes, keep btnRow as close to keyboard as practical */
-html.has-kb.tight .btnRow{
-  bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 10px);
-}
-/* =========================
-   STABLE MOBILE LAYOUT (no vh-jitter)
-   ========================= */
-
-/* JS will keep these up to date */
-:root{
-  --vvh: 100dvh;          /* px from visualViewport */
-  --btnrow-h: 70px;       /* measured by JS */
-}
-
-/* Use stable viewport height (px) so iOS address-bar changes don't reflow margins via vh clamps */
-.wrap{
-  height: var(--vvh);
-  max-height: var(--vvh);
-}
-
-/* When the custom keyboard is showing:
-   - constrain the play area to the visible space ABOVE the keyboard
-   - reserve space for the fixed Hint/Check row so hintTrack never slides under it */
-html.has-kb .wrap{
-  /* End the play area ABOVE the fixed button row */
-  height: calc(
-    var(--vvh) - var(--kb-h) - env(safe-area-inset-bottom)
-    - var(--btnrow-h) - var(--kb-gap) - var(--reserve-gap)
-  );
-  max-height: calc(
-    var(--vvh) - var(--kb-h) - env(safe-area-inset-bottom)
-    - var(--btnrow-h) - var(--kb-gap) - var(--reserve-gap)
-  );
-
-  /* back to normal padding; we no longer “reserve” with padding-bottom */
-  padding-bottom: 14px;
-}
-
-
-/* Kill the transform “lift” on small screens (it creates visual overlap without changing layout) */
-@media (pointer: coarse) and (max-width: 520px){
-  .msgSlot{ transform:none !important; }
-  .hintTrack{ transform:none !important; }
-}
-
-/* Replace all the vh-based vertical spacing with fixed px on small/coarse screens
-   (this removes the bounce when Safari bars expand/contract) */
-@media (pointer: coarse) and (max-width: 520px){
-  .clue{
-    margin: 12px auto 0 !important;
-  }
-  .gridDock{
-    margin: 14px auto 0 !important;
-  }
-  html.has-kb .gridDock{
-    margin: 14px auto 0 !important; /* override your vh-based has-kb rule */
-  }
-
-  .msgSlot{
-    margin: 8px auto 0 !important;
-    height: 92px !important;
-  }
-  .hintTrack{
-    margin: 10px auto 0 !important;
-    min-height: 72px !important;
-  }
-
-  .btnRow{
-    margin-top: 12px !important;
-  }
-}
-
-/* Slight safety buffer so the last grid cell never clips on very narrow widths */
-@media (max-width: 380px){
-  .grid{
-    width: min(
-      calc(var(--n) * var(--cell) + (var(--n) - 1) * var(--gap)),
-      calc(100vw - 44px) /* was 36px; gives 8px extra safety */
-    ) !important;
-  }
-}
-
 
   </style>
 </head>
@@ -1164,7 +1009,6 @@ html.has-kb .wrap{
     </div>
 
     <div class="clue" id="clue"></div>
-<div class="coachSlot" id="coachSlot" aria-live="polite"></div>
 
     <div class="gridDock" id="gridDock">
       <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
@@ -1320,46 +1164,6 @@ const el = {
   hintsModalClose: document.getElementById('hintsModalClose'),
 };
 
-
-/* =======================
-   Stable viewport sizing (no tight/tight2 flipping)
-   ======================= */
-
-function syncViewportVars(){
-  const html = document.documentElement;
-  const vv = window.visualViewport;
-  const h = vv ? vv.height : window.innerHeight;
-  html.style.setProperty('--vvh', `${Math.round(h)}px`);
-}
-
-function syncBtnRowVar(){
-  const html = document.documentElement;
-  const r = el.btnRow?.getBoundingClientRect();
-  if(r && r.height) html.style.setProperty('--btnrow-h', `${Math.ceil(r.height)}px`);
-}
-
-function syncLayoutVars(){
-  syncViewportVars();
-  syncBtnRowVar();
-}
-
-/* Only listen to *resize* (NOT visualViewport.scroll) to avoid tap-jitter */
-if(window.visualViewport){
-  window.visualViewport.addEventListener('resize', syncViewportVars, {passive:true});
-}
-window.addEventListener('resize', syncLayoutVars, {passive:true});
-window.addEventListener('orientationchange', syncLayoutVars, {passive:true});
-
-/* Keep btnRow height current (it changes when “solved” fades it, etc.) */
-if('ResizeObserver' in window && el.btnRow){
-  const ro = new ResizeObserver(()=> syncBtnRowVar());
-  ro.observe(el.btnRow);
-}
-
-/* Run once on load */
-requestAnimationFrame(syncLayoutVars);
-
-
 const TWOTRI_TEXT  = "Two trigrams from same word";
 const OVERLAP_TEXT = "1-letter overlap allowed ✓";
 
@@ -1474,11 +1278,7 @@ function getN(){
   return clamp(a.length || 7, 6, 8);
 }
 function startMax(){ return Math.max(0, getN() - TR); }
-function renderSmart(){
-  render(!state.useCustomKB);
-  scheduleLayoutTune(); // <- add this
-}
-
+function renderSmart(){ render(!state.useCustomKB); }
 function hintsUsedCount(){
   return state.hintCount || 0; // you already increment hintCount per hint
 }
@@ -1754,28 +1554,29 @@ function setResultSkillMsg(line1, skill){
    ======================= */
 function bindTapReliable(node, fn){
   if(!node) return;
-
   let last = 0;
-  let sawPointer = false;
 
   const fire = (e)=>{
     const now = performance.now();
-    // iOS can delay click ~300ms; use a wider guard
-    if(now - last < 450) return;
+    if(now - last < 260) return;
     last = now;
     try{ fn(e); }catch(err){ console.error(err); }
   };
 
   node.addEventListener('pointerup', (e)=>{
     if(e.pointerType === 'mouse' && e.button !== 0) return;
-    sawPointer = true;
     e.preventDefault();
     e.stopPropagation();
     fire(e);
   }, {passive:false});
 
   node.addEventListener('click', (e)=>{
-    if(sawPointer) return; // ignore synthetic click after pointerup
+    e.preventDefault();
+    e.stopPropagation();
+    fire(e);
+  }, {passive:false});
+
+  node.addEventListener('touchend', (e)=>{
     e.preventDefault();
     e.stopPropagation();
     fire(e);
@@ -1850,7 +1651,6 @@ function setCustomKBEnabled(on){
   state.useCustomKB = !!on;
   document.documentElement.classList.toggle('has-kb', state.useCustomKB);
   buildKeyboard();
-  requestAnimationFrame(syncLayoutVars);
   requestAnimationFrame(()=> updateKeyboardHeightVar());
 }
 function updateKeyboardHeightVar(){
@@ -1858,11 +1658,8 @@ function updateKeyboardHeightVar(){
   const rect = el.kbHost.getBoundingClientRect();
   if(rect && rect.height){
     document.documentElement.style.setProperty('--kb-h', `${Math.ceil(rect.height)}px`);
-    syncLayoutVars();
   }
 }
-
-
 function pressKeyAction(kind, val){
   if(state.finished) return;
   if(state.modalOpen) return;
@@ -3664,8 +3461,6 @@ function onClueWordActivate(group){
    ======================= */
 function renderGrid(stealFocus=true){
   const n = getN();
-el.grid.style.setProperty('--n', n);
-
   const f = flags();
   const revealed = state.finished;
 
