@@ -994,6 +994,66 @@
   #kbHost{ display:none !important; }
   #hintsModal{ display:none !important; }
 }
+    /* Coach zone (between clue and grid) */
+.coachSlot{
+  width:100%;
+  max-width:760px;
+  margin: 10px auto 0;
+  min-height: 28px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+}
+.coachSlot:empty{ display:none; } /* no space until you use it */
+
+/* Ensure buttons sit above if anything ever visually overlaps */
+.btnRow{ position:relative; z-index:50; }
+
+/* IMPORTANT: reduce the “floating gap” above the keyboard a bit (helps SE a lot) */
+html.has-kb .btnRow{
+  bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 14px); /* was +36px */
+}
+
+/* Tight-mode: applied by JS if hintTrack would overlap btnRow */
+html.tight{
+  --lift-msg: 0px;
+  --lift-hints: 0px;
+}
+html.tight .wrap{ padding: 10px 12px 12px; }
+
+html.tight .clue{
+  margin-top: clamp(10px, 2.2vh, 18px);
+  padding: 11px 12px 12px 16px;
+  font-size: clamp(26px, 6.0vw, 34px);
+}
+html.tight html.has-kb .gridDock,
+html.has-kb.tight .gridDock{
+  margin: clamp(22px, 3.0vh, 40px) auto 0;
+}
+html.tight .grid{ --cell: 40px !important; }
+
+html.tight .msgSlot{ height: 84px; }
+html.tight .hintTrack{ margin-top: 10px; }
+
+/* Extra-tight (if still overlapping after tight) */
+html.tight2{
+  --lift-msg: 0px;
+  --lift-hints: 0px;
+}
+html.tight2 .clue{
+  margin-top: 8px;
+  font-size: clamp(24px, 5.8vw, 32px);
+}
+html.tight2 .grid{ --cell: 38px !important; }
+html.tight2 .msgSlot{ height: 74px; }
+html.tight2 .hintTrack{ margin-top: 8px; }
+
+/* In tight modes, keep btnRow as close to keyboard as practical */
+html.has-kb.tight .btnRow{
+  bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 10px);
+}
+
 
   </style>
 </head>
@@ -1009,6 +1069,7 @@
     </div>
 
     <div class="clue" id="clue"></div>
+<div class="coachSlot" id="coachSlot" aria-live="polite"></div>
 
     <div class="gridDock" id="gridDock">
       <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
@@ -1163,6 +1224,43 @@ const el = {
   hintsModalBody: document.getElementById('hintsModalBody'),
   hintsModalClose: document.getElementById('hintsModalClose'),
 };
+let _layoutTuneRAF = 0;
+
+function scheduleLayoutTune(){
+  if(_layoutTuneRAF) cancelAnimationFrame(_layoutTuneRAF);
+  _layoutTuneRAF = requestAnimationFrame(()=>{
+    _layoutTuneRAF = 0;
+    tuneLayoutNow();
+  });
+}
+
+function tuneLayoutNow(){
+  const html = document.documentElement;
+  if(!el.hintTrack) return;
+
+  const hasKB = html.classList.contains('has-kb');
+  const btnTop = (hasKB && el.btnRow)
+    ? el.btnRow.getBoundingClientRect().top
+    : window.innerHeight;
+
+  const hintBottom = el.hintTrack.getBoundingClientRect().bottom;
+
+  // If the hint track would run into the buttons, enable tight mode
+  const needTight = hintBottom > (btnTop - 8);
+  html.classList.toggle('tight', needTight);
+
+  // Second pass for extra-tight
+  requestAnimationFrame(()=>{
+    const btnTop2 = (hasKB && el.btnRow)
+      ? el.btnRow.getBoundingClientRect().top
+      : window.innerHeight;
+
+    const hintBottom2 = el.hintTrack.getBoundingClientRect().bottom;
+    html.classList.toggle('tight2', hintBottom2 > (btnTop2 - 8));
+  });
+}
+
+window.addEventListener('resize', scheduleLayoutTune, {passive:true});
 
 const TWOTRI_TEXT  = "Two trigrams from same word";
 const OVERLAP_TEXT = "1-letter overlap allowed ✓";
@@ -1278,7 +1376,11 @@ function getN(){
   return clamp(a.length || 7, 6, 8);
 }
 function startMax(){ return Math.max(0, getN() - TR); }
-function renderSmart(){ render(!state.useCustomKB); }
+function renderSmart(){
+  render(!state.useCustomKB);
+  scheduleLayoutTune(); // <- add this
+}
+
 function hintsUsedCount(){
   return state.hintCount || 0; // you already increment hintCount per hint
 }
@@ -1658,8 +1760,10 @@ function updateKeyboardHeightVar(){
   const rect = el.kbHost.getBoundingClientRect();
   if(rect && rect.height){
     document.documentElement.style.setProperty('--kb-h', `${Math.ceil(rect.height)}px`);
+    scheduleLayoutTune(); // <- add this
   }
 }
+
 function pressKeyAction(kind, val){
   if(state.finished) return;
   if(state.modalOpen) return;
