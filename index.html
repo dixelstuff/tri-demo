@@ -1044,6 +1044,54 @@
   #kbHost{ display:none !important; }
   #hintsModal{ display:none !important; }
 }
+/* =========================
+   Tighten solved layout (override)
+   ========================= */
+
+/* lift both up more; lift badge more than message to tighten the gap */
+:root{
+  --lift-msg: 38px;     /* was 26 */
+  --lift-hints: 96px;   /* was 38 */
+}
+
+.msgSlot{
+  height: 78px;                       /* was ~98/104 */
+  margin-top: clamp(2px, 0.7vh, 6px); /* was larger */
+}
+
+.wrap.solved .msgSlot{
+  margin-top: clamp(0px, 0.4vh, 4px); /* stop adding extra gap on solve */
+}
+
+/* pull the text inside the slot upward */
+.msg{ top: 10px; }
+.msg.result{ top: 12px; }
+.wrap.solved .msg.result{ top: 12px; }
+
+/* neutralize any later mobile/desktop translateY pushes */
+.msg.result{ transform: translateX(-50%) translateY(0px); }
+
+/* bring the badge closer to the message */
+.skillDock{
+  margin-top: clamp(0px, 0.5vh, 6px); /* was ~14–24px */
+  min-height: 74px;                   /* slightly smaller to reduce dead space */
+}
+
+@media (max-width:520px){
+  :root{
+    --lift-msg: 34px;
+    --lift-hints: 88px;
+  }
+
+  .msgSlot{ height: 84px; }
+  .msg{ top: 12px; }
+  .msg.result{ top: 14px; }
+  .wrap.solved .msg.result{ top: 14px; }
+}
+/* Dim individual extra hint letters when they already exist as SINGLE letters in the grid */
+#trackBox-extras .letter.is-in-grid{
+  opacity: .38;
+}
 
   </style>
 </head>
@@ -2066,6 +2114,30 @@ function gridHasExactTrigram(tri){
   }
   return false;
 }
+function updateExtrasHintFade(){
+  const row = document.getElementById('trackBox-extras');
+  if(!row) return;
+
+  // Count SINGLE letters currently in the grid (these are, by definition, not inside trigrams)
+  const counts = Object.create(null);
+  for(const s of (state.singles || [])){
+    const ch = String(s.ch || "").toLowerCase();
+    if(!ch) continue;
+    counts[ch] = (counts[ch] || 0) + 1;
+  }
+
+  // Apply per-tile fading (handles duplicates by consuming counts)
+  const remaining = Object.assign(Object.create(null), counts);
+
+  row.querySelectorAll('.letter').forEach(l => l.classList.remove('is-in-grid'));
+  row.querySelectorAll('.letter').forEach(l=>{
+    const ch = String(l.textContent || "").trim().toLowerCase();
+    if(remaining[ch] > 0){
+      l.classList.add('is-in-grid');
+      remaining[ch]--;
+    }
+  });
+}
 
 /* =======================
    Always-active typing
@@ -2734,9 +2806,10 @@ function hintFlyKeyframes(dx, dy, startScale){
 function revealTargetInstant(tEl){
   if(!tEl) return;
   tEl.style.transition = 'none';
-  tEl.style.opacity = '1';
+  tEl.style.opacity = ''; // let CSS decide (1.0 or .38 if .is-in-grid)
   requestAnimationFrame(()=> requestAnimationFrame(()=>{ tEl.style.transition = ''; }));
 }
+
 
 function runHintFlyExtrasSequential(targetRow, chars){
   if(!targetRow) return false;
@@ -2893,7 +2966,7 @@ function scheduleHintFly(kind){
       if(state.pendingFly === 'extras'){
         const row = document.getElementById('trackBox-extras');
         if(row){
-          row.querySelectorAll('.letter').forEach(x => x.style.opacity = "1");
+          row.querySelectorAll('.letter').forEach(x => x.style.opacity = "");
         }
       }else{
         if(t) t.style.opacity = "1";
@@ -3428,6 +3501,7 @@ if(bx2) bx2.classList.toggle('is-in-grid', gridHasExactTrigram(p.tri2));
     el.trackExtras.appendChild(block);
     el.trackExtras.style.display = "";
   }
+  updateExtrasHintFade();
 }
 
 /* =======================
