@@ -26,7 +26,7 @@
     --lift-hints: 96px;
     --msg-drop: 35px;        /* grid → warning msg down */
     --result-drop: 20px;     /* grid → result msg down (total, not extra) */
-    --badge-drop: 50px;      /* result msg → badge down */
+    --badge-drop: 60px;      /* result msg → badge down */
   }
 
   *{ box-sizing:border-box; }
@@ -374,7 +374,11 @@
 
   .msg.show{ opacity:.92; }
   .msg.warn{ opacity:.92; font-size:20px; }
-  .msg.result{ top:12px; }
+  .msg.result{
+  top:12px;
+  font-size:28px; 
+}
+
 
   .msg .msgLine{ display:block; }
   .msg.result .msgLine.score{
@@ -911,7 +915,7 @@
     .msgSlot{ height:84px; }
     .msg{ top:12px; font-size:20px; }
     .msg.warn{ font-size:19px; }
-    .msg.result{ top:14px; }
+    .msg.result{ top:14px; font-size:24px; }
 
     .btn{ font-size:19px; padding:9px 15px; min-width:98px; }
     .kbKey{ height:46px; }
