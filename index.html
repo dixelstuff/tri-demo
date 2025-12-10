@@ -135,11 +135,11 @@
 .clueWrap{
   position:relative;
   flex:0 0 auto;
-  padding-bottom: 54px;
+  padding-bottom: 0px;
 }
 
 /* tune this if you want the hint track a bit closer/further from the clue */
-:root{ --clue-hint-gap: 10px; }
+:root{ --clue-hint-gap: 2px; }
 
 /* Hint track now floats under the clue (no layout push) */
 .hintTrackTop{
@@ -175,7 +175,7 @@
     .gridDock{
       display:block;
       width:fit-content;
-      margin: clamp(38px, 6.0vh, 58px) auto 0;
+      margin: 44px auto 0;
       position:relative;
       flex:0 0 auto;
       border-radius:14px;
@@ -189,7 +189,7 @@
       .gridDock{ margin-top: clamp(36px, 6.1vh, 62px); }
     }
     html.has-kb .gridDock{
-      margin: clamp(52px, 8.0vh, 86px) auto 0;
+      margin: 38px auto 0;
     }
 
     .gridDock.shake{ animation:shake .16s linear 0s 2; }
@@ -438,8 +438,7 @@
 }
 
 
-   /* Keep hintTrack as the layout “slot”, but fade the mini-grid out completely on solve */
-#hintTrack{ position:relative; } /* so the badge can sit in the same spot */
+
 
 .wrap.solved .hintTrack{
   pointer-events:none;
