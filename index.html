@@ -1114,7 +1114,9 @@ const state = {
   hintCount: 0,
   hintsUsed: { w1:false, w2:false, extras:false },
 
-  assist: true,     // defaults ON, non-persistent
+  assist: false,        // defaults OFF
+  assistLocked: false,  // once Enhanced is turned on for this puzzle, it can't be turned off
+
 
   sel1: null,
   sel2: null,
@@ -1448,13 +1450,42 @@ document.addEventListener('contextmenu', (e)=>{
    ======================= */
 function setEnhanced(on, renderNow=true){
   const next = !!on;
+
+  // Once Enhanced is enabled for this puzzle, do not allow turning it off.
+  if(state.assistLocked && !next) return;
+
   if(state.assist === next) return;
 
   state.assist = next;
+
+  // Lock it on the first time it is enabled
+  if(next) state.assistLocked = true;
+
   if(!state.assist) abortDrag();
 
   if(renderNow) renderSmart();
 }
+/* =======================
+   Clue tap enables Enhanced ONCE (capture phase)
+   ======================= */
+(function bindClueEnableOnce(){
+  if(!el.clue) return;
+
+  const handler = (e)=>{
+    if(state.finished) return;
+    if(state.modalOpen) return;
+    if(state.drag) return;
+    if(state.assist) return; // already enabled
+
+    // enable + lock for the rest of this puzzle
+    setEnhanced(true, true);
+  };
+
+  // Capture phase so it still works even if inner clue-word handlers stopPropagation()
+  el.clue.addEventListener('pointerdown', handler, {capture:true, passive:true});
+  el.clue.addEventListener('click', handler, {capture:true, passive:true});
+})();
+
 function setResultSkillMsg(line1, skill){
   clearMsgTimer();
   el.msg.classList.remove('show','warn','result');
@@ -1524,55 +1555,6 @@ function bindTapReliable(node, fn){
   });
 }
 
-/* =======================
-   Background-tap toggles Enhanced
-   ======================= */
-function isBackgroundToggleTarget(t){
-  if(!t) return false;
-
-if(t.closest && t.closest(
-  'button, a, #clue, #gridDock, #gridWrap, #grid, #hintTrack, #skillDock, #btnRow, #kbHost, #hintsModal'
-)) return false;
-
-
-  if(t.closest && !t.closest('#wrap')) return false;
-
-  return true;
-}
-
-(function bindBackgroundToggle(){
-  let last = 0;
-
-  const handler = (e)=>{
-    if(state.finished) return;
-    if(state.modalOpen) return;
-    if(state.drag) return;
-    if(performance.now() - (state.justDraggedAt||0) < 350) return;
-
-    // EXCLUDE the zone from the top of the Hint/Check row downward (prevents accidental toggles while keyboarding)
-    const br = el.btnRow && el.btnRow.getBoundingClientRect();
-    if(br && e.clientY >= (br.top - 6)) return;
-
-    const t = e.target;
-    if(!isBackgroundToggleTarget(t)) return;
-
-    const now = performance.now();
-    if(now - last < 260) return;
-    last = now;
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    setEnhanced(!state.assist, true);
-
-    if(!state.useCustomKB){
-      requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
-    }
-  };
-
-  document.addEventListener('pointerup', handler, {passive:false, capture:true});
-  document.addEventListener('click', handler, {passive:false, capture:true});
-})();
 
 /* =======================
    Keyboard detection / build
@@ -3240,7 +3222,7 @@ function renderHintTrack(){
     el.trackW1.appendChild(
       makeTrigramBlock(norm(p.tri1), "sel-w1", "word 1 trigram", ()=>{
         if(state.finished || state.modalOpen) return;
-        if(!state.assist) setEnhanced(true, false);
+        if(!state.assist) return;
         addEffort(2);
         placeTrigram('w1', norm(p.tri1));
         renderSmart();
@@ -3262,7 +3244,7 @@ if(bx1) bx1.classList.toggle('is-in-grid', gridHasExactTrigram(p.tri1));
     el.trackW2.appendChild(
       makeTrigramBlock(norm(p.tri2), "sel-w2", "word 2 trigram", ()=>{
         if(state.finished || state.modalOpen) return;
-        if(!state.assist) setEnhanced(true, false);
+        if(!state.assist) return;
         addEffort(2);
         placeTrigram('w2', norm(p.tri2));
         renderSmart();
@@ -3306,7 +3288,7 @@ if(bx2) bx2.classList.toggle('is-in-grid', gridHasExactTrigram(p.tri2));
         if(state.modalOpen) return;
         clearTransientOnAnyChange();
 
-        if(!state.assist) setEnhanced(true, false);
+        if(!state.assist) return;
 
         const n = getN();
         for(let i=0;i<n;i++){
@@ -3850,6 +3832,8 @@ if(badgeVal) badgeVal.textContent = "—";
 
   state.hintCount = 0;
   state.hintsUsed = { w1:false, w2:false, extras:false };
+  state.assist = false;
+  state.assistLocked = false;
 
   state.bank = [];
   state.pendingFly = null;
