@@ -25,8 +25,8 @@
     --lift-msg: 38px;
     --lift-hints: 96px;
     --msg-drop: 35px;        /* grid → warning msg down */
-    --result-drop: 28px;     /* grid → result msg down (total, not extra) */
-    --badge-drop: 70px;      /* result msg → badge down */
+    --result-drop: 30px;     /* grid → result msg down (total, not extra) */
+    --badge-drop: 74px;      /* result msg → badge down */
   }
 
   *{ box-sizing:border-box; }
@@ -376,7 +376,7 @@
   .msg.warn{ opacity:.92; font-size:20px; }
   .msg.result{
   top:12px;
-  font-size:31px; 
+  font-size:30px; 
 }
 
 
@@ -513,21 +513,21 @@
     position:absolute;
     left:50%;
     top:40%;
-    transform:translate(-50%,-50%) translateY(var(--badge-drop)) scale(.90);
+    transform:translate(-50%,-50%) translateY(var(--badge-drop)) scale(.86);
     opacity:0;
     pointer-events:none;
     transition: opacity .35s ease, transform .35s ease;
   }
   .wrap.solved .skillBadge{
     opacity:1;
-    transform:translate(-50%,-50%) translateY(var(--badge-drop)) scale(.92);
+    transform:translate(-50%,-50%) translateY(var(--badge-drop)) scale(.88);
     transition-delay:.06s;
   }
 
   .skillBadgeInner{
     position:relative;
     overflow:hidden;
-    min-width:135px;
+    min-width:125px;
     padding:10px 14px;
     border-radius:16px;
     text-align:center;
