@@ -418,15 +418,16 @@
 
     /* Lift message + hint grids slightly (does NOT affect button position) */
 :root{
-  --lift-msg: 8px;
-  --lift-hints: 10px;
+  --lift-msg: 18px;     /* moves result messages up */
+  --lift-hints: 24px;   /* moves badge up a bit more */
 }
 @media (max-width:520px){
   :root{
-    --lift-msg: 10px;
-    --lift-hints: 14px;
+    --lift-msg: 20px;
+    --lift-hints: 28px;
   }
 }
+
 
 .msgSlot{
   transform: translateY(calc(-1 * var(--lift-msg)));
@@ -733,6 +734,10 @@
     @media (max-width:520px){
       .hintSpot{ top:40%; }
     }
+/* Dim hint trigram tiles in the mini-grid when that trigram is already in the main grid */
+.letters.is-in-grid .letter{
+  opacity: .38;
+}
 
     .btnRow{
       margin-top: clamp(18px, 3.8vh, 26px);
@@ -895,12 +900,16 @@
 }
 
       .wrap.solved .msg.result{ top: 36px; }
-      /* Final result message: lower + slightly larger */
+/* Final result message: don't push it DOWN */
 .msg.result{
-  top: 28px; /* keep your existing top */
-  transform: translateX(-50%) translateY(24px); /* move DOWN ~5–6px */
-  font-size: 28px;                             /* slightly larger */
+  transform: translateX(-50%) translateY(0px);
 }
+@media (max-width:520px){
+  .msg.result{
+    transform: translateX(-50%) translateY(0px);
+  }
+}
+
 .wrap.solved .msg.result{
   top: 34px; /* keep your existing top */
 }
@@ -2044,6 +2053,18 @@ function focusCell(idx){
       inp.setSelectionRange(len, len);
     }catch{}
   }
+}
+function gridHasExactTrigram(tri){
+  const t = norm(tri);
+  if(!t || t.length !== 3) return false;
+
+  const n = getN();
+  for(let s=0; s<=n-3; s++){
+    const a = cellChar(s), b = cellChar(s+1), c = cellChar(s+2);
+    if(!a || !b || !c) continue;
+    if(((a+b+c).toLowerCase()) === t) return true;
+  }
+  return false;
 }
 
 /* =======================
@@ -3323,6 +3344,9 @@ function renderHintTrack(){
         renderSmart();
       }, "trackBox-w1")
     );
+    const bx1 = el.trackW1.querySelector('#trackBox-w1');
+if(bx1) bx1.classList.toggle('is-in-grid', gridHasExactTrigram(p.tri1));
+
     el.trackW1.style.display = "";
 
     // PRE-HIDE during pending fly (prevents flash before overlay animation starts)
@@ -3342,6 +3366,9 @@ function renderHintTrack(){
         renderSmart();
       }, "trackBox-w2")
     );
+    const bx2 = el.trackW2.querySelector('#trackBox-w2');
+if(bx2) bx2.classList.toggle('is-in-grid', gridHasExactTrigram(p.tri2));
+
     el.trackW2.style.display = "";
 
     // PRE-HIDE during pending fly
