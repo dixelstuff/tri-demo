@@ -2855,25 +2855,39 @@ function updateStatusMessages(){
   if(state.lockMsg) return;
   if(state.msgTransient) return;
 
+  // Keep these here because updateStatusMessages can be called outside render()
   computeTwoLetterOverlapInvalid();
   computeMax3Invalid();
   computeTwoTrigramsInvalid();
   computeHintExcludedTrigrams();
 
-  const hasOL2 = state.ol2Set && state.ol2Set.size > 0;
-  const hasMax3 = state.badSet && state.badSet.size > 0;
-  const hasTwo  = state.twoSet && state.twoSet.size > 0;
-  const hasExcluded = state.exclSet && state.exclSet.size > 0;
+  const hasOL2    = (state.ol2Set && state.ol2Set.size > 0);
+  const hasMax3   = (state.badSet && state.badSet.size > 0);
+  const hasTwo    = (state.twoSet && state.twoSet.size > 0);
+  const hasExcl   = (state.exclSet && state.exclSet.size > 0);
 
-  // NEW: show 2-letter overlap warning
-  if(hasOL2){ setMsg(OVERLAP2_TEXT, 'warn'); state.overlapMsgOn=false; return; }
+  if(hasOL2){
+    setMsg(OVERLAP2_TEXT, 'warn');
+    state.overlapMsgOn = false;
+    return;
+  }
+  if(hasMax3){
+    setMsg("Max 3 contiguous letters allowed", "warn");
+    state.overlapMsgOn = false;
+    return;
+  }
+  if(hasTwo){
+    setMsg(TWOTRI_TEXT, "warn");
+    state.overlapMsgOn = false;
+    return;
+  }
+  if(hasExcl){
+    setMsg(excludedMsgText(), "warn");
+    state.overlapMsgOn = false;
+    return;
+  }
 
-  if(state.ol2Set.size){ setMsg(OVERLAP2_TEXT, "warn"); renderSmart(); return; }
-  if(state.badSet.size){ setMsg("Max 3 contiguous letters allowed", "warn"); renderSmart(); return; }
-  if(state.twoSet.size){ setMsg(TWOTRI_TEXT, "warn"); renderSmart(); return; }
-  if(state.exclSet.size){ setMsg(excludedMsgText(), "warn"); renderSmart(); return; }
-
-
+  // Clear stale warning message (if one was showing)
   if(el.msg.classList.contains('warn')) setMsg("");
 
   const hasOverlap = state.assist && overlapActiveNow();
@@ -2887,6 +2901,7 @@ function updateStatusMessages(){
     state.overlapMsgOn = false;
   }
 }
+
 
 
 /* =======================
@@ -3499,6 +3514,9 @@ function errorItemsForGroup(group){
   if(state.badRuns[group] && state.badRuns[group].length){
     return state.badRuns[group].map(s => ({sub:s, cls:"u-red"}));
   }
+  if(state.ol2Tris[group] && state.ol2Tris[group].size){
+    return Array.from(state.ol2Tris[group]).map(t => ({sub:t, cls:"u-red"}));
+  }
   if(state.twoTris[group] && state.twoTris[group].size){
     return Array.from(state.twoTris[group]).map(t => ({sub:t, cls:"u-red"}));
   }
@@ -3507,6 +3525,7 @@ function errorItemsForGroup(group){
   }
   return [];
 }
+
 function inferredSingleTrigram(group){
   const n = getN();
   const p = current();
