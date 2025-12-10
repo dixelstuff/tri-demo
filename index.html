@@ -1572,10 +1572,13 @@ function computeFinalSkill(gaveUp){
 
   const dt = Math.max(0, (vNow - vSeg) / 1000);
 
-  // segment effort
+  // segment effort (subtract unavoidable baseline typing so 100 is achievable)
   const effNow = (state.effortUnits || 0);
   const effSeg = (typeof state.effortAtSegmentStart === "number") ? state.effortAtSegmentStart : 0;
-  const de = Math.max(0, effNow - effSeg);
+
+  const BASE_E = getN(); // typing the N letters once is "clean solve" baseline
+  const de = Math.max(0, (effNow - effSeg) - BASE_E);
+
 
   // wrong checks in segment + discounted carry
   const wrongNow = (state.wrongCheckCount || 0);
