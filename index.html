@@ -1267,11 +1267,15 @@ function skillResetForPuzzle(){
 
   state.hastePenalty = 0;
 }
-  function resetEnhancedForNewPuzzle(){
-  // Hard reset: next puzzle always starts with Enhanced OFF
+function resetEnhancedForNewPuzzle(){
+  // Hard reset: every puzzle starts with Enhanced OFF
   state.assist = false;
   state.assistLocked = false;
+
+  // Also ensure no enhanced-only interaction is left hanging
+  abortDrag?.();
 }
+
 
 function skillPause(){
   state._skillPaused = true;
@@ -3830,6 +3834,7 @@ function resetAllForPuzzle(){
   state.finished = false;
   state.gaveUp = false;
   el.wrap.classList.remove('solved','gaveup');
+  resetEnhancedForNewPuzzle();
 const badgeVal = document.getElementById('skillBadgeValue');
 if(badgeVal) badgeVal.textContent = "—";
 
@@ -3855,7 +3860,7 @@ if(badgeVal) badgeVal.textContent = "—";
   state.sel1 = null;
   state.sel2 = null;
 
-  state.assist = true;
+
 
   setMsg("");
   state.overlapMsgOn = false;
