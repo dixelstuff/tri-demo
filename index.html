@@ -3832,8 +3832,7 @@ if(badgeVal) badgeVal.textContent = "—";
 
   state.hintCount = 0;
   state.hintsUsed = { w1:false, w2:false, extras:false };
-  state.assist = false;
-  state.assistLocked = false;
+
 
   state.bank = [];
   state.pendingFly = null;
@@ -3863,6 +3862,8 @@ window.addEventListener('resize', ()=>{
 /* init */
 setCustomKBEnabled(shouldUseCustomKB());
 resetAllForPuzzle();
+state.assist = false;
+state.assistLocked = false;  
 renderSmart();
 </script>
 </body>
