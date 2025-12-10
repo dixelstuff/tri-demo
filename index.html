@@ -117,6 +117,45 @@
     font-weight:400;
     flex:0 0 auto;
   }
+  /* ===== Assist activation flash (clue glow) ===== */
+.clue.assist-glow{
+  animation: assistClueGlow 2.6s ease-out both;
+}
+
+@keyframes assistClueGlow{
+  0%{
+    box-shadow:
+      0 2px 6px rgba(0,0,0,.08),
+      0 0 0 4px rgba(255,220,0,.92),
+      0 0 24px rgba(255,220,0,.55);
+  }
+  55%{
+    box-shadow:
+      0 2px 6px rgba(0,0,0,.08),
+      0 0 0 4px rgba(255,220,0,.72),
+      0 0 26px rgba(255,220,0,.46);
+  }
+  100%{
+    box-shadow:
+      0 2px 6px rgba(0,0,0,.08),
+      0 0 0 0 rgba(255,220,0,0),
+      0 0 0 rgba(255,220,0,0);
+  }
+}
+
+/* ===== Assist activation flash (message) ===== */
+.msg.assistFlash{
+  /* runs without needing .show; it fades in then down+out */
+  animation: assistMsgFlash 2.4s ease-in-out both;
+}
+
+@keyframes assistMsgFlash{
+  0%   { opacity:0;   transform: translateX(-50%) translateY(-6px); }
+  12%  { opacity:.92; transform: translateX(-50%) translateY(0px); }
+  75%  { opacity:.92; transform: translateX(-50%) translateY(0px); }
+  100% { opacity:0;   transform: translateX(-50%) translateY(10px); }
+}
+
   .clue .len{
     opacity:.55;
     display:inline-block;
@@ -1142,6 +1181,17 @@ const state = {
   msgTransient: false,
   lockMsg: false,
 
+    // --- Assist activation flash (temporary override) ---
+  assistFlashOn: false,
+  assistFlashTimer: null,
+  assistGlowTimer: null,
+  assistPrevMsg: null,
+  assistMsgQueue: null,
+
+  // Track transient end time so we can pause/resume it around the assist flash
+  msgTransientEndsAt: 0,
+
+
   cycleCount: 0,
   wrongCheckCount: 0,
   // --- Skill scoring ---
@@ -1479,6 +1529,8 @@ function setEnhanced(on, renderNow=true, source='auto'){
   if(state.assist === next) return;
 
   state.assist = next;
+    if(next) triggerAssistActivatedUI();
+
 
   // Lock it on the first time the USER enables it (this puzzle only)
   if(next) state.assistLocked = true;
@@ -1742,10 +1794,12 @@ function updateKeyboardState(){
 function clearMsgTimer(){
   if(state.msgTimer){ clearTimeout(state.msgTimer); state.msgTimer=null; }
   state.msgTransient = false;
+  state.msgTransientEndsAt = 0;
 }
-function setMsg(text, kind){
+
+function setMsgDirect(text, kind){
   clearMsgTimer();
-  el.msg.classList.remove('show','warn','result');
+  el.msg.classList.remove('show','warn','result','assistFlash');
   el.msg.textContent = text || "";
   if(!text) return;
   void el.msg.offsetWidth;
@@ -1753,18 +1807,41 @@ function setMsg(text, kind){
   if(kind === 'warn') el.msg.classList.add('warn');
   if(kind === 'result') el.msg.classList.add('result');
 }
-function setTransientMsg(text, ms=2400, kind=null){
-  setMsg(text, kind);
+
+function setMsg(text, kind){
+  // If assist flash is active, queue the latest message instead of showing it now
+  if(state.assistFlashOn){
+    state.assistMsgQueue = { text: text || "", kind: kind || null, transient:false };
+    return;
+  }
+  setMsgDirect(text, kind);
+}
+
+function setTransientMsgDirect(text, ms=2400, kind=null){
+  setMsgDirect(text, kind);
   state.msgTransient = true;
+  state.msgTransientEndsAt = performance.now() + ms;
+
   state.msgTimer = setTimeout(()=>{
-    el.msg.classList.remove('show','warn','result');
+    el.msg.classList.remove('show','warn','result','assistFlash');
     el.msg.textContent = "";
     state.msgTimer = null;
     state.msgTransient = false;
+    state.msgTransientEndsAt = 0;
   }, ms);
 }
+
+function setTransientMsg(text, ms=2400, kind=null){
+  if(state.assistFlashOn){
+    state.assistMsgQueue = { text: text || "", kind: kind || null, transient:true, ms: ms || 2400 };
+    return;
+  }
+  setTransientMsgDirect(text, ms, kind);
+}
+
 function clearTransientOnAnyChange(){
-  skillTouch(); 
+  skillTouch();
+  if(state.assistFlashOn) return;
   if(state.lockMsg){
     state.lockMsg = false;
     setMsg("");
@@ -1778,6 +1855,94 @@ function clearTransientOnAnyChange(){
 function excludedMsgText(){
   const n = (state.exclTris?.w1?.size || 0) + (state.exclTris?.w2?.size || 0);
   return (n >= 2) ? "Your hints excluded these trigrams" : "Your hint excluded this trigram";
+}
+
+  const ASSIST_FLASH_MS = 2400;  // should match .msg.assistFlash duration (2.4s)
+const CLUE_GLOW_MS    = 2600;  // should match .clue.assist-glow duration (2.6s)
+
+function triggerAssistActivatedUI(){
+  if(state.finished) return;
+
+  // --- clue glow flash ---
+  if(state.assistGlowTimer){ clearTimeout(state.assistGlowTimer); state.assistGlowTimer = null; }
+  if(el.clue){
+    el.clue.classList.remove('assist-glow');
+    void el.clue.offsetWidth;        // restart animation reliably
+    el.clue.classList.add('assist-glow');
+    state.assistGlowTimer = setTimeout(()=>{
+      el.clue.classList.remove('assist-glow');
+      state.assistGlowTimer = null;
+    }, CLUE_GLOW_MS);
+  }
+
+  // --- capture current message (and pause its transient timer if needed) ---
+  const now = performance.now();
+  state.assistPrevMsg = {
+    text: el.msg.textContent || "",
+    kind: el.msg.classList.contains('warn') ? 'warn'
+         : el.msg.classList.contains('result') ? 'result'
+         : null,
+    wasShown: el.msg.classList.contains('show') && !!el.msg.textContent,
+    transient: state.msgTransient,
+    remaining: state.msgTransient ? Math.max(0, (state.msgTransientEndsAt || 0) - now) : 0
+  };
+
+  // pause any running transient timer underneath the flash
+  if(state.msgTransient && state.msgTimer){
+    clearTimeout(state.msgTimer);
+    state.msgTimer = null;
+  }
+  state.msgTransient = false;
+  state.msgTransientEndsAt = 0;
+
+  // --- activate suppression + clear any prior queue ---
+  state.assistMsgQueue = null;
+  state.assistFlashOn = true;
+
+  // --- show the assist message (bypass queue) ---
+  el.msg.classList.remove('show','warn','result');
+  el.msg.textContent = "Assist mode activated";
+  void el.msg.offsetWidth;
+  el.msg.classList.add('assistFlash');
+
+  // --- restore after a few seconds ---
+  if(state.assistFlashTimer){ clearTimeout(state.assistFlashTimer); state.assistFlashTimer = null; }
+  state.assistFlashTimer = setTimeout(()=>{
+    state.assistFlashOn = false;
+    state.assistFlashTimer = null;
+
+    // remove flash styling
+    el.msg.classList.remove('assistFlash');
+    el.msg.textContent = "";
+    el.msg.classList.remove('show','warn','result');
+
+    // 1) if anything tried to message during the flash, show the LAST queued message
+    const q = state.assistMsgQueue;
+    state.assistMsgQueue = null;
+
+    if(q && q.text){
+      if(q.transient) setTransientMsgDirect(q.text, q.ms, q.kind);
+      else setMsgDirect(q.text, q.kind);
+      state.assistPrevMsg = null;
+      return;
+    }
+
+    // 2) otherwise restore what was showing before (including remaining transient time)
+    const prev = state.assistPrevMsg;
+    state.assistPrevMsg = null;
+
+    if(prev && prev.wasShown && prev.text){
+      if(prev.transient && prev.remaining > 0){
+        setTransientMsgDirect(prev.text, prev.remaining, prev.kind);
+      }else{
+        setMsgDirect(prev.text, prev.kind);
+      }
+      return;
+    }
+
+    // 3) otherwise recompute normal status messaging
+    updateStatusMessages();
+  }, ASSIST_FLASH_MS);
 }
 
 /* =======================
@@ -2431,6 +2596,7 @@ function rebuildBank(){
    Status messages
    ======================= */
 function updateStatusMessages(){
+  if(state.assistFlashOn) return;
   if(state.finished) return;
   if(state.lockMsg) return;
   if(state.msgTransient) return;
