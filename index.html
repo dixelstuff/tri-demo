@@ -1581,9 +1581,10 @@ function computeFinalSkill(gaveUp){
   const wrongW = 1.0;
 
   // per-band tuning knobs (start values)
-  const Tref = [80, 70, 65, 55];
-  const Eref = [18, 16, 15, 13];
-  const k    = [0.75, 0.65, 0.60, 0.55];
+  const Tref = [140, 120, 110, 90];
+  const Eref = [32, 28, 26, 20];
+  const k    = [0.55, 0.52, 0.50, 0.48];
+
 
   // fast-then-slow decay within the band
   const L = (dt / Tref[h]) + (de / Eref[h]) + (wrongW * wrongEffective);
