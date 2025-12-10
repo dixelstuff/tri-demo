@@ -1344,24 +1344,32 @@ function getVisibleMsNow(){
   return _visibleMsTotal + (_visibleStartTs != null ? (now - _visibleStartTs) : 0);
 }
 
-/* ---- Legacy active-time hooks (still called elsewhere; now NOT used for scoring) ---- */
 function skillResetForPuzzle(){
   // keep legacy fields stable (harmless)
   state.activeMs = 0;
   state._skillPaused = false;
   state._skillLastTs = performance.now();
 
-  // new fields for scoring
+  // baseline timestamps
   const vNow = getVisibleMsNow();
   state.visibleMsAtPuzzleStart = vNow;
   state.visibleMsAtLastHint = vNow;
   state.visibleMsAtHint1 = null;
 
+  // legacy phase markers (still used by applyHintHasteForStep)
   state.effortAtLastHint = (state.effortUnits || 0);
   state.realCyclesAtLastHint = (state.cycleCount || 0);
 
+  // parked: still computed, but no longer used in final score
   state.hastePenalty = 0;
+
+  // --- NEW: band-scoring segment markers ---
+  state.visibleMsAtSegmentStart = vNow;
+  state.effortAtSegmentStart = (state.effortUnits || 0);
+  state.wrongCheckCountAtSegmentStart = (state.wrongCheckCount || 0);
+  state.wrongCarry = 0; // discounted carry-over of wrong checks across segments
 }
+
 function resetEnhancedForNewPuzzle(){
   // Hard reset: every puzzle starts with Enhanced OFF
   state.assist = false;
@@ -1512,15 +1520,81 @@ function otherPenalty(){
     total: (cyclePenalty + wrongPenalty + timePenalty + effortPenalty)
   };
 }
+function skillBandForHints(h){
+  // exact non-overlapping bands
+  if(h <= 0) return { min: 88, max: 100 };
+  if(h === 1) return { min: 68, max: 87 };
+  if(h === 2) return { min: 48, max: 67 };
+  return { min: 30, max: 47 }; // h >= 3
+}
+
+function skillStartNewSegmentAfterHint(){
+  // close current segment: compute new wrongs, roll into discounted carry
+  const wrongNow = (state.wrongCheckCount || 0);
+  const wrongStart = (state.wrongCheckCountAtSegmentStart || 0);
+  const dw = Math.max(0, wrongNow - wrongStart);
+
+  const alpha = 0.5;
+  state.wrongCarry = ((state.wrongCarry || 0) + dw) * alpha;
+
+  // start next segment now
+  const vNow = getVisibleMsNow();
+  state.visibleMsAtSegmentStart = vNow;
+  state.effortAtSegmentStart = (state.effortUnits || 0);
+  state.wrongCheckCountAtSegmentStart = wrongNow;
+}
 
 /* ---- Final skill ---- */
 function computeFinalSkill(gaveUp){
   // legacy hook (does not affect visible-time scoring)
   skillTouch();
 
+  // Give up: fixed 30
   if(gaveUp){
-    return { skillRaw: 25, skill: 25 };
+    return { skillRaw: 30, skill: 30 };
   }
+
+  // hint band (0..3)
+  const h = clamp(hintsUsedCount(), 0, 3);
+  const { min: bandMin, max: bandMax } = skillBandForHints(h);
+
+  // segment time (visible)
+  const vNow = getVisibleMsNow();
+  const vSeg =
+    (typeof state.visibleMsAtSegmentStart === "number") ? state.visibleMsAtSegmentStart :
+    (typeof state.visibleMsAtPuzzleStart === "number") ? state.visibleMsAtPuzzleStart :
+    vNow;
+
+  const dt = Math.max(0, (vNow - vSeg) / 1000);
+
+  // segment effort
+  const effNow = (state.effortUnits || 0);
+  const effSeg = (typeof state.effortAtSegmentStart === "number") ? state.effortAtSegmentStart : 0;
+  const de = Math.max(0, effNow - effSeg);
+
+  // wrong checks in segment + discounted carry
+  const wrongNow = (state.wrongCheckCount || 0);
+  const wrongSeg = (typeof state.wrongCheckCountAtSegmentStart === "number") ? state.wrongCheckCountAtSegmentStart : 0;
+  const dw = Math.max(0, wrongNow - wrongSeg);
+
+  const wrongEffective = dw + (state.wrongCarry || 0);
+  const wrongW = 1.0;
+
+  // per-band tuning knobs (start values)
+  const Tref = [80, 70, 65, 55];
+  const Eref = [18, 16, 15, 13];
+  const k    = [0.75, 0.65, 0.60, 0.55];
+
+  // fast-then-slow decay within the band
+  const L = (dt / Tref[h]) + (de / Eref[h]) + (wrongW * wrongEffective);
+
+  const span = (bandMax - bandMin);
+  const skillRaw = bandMin + span * Math.exp(-k[h] * L);
+  const skill = clamp(Math.round(skillRaw), bandMin, bandMax);
+
+  return { skillRaw, skill };
+}
+
 
   const hp = hintPenalty();
   const op = otherPenalty();
@@ -2297,12 +2371,18 @@ function nextEditableFrom(startIdx, dir){
 function typeLetterAtIndex(idx, ch){
   const n = getN();
   const lower = ch.toLowerCase();
-  addEffort(1);
+
+  // NEW: effort only if the cell's letter actually changes
+  const prev = String(cellChar(idx) || "").toLowerCase();
+  if(prev !== lower) addEffort(1);
+
   state.singles = state.singles.filter(x => x.idx !== idx);
   state.singles.push({id: uid(), ch: lower, idx});
+
   const next = nextEditableFrom(idx + 1, +1);
   state.focusIdx = (next == null) ? clamp(idx + 1, 0, n-1) : next;
 }
+
 function typeLetterIntoGrid(letter){
   if(state.finished) return false;
   if(state.modalOpen) return false;
@@ -3960,30 +4040,33 @@ function applyHint(id){
   if(id === HINT_IDS.w1){
     if(state.hintsUsed.w1) return;
 
-    // Hint-haste penalty for step 1 (start → Hint1)
+    // parked system: keep updating, but final score ignores hastePenalty
     applyHintHasteForStep(1);
+
+    // NEW: close segment 0 and start segment 1
+    skillStartNewSegmentAfterHint();
 
     state.hintsUsed.w1 = true;
     state.hintCount += 1;
 
-    scheduleHintFly('w1');              // moved BEFORE render
+    scheduleHintFly('w1');
     renderSmart();
     return;
   }
 
   if(id === HINT_IDS.w2){
     if(state.hintsUsed.w2) return;
-
-    // (Should be sequential anyway, but keep this safe)
     if(!state.hintsUsed.w1) return;
 
-    // Hint-haste penalty for step 2 (Hint1 → Hint2)
     applyHintHasteForStep(2);
+
+    // NEW: close segment 1 and start segment 2
+    skillStartNewSegmentAfterHint();
 
     state.hintsUsed.w2 = true;
     state.hintCount += 1;
 
-    scheduleHintFly('w2');              // moved BEFORE render
+    scheduleHintFly('w2');
     renderSmart();
     return;
   }
@@ -3992,18 +4075,21 @@ function applyHint(id){
     if(state.hintsUsed.extras) return;
     if(!extrasUnlocked()) return;
 
-    // Hint-haste penalty for step 3 (Hint2 → Hint3)
     applyHintHasteForStep(3);
+
+    // NEW: close segment 2 and start segment 3
+    skillStartNewSegmentAfterHint();
 
     state.hintsUsed.extras = true;
     state.hintCount += 1;
     if(state.bank.length === 0) rebuildBank();
 
-    scheduleHintFly('extras');          // moved BEFORE render
+    scheduleHintFly('extras');
     renderSmart();
     return;
   }
 }
+
 
 /* =======================
    Buttons / nav
