@@ -25,8 +25,8 @@
     --lift-msg: 38px;
     --lift-hints: 96px;
     --msg-drop: 35px;        /* grid → warning msg down */
-    --result-drop: 25px;     /* grid → result msg down (total, not extra) */
-    --badge-drop: 65px;      /* result msg → badge down */
+    --result-drop: 28px;     /* grid → result msg down (total, not extra) */
+    --badge-drop: 70px;      /* result msg → badge down */
   }
 
   *{ box-sizing:border-box; }
@@ -513,14 +513,14 @@
     position:absolute;
     left:50%;
     top:40%;
-    transform:translate(-50%,-50%) translateY(var(--badge-drop)) scale(.92);
+    transform:translate(-50%,-50%) translateY(var(--badge-drop)) scale(.90);
     opacity:0;
     pointer-events:none;
     transition: opacity .35s ease, transform .35s ease;
   }
   .wrap.solved .skillBadge{
     opacity:1;
-    transform:translate(-50%,-50%) translateY(var(--badge-drop)) scale(.94);
+    transform:translate(-50%,-50%) translateY(var(--badge-drop)) scale(.92);
     transition-delay:.06s;
   }
 
