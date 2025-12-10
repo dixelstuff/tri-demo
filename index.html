@@ -781,6 +781,13 @@
     font-weight:750;
     background: rgba(0,0,0,.07);
   }
+  .kbKey.reset{
+  font-size:16.3px;
+  letter-spacing:.03em;
+  font-weight:750;
+  background: rgba(0,0,0,.07); /* same as Delete */
+}
+
   .kbKey.is-disabled{
     opacity:.38;
     background: rgba(0,0,0,.04);
@@ -1592,6 +1599,28 @@ function updateKeyboardHeightVar(){
     document.documentElement.style.setProperty('--kb-h', `${Math.ceil(rect.height)}px`);
   }
 }
+  function resetMainGridOnly(){
+  if(state.modalOpen) return;
+  if(state.finished) return; // keeps solved/gaveup state intact
+
+  clearTransientOnAnyChange();
+  abortDrag();
+
+  // clear the whole main grid
+  state.placed = { w1:null, w2:null };
+  state.singles = [];
+
+  // cursor back to first cell
+  state.focusIdx = 0;
+
+  renderSmart();
+
+  // desktop fallback (won’t run on custom KB)
+  if(!state.useCustomKB){
+    requestAnimationFrame(()=> focusCell(0));
+  }
+}
+
 function pressKeyAction(kind, val){
   if(state.finished) return;
   if(state.modalOpen) return;
@@ -1599,10 +1628,13 @@ function pressKeyAction(kind, val){
     typeLetterIntoGrid(val);
   }else if(kind === 'delete'){
     kbBackspace();
-  }else if(kind === 'enter'){
-    if(!canEnableCheckNow()) return;
-    onCheck();
-  }
+}else if(kind === 'reset'){
+  resetMainGridOnly();
+}else if(kind === 'enter'){
+  if(!canEnableCheckNow()) return;
+  onCheck();
+}
+
 }
 function makeKey(label, aria, cls, kind, val){
   const b = document.createElement('button');
@@ -1612,6 +1644,8 @@ function makeKey(label, aria, cls, kind, val){
 
   if(kind === 'letter'){
     b.textContent = label;
+  }else if(kind === 'reset'){
+  b.textContent = "RESET";
   }else if(kind === 'enter'){
     b.textContent = "CHECK";
   }else if(kind === 'delete'){
@@ -1652,7 +1686,7 @@ function buildKeyboard(){
 
   const r3 = document.createElement('div');
   r3.className = "kbRow";
-  r3.appendChild(makeKey("CHECK", "Check", "wide enter", "enter", null));
+  r3.appendChild(makeKey("RESET", "Reset", "wide reset", "reset", null));
   for(const ch of "ZXCVBNM"){
     r3.appendChild(makeKey(ch, `Letter ${ch}`, "", "letter", ch.toLowerCase()));
   }
