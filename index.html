@@ -171,8 +171,12 @@
   .clueWrap{
     position:relative;
     flex:0 0 auto;
-    padding-bottom:15px; /* makes room for the floating track */
+    padding-bottom:0; /* only add space when the track is actually on top */
   }
+  .clueWrap.hasTopTrack{
+    padding-bottom:15px; /* makes room for the floating (top) track */
+  }
+
   .hintTrackTop{
     position:absolute;
     left:50%;
@@ -442,6 +446,28 @@
     align-items:center;
     justify-content:center;
     transition:opacity .35s ease, transform .35s ease;
+  }
+  /* ===== Bottom hint-track dock (dynamic placement) ===== */
+  .hintDockBottom{
+    width:100%;
+    max-width:920px;
+    margin: 8px auto 0;
+    display:flex;
+    justify-content:center;
+    flex:0 0 auto;
+    z-index:25;
+  }
+
+  /* When using custom KB, buttons become fixed; keep the dock pinned above them */
+  html.has-kb .hintDockBottom{
+    position:fixed;
+    left:0; right:0;
+    bottom: calc(
+      var(--kb-h) + env(safe-area-inset-bottom) + 36px
+      + var(--btn-row-h, 0px) + 10px
+    );
+    margin:0;
+    z-index:9996; /* below btnRow (9997) so buttons always win if overlap */
   }
 
   .trackRow{
@@ -1015,6 +1041,8 @@
       </div>
     </div>
   </div>
+  <!-- bottom hint-track dock (we move #hintTrack here when there’s room) -->
+  <div class="hintDockBottom" id="hintDockBottom"></div>
 
   <div class="btnRow" id="btnRow">
     <button class="btn hints" id="hintsBtn" type="button">hint 1</button>
@@ -1125,6 +1153,10 @@ const el = {
   gridWrap: document.getElementById('gridWrap'),
   grid: document.getElementById('grid'),
   msg: document.getElementById('msg'),
+
+  clueWrap: document.getElementById('clueWrap'),
+  msgSlot: document.getElementById('msgSlot'),
+  hintDockBottom: document.getElementById('hintDockBottom'),
 
   hintTrack: document.getElementById('hintTrack'),
   trackW1: document.getElementById('trackW1'),
@@ -1273,7 +1305,11 @@ function getN(){
   return clamp(a.length || 7, 6, 8);
 }
 function startMax(){ return Math.max(0, getN() - TR); }
-function renderSmart(){ render(!state.useCustomKB); }
+function renderSmart(){
+  render(!state.useCustomKB);
+  requestAnimationFrame(updateHintTrackPlacement);
+}
+
 function hintsUsedCount(){
   return state.hintCount || 0; // you already increment hintCount per hint
 }
@@ -1644,7 +1680,12 @@ function setCustomKBEnabled(on){
   state.useCustomKB = !!on;
   document.documentElement.classList.toggle('has-kb', state.useCustomKB);
   buildKeyboard();
-  requestAnimationFrame(()=> updateKeyboardHeightVar());
+    requestAnimationFrame(()=>{
+    updateKeyboardHeightVar();
+    updateBtnRowHeightVar();
+    updateHintTrackPlacement();
+  });
+
 }
 function updateKeyboardHeightVar(){
   if(!state.useCustomKB) return;
@@ -1653,6 +1694,81 @@ function updateKeyboardHeightVar(){
     document.documentElement.style.setProperty('--kb-h', `${Math.ceil(rect.height)}px`);
   }
 }
+  /* =======================
+   Hint track placement (TOP vs BOTTOM)
+   ======================= */
+const KB_FORCE_TOP_RATIO = 0.42;  // tune this (e.g. 0.38–0.48)
+const HINT_PAD = 8;               // minimum breathing room in px
+
+let _hintTrackMode = null;
+
+function updateBtnRowHeightVar(){
+  const r = el.btnRow?.getBoundingClientRect?.();
+  if(r && r.height){
+    document.documentElement.style.setProperty('--btn-row-h', `${Math.ceil(r.height)}px`);
+  }
+}
+
+function applyHintTrackMode(mode){
+  if(_hintTrackMode === mode) return;
+  _hintTrackMode = mode;
+
+  if(mode === 'top'){
+    // Move under the clue, inside clueWrap (so .hintTrackTop absolute positioning works)
+    if(el.clue) el.clue.insertAdjacentElement('afterend', el.hintTrack);
+    el.hintTrack.classList.add('hintTrackTop');
+    if(el.clueWrap) el.clueWrap.classList.add('hasTopTrack');
+  }else{
+    // Move into bottom dock (normal flow / fixed when has-kb)
+    if(el.hintDockBottom) el.hintDockBottom.appendChild(el.hintTrack);
+    el.hintTrack.classList.remove('hintTrackTop');
+    if(el.clueWrap) el.clueWrap.classList.remove('hasTopTrack');
+  }
+}
+
+function updateHintTrackPlacement(){
+  if(!el.hintTrack || !el.hintDockBottom || !el.msgSlot || !el.btnRow) return;
+
+  // Keep vars fresh (KB height + button row height)
+  updateBtnRowHeightVar();
+  if(state.useCustomKB) updateKeyboardHeightVar();
+
+  const vh = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
+  const kbH = (state.useCustomKB && el.kbHost) ? (el.kbHost.getBoundingClientRect().height || 0) : 0;
+  const kbRatio = (vh > 0) ? (kbH / vh) : 0;
+
+  // Rule 1: only force TOP when keyboard is “too big”
+  if(state.useCustomKB && kbRatio >= KB_FORCE_TOP_RATIO){
+    applyHintTrackMode('top');
+    return;
+  }
+
+  // Rule 2: prefer BOTTOM, but only if it visually fits between msg + buttons
+  applyHintTrackMode('bottom');
+
+  requestAnimationFrame(()=>{
+    if(_hintTrackMode !== 'bottom') return;
+
+    const msgRect   = el.msgSlot.getBoundingClientRect();
+    const btnRect   = el.btnRow.getBoundingClientRect();
+    const trackRect = el.hintTrack.getBoundingClientRect();
+
+    const fits =
+      (trackRect.top    >= msgRect.bottom + HINT_PAD) &&
+      (trackRect.bottom <= btnRect.top     - HINT_PAD);
+
+    if(!fits){
+      applyHintTrackMode('top');
+    }
+  });
+}
+
+// Also respond to resizes
+window.addEventListener('resize', ()=> requestAnimationFrame(updateHintTrackPlacement), {passive:true});
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', ()=> requestAnimationFrame(updateHintTrackPlacement), {passive:true});
+}
+
   function resetMainGridOnly(){
   if(state.modalOpen) return;
   if(state.finished) return; // keeps solved/gaveup state intact
