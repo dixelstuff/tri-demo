@@ -464,7 +464,7 @@
     left:0; right:0;
     bottom: calc(
       var(--kb-h) + env(safe-area-inset-bottom) + 36px
-      + var(--btn-row-h, 0px) + 10px
+      + var(--btn-row-h, 0px) + 22px
     );
     margin:0;
     z-index:9996; /* below btnRow (9997) so buttons always win if overlap */
@@ -1698,7 +1698,7 @@ function updateKeyboardHeightVar(){
    Hint track placement (TOP vs BOTTOM)
    ======================= */
 const KB_FORCE_TOP_RATIO = 0.8;  // tune this (e.g. 0.38–0.48)
-const HINT_PAD = 8;               // minimum breathing room in px
+const HINT_PAD = 10;               // minimum breathing room in px
 
 let _hintTrackMode = null;
 
