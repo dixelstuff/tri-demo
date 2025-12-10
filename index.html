@@ -146,14 +146,17 @@
    ========================= */
 .h-w1, .h-w2{
   pointer-events:none;
-  border-radius:6px;
+  display:inline-block;
+  padding: 0.02em 0.10em 0.07em;
+  margin: 0 -0.02em;              /* cancels most width growth */
+  border-radius: 0.55em;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
+  box-shadow: inset 0 -0.06em 0 rgba(0,0,0,.10);
 }
+.h-w1{ background: rgba(255,243,179,.92); }
+.h-w2{ background: rgba(207,232,255,.92); }
 
-/* “marker” highlight behind the letter (doesn't change underline layout) */
-.h-w1{ box-shadow: inset 0 -0.62em 0 rgba(255,243,179,.92); }
-.h-w2{ box-shadow: inset 0 -0.62em 0 rgba(207,232,255,.92); }
 
     .u-w1, .u-w2, .u-red{
       text-decoration: underline;
@@ -686,14 +689,21 @@
    Extra letters under the clue
    ========================= */
 .extrasFloat{
-  margin: 10px auto 0;
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  top:0;                 /* JS will set the real top under the clue */
+  margin:0;
   width:fit-content;
   max-width:min(940px,94vw);
-  display:none;            /* shown only after hint 3 */
+  display:none;
   justify-content:center;
   align-items:center;
+  z-index:25;
+  pointer-events:auto;
 }
 .extrasFloat.show{ display:flex; }
+
 
     .hintSpotOverlay{
       position:fixed;
@@ -1627,9 +1637,10 @@ function bindTapReliable(node, fn){
 function isBackgroundToggleTarget(t){
   if(!t) return false;
 
-  if(t.closest && t.closest(
-    'button, a, #clue, #gridDock, #gridWrap, #grid, #hintTrack, #btnRow, #kbHost, #hintsModal'
-  )) return false;
+if(t.closest && t.closest(
+  'button, a, #clue, #extrasFloat, #gridDock, #gridWrap, #grid, #hintTrack, #btnRow, #kbHost, #hintsModal'
+)) return false;
+
 
   if(t.closest && !t.closest('#wrap')) return false;
 
@@ -1928,54 +1939,63 @@ function underlineBySubstrings(token, items){
     }
   }
 
-  // --- NEW: hint colouring (independent of underline) ---
-  const hintAt = new Array(chars.length).fill(null);
-  try{
-    const p = current();
-    const tkn = norm(token);
+// --- NEW: hint colouring (independent of underline; NOT dependent on grid) ---
+const hintClsAt = new Array(chars.length).fill(null);
 
-    // only colour letters once that hint is taken
-    if(state?.hintsUsed?.w1 && tkn === norm(p.word1)){
-      const tri = norm(p.tri1);
-      const pos = tri ? clean.indexOf(tri) : -1;
-      if(pos >= 0){
-        for(let k=0;k<tri.length;k++){
-          const oi = map[pos+k];
-          if(oi != null) hintAt[oi] = "h-w1";
-        }
-      }
-    }
-    if(state?.hintsUsed?.w2 && tkn === norm(p.word2)){
-      const tri = norm(p.tri2);
-      const pos = tri ? clean.indexOf(tri) : -1;
-      if(pos >= 0){
-        for(let k=0;k<tri.length;k++){
-          const oi = map[pos+k];
-          if(oi != null) hintAt[oi] = "h-w2";
-        }
-      }
-    }
-  }catch{}
+try{
+  const p = current();
+  const tkn = norm(token);
 
-  // --- output (underline spans same as before; hint spans nested inside) ---
-  let out = "";
-  let open = null;
-  for(let i=0;i<chars.length;i++){
-    const c = chars[i];
-    const cls = clsAt[i];
+  const markHint = (tri, cls)=>{
+    tri = norm(tri);
+    if(!tri) return;
+    const pos = clean.indexOf(tri);
+    if(pos < 0) return;
 
-    if(cls !== open){
-      if(open) out += "</span>";
-      if(cls) out += `<span class="${cls}">`;
-      open = cls || null;
-    }
+    const startOi = map[pos];
+    const endOi   = map[pos + tri.length - 1];
+    if(startOi == null || endOi == null) return;
 
-    const esc = escapeHtml(c);
-    if(hintAt[i]) out += `<span class="${hintAt[i]}">${esc}</span>`;
-    else out += esc;
+    const lo = Math.min(startOi, endOi);
+    const hi = Math.max(startOi, endOi);
+    for(let j=lo; j<=hi; j++) hintClsAt[j] = cls;
+  };
+
+  if(state?.hintsUsed?.w1 && tkn === norm(p.word1)) markHint(p.tri1, "h-w1");
+  if(state?.hintsUsed?.w2 && tkn === norm(p.word2)) markHint(p.tri2, "h-w2");
+}catch{}
+
+// --- output (underline spans as before; hint spans never cross underline boundaries) ---
+let out = "";
+let open = null;   // underline span
+let hOpen = null;  // hint span
+
+for(let i=0;i<chars.length;i++){
+  const c = chars[i];
+  const cls = clsAt[i];
+
+  // if underline boundary changes, close hint first (prevents invalid overlap)
+  if(cls !== open){
+    if(hOpen){ out += "</span>"; hOpen = null; }
+    if(open) out += "</span>";
+    if(cls) out += `<span class="${cls}">`;
+    open = cls || null;
   }
-  if(open) out += "</span>";
-  return out;
+
+  const hcls = hintClsAt[i];
+  if(hcls !== hOpen){
+    if(hOpen) out += "</span>";
+    if(hcls) out += `<span class="${hcls}">`;
+    hOpen = hcls || null;
+  }
+
+  out += escapeHtml(c);
+}
+
+if(hOpen) out += "</span>";
+if(open) out += "</span>";
+return out;
+
 }
 
 
@@ -3308,6 +3328,7 @@ function makeTrigramBlock(tri, cls, labelText, onTap, id){
 
   const row = document.createElement('div');
   row.className = "extrasRow";
+positionExtrasFloat();
 
   for(const tile of state.bank){
     const box = document.createElement('div');
@@ -3344,7 +3365,18 @@ function makeTrigramBlock(tri, cls, labelText, onTap, id){
   }
 
   el.extrasFloat.appendChild(row);
+    positionExtrasFloat();
+
 }
+function positionExtrasFloat(){
+  if(!el.extrasFloat || !el.clue) return;
+  const gap = 10; // px under the clue bubble
+  const top = el.clue.offsetTop + el.clue.offsetHeight + gap;
+  el.extrasFloat.style.top = `${top}px`;
+}
+window.addEventListener('resize', ()=>{
+  if(el.extrasFloat && el.extrasFloat.classList.contains('show')) positionExtrasFloat();
+}, {passive:true});
 
 function renderHintTrack(){
   // Hint-track tiles are removed. We only:
