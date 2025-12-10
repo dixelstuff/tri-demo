@@ -1596,15 +1596,7 @@ function computeFinalSkill(gaveUp){
 }
 
 
-  const hp = hintPenalty();
-  const op = otherPenalty();
-  const hastePenalty = (state.hastePenalty || 0);
-
-  const skillRaw = 100 - hp - op.total - hastePenalty;
-  const skill = Math.max(30, Math.round(skillRaw));
-
-  return { skillRaw, skill };
-}
+ 
 
 
   
@@ -2048,8 +2040,8 @@ function excludedMsgText(){
   return (n >= 2) ? "Your hints excluded these trigrams" : "Your hint excluded this trigram";
 }
 
-  const ASSIST_FLASH_MS = 2400;  // should match .msg.assistFlash duration (2.4s)
-const CLUE_GLOW_MS    = 2600;  // should match .clue.assist-glow duration (2.6s)
+  const ASSIST_FLASH_MS = 4200;  // should match .msg.assistFlash duration (4.2s)
+const CLUE_GLOW_MS    = 3200;  // should match .clue.assist-glow duration (3.2s)
 
 function triggerAssistActivatedUI(){
   if(state.finished) return;
