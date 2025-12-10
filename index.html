@@ -196,7 +196,7 @@
 
     .wrap.solved:not(.gaveup) .gridDock{
       pointer-events:none;
-      transform: translate3d(0,-14px,0) scale(1.01);
+      transform: translate3d(0,-16px,0) scale(1.01);
       box-shadow:
         0 0 0 7px rgba(200,247,210,.55),
         0 0 0 13px rgba(200,247,210,.22),
@@ -208,7 +208,7 @@
 
     .wrap.gaveup .gridDock{
       pointer-events:none;
-      transform: translate3d(0,-12px,0) scale(1.01);
+      transform: translate3d(0,-16px,0) scale(1.01);
       box-shadow:
         0 0 0 7px rgba(255, 150, 160, .46),
         0 0 0 13px rgba(255, 150, 160, .20),
@@ -219,9 +219,9 @@
     }
 
     @keyframes solvedPop{
-      0%{ transform: translate3d(0,-6px,0) scale(.985); }
-      55%{ transform: translate3d(0,-16px,0) scale(1.02); }
-      100%{ transform: translate3d(0,-12px,0) scale(1.01); }
+      0%{ transform: translate3d(0,-10px,0) scale(.985); }
+      55%{ transform: translate3d(0,-20px,0) scale(1.02); }
+      100%{ transform: translate3d(0,-16px,0) scale(1.01); }
     }
     @keyframes glowPulse{
       0%{
@@ -418,13 +418,13 @@
 
     /* Lift message + hint grids slightly (does NOT affect button position) */
 :root{
-  --lift-msg: 18px;     /* moves result messages up */
-  --lift-hints: 24px;   /* moves badge up a bit more */
+  --lift-msg: 26px;     /* moves result messages up */
+  --lift-hints: 38px;   /* moves badge up a bit more */
 }
 @media (max-width:520px){
   :root{
-    --lift-msg: 20px;
-    --lift-hints: 28px;
+    --lift-msg: 26px;
+    --lift-hints: 38px;
   }
 }
 
