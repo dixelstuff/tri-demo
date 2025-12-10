@@ -1180,6 +1180,8 @@ const el = {
 
 const TWOTRI_TEXT  = "Two trigrams from same word";
 const OVERLAP_TEXT = "1-letter overlap allowed ✓";
+const OVERLAP2_TEXT = "2-letter overlap not allowed";
+
 
 const HINT_IDS = { w1:'w1', w2:'w2', extras:'extras' };
 
@@ -1243,6 +1245,9 @@ const state = {
 
   twoSet: new Set(),
   twoTris: { w1: new Set(), w2: new Set() },
+
+  ol2Set: new Set(),
+  ol2Tris: { w1: new Set(), w2: new Set() },
 
   exclSet: new Set(),
   exclTris: { w1: new Set(), w2: new Set() },
@@ -2208,7 +2213,9 @@ function underlineBySubstrings(token, items){
         }
       }
 
-      break;
+            // find the next occurrence (allows overlaps)
+      pos = clean.indexOf(sub, pos + 1);
+
     }
   }
 
@@ -2754,6 +2761,65 @@ function computeHintExcludedTrigrams(){
       }
     }
   }
+function computeTwoLetterOverlapInvalid(){
+  state.ol2Set = new Set();
+  state.ol2Tris = { w1: new Set(), w2: new Set() };
+
+  const n = getN();
+  const p = current();
+  const w1 = norm(p.word1);
+  const w2 = norm(p.word2);
+  if(!w1 || !w2) return;
+
+  // Build allowed trigram sets for each clue word
+  const set1 = new Set();
+  const set2 = new Set();
+  for(let i=0;i<=w1.length-TR;i++) set1.add(w1.slice(i,i+TR));
+  for(let i=0;i<=w2.length-TR;i++) set2.add(w2.slice(i,i+TR));
+
+  // 1) Explicitly catch the (rare) case where BOTH placed trigrams overlap by 2
+  const a = state.placed?.w1;
+  const b = state.placed?.w2;
+  if(a && b && overlapCount(a.start, b.start) === 2){
+    state.ol2Tris.w1.add(a.tri);
+    state.ol2Tris.w2.add(b.tri);
+    for(const k of trigramCells(a.start)) state.ol2Set.add(k);
+    for(const k of trigramCells(b.start)) state.ol2Set.add(k);
+  }
+
+  // 2) Catch typed-letter situations like "binc" where two valid trigrams overlap by 2
+  const chars = Array.from({length:n}, (_,i)=>cellChar(i));
+
+  const occW2ByStart = new Map();
+  for(let s=0; s<=n-3; s++){
+    if(!chars[s] || !chars[s+1] || !chars[s+2]) continue;
+    const tri = (chars[s]+chars[s+1]+chars[s+2]).toLowerCase();
+    if(set2.has(tri)){
+      if(!occW2ByStart.has(s)) occW2ByStart.set(s, []);
+      occW2ByStart.get(s).push(tri);
+    }
+  }
+
+  for(let s=0; s<=n-3; s++){
+    if(!chars[s] || !chars[s+1] || !chars[s+2]) continue;
+    const tri1 = (chars[s]+chars[s+1]+chars[s+2]).toLowerCase();
+    if(!set1.has(tri1)) continue;
+
+    // 2-letter overlap happens when starts differ by 1
+    for(const s2 of [s-1, s+1]){
+      const hits2 = occW2ByStart.get(s2);
+      if(!hits2) continue;
+
+      for(const tri2 of hits2){
+        state.ol2Tris.w1.add(tri1);
+        state.ol2Tris.w2.add(tri2);
+
+        for(const k of trigramCells(s))  state.ol2Set.add(k);
+        for(const k of trigramCells(s2)) state.ol2Set.add(k);
+      }
+    }
+  }
+}
 
   if(state.hintsUsed.w1) scan('w1', p.word1, norm(p.tri1));
   if(state.hintsUsed.w2) scan('w2', p.word2, norm(p.tri2));
@@ -2791,17 +2857,24 @@ function updateStatusMessages(){
   if(state.lockMsg) return;
   if(state.msgTransient) return;
 
+  computeTwoLetterOverlapInvalid();
   computeMax3Invalid();
   computeTwoTrigramsInvalid();
   computeHintExcludedTrigrams();
 
+  const hasOL2 = state.ol2Set && state.ol2Set.size > 0;
   const hasMax3 = state.badSet && state.badSet.size > 0;
   const hasTwo  = state.twoSet && state.twoSet.size > 0;
   const hasExcluded = state.exclSet && state.exclSet.size > 0;
 
-  if(hasMax3){ setMsg("Max 3 contiguous letters allowed", 'warn'); state.overlapMsgOn=false; return; }
-  if(hasTwo){  setMsg(TWOTRI_TEXT, 'warn'); state.overlapMsgOn=false; return; }
-  if(hasExcluded){ setMsg(excludedMsgText(), 'warn'); state.overlapMsgOn=false; return; }
+  // NEW: show 2-letter overlap warning
+  if(hasOL2){ setMsg(OVERLAP2_TEXT, 'warn'); state.overlapMsgOn=false; return; }
+
+  if(state.ol2Set.size){ setMsg(OVERLAP2_TEXT, "warn"); renderSmart(); return; }
+  if(state.badSet.size){ setMsg("Max 3 contiguous letters allowed", "warn"); renderSmart(); return; }
+  if(state.twoSet.size){ setMsg(TWOTRI_TEXT, "warn"); renderSmart(); return; }
+  if(state.exclSet.size){ setMsg(excludedMsgText(), "warn"); renderSmart(); return; }
+
 
   if(el.msg.classList.contains('warn')) setMsg("");
 
@@ -2816,6 +2889,7 @@ function updateStatusMessages(){
     state.overlapMsgOn = false;
   }
 }
+
 
 /* =======================
    Check logic
@@ -3200,14 +3274,22 @@ function scheduleHintFly(kind){
    Drag ghost + drag logic
    ======================= */
 function trigramIsRedAtStart(start){
+  computeTwoLetterOverlapInvalid();
   computeMax3Invalid();
   computeTwoTrigramsInvalid();
   computeHintExcludedTrigrams();
+
   for(const idx of trigramCells(start)){
-    if(state.badSet.has(idx) || state.twoSet.has(idx) || state.exclSet.has(idx)) return true;
+    if(
+      state.ol2Set.has(idx) ||
+      state.badSet.has(idx) ||
+      state.twoSet.has(idx) ||
+      state.exclSet.has(idx)
+    ) return true;
   }
   return false;
 }
+
 function makeGhostBox(text, bg){
   const ghost = document.createElement('div');
   ghost.className = "ghost";
@@ -3837,9 +3919,11 @@ function renderGrid(stealFocus=true){
     }
   }
 
+  computeTwoLetterOverlapInvalid();
   computeMax3Invalid();
   computeTwoTrigramsInvalid();
   computeHintExcludedTrigrams();
+
 
   const overlapSet = (!revealed && f.showGridColors) ? computeOverlapIdxSet() : new Set();
 
@@ -3861,7 +3945,7 @@ function renderGrid(stealFocus=true){
       if(overlapSet.has(i)) cell.classList.add('bg-ol');
       else cell.classList.add(tri.group==='w1' ? 'bg-w1' : 'bg-w2');
     }
-    if(!revealed && f.showBadCellColor && (state.badSet.has(i) || state.twoSet.has(i) || state.exclSet.has(i))){
+    if(!revealed && f.showBadCellColor && (state.ol2Set.has(i) || state.badSet.has(i) || state.twoSet.has(i) || state.exclSet.has(i))){
       cell.classList.add('bg-bad');
     }
 
