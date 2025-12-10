@@ -1267,6 +1267,12 @@ function skillResetForPuzzle(){
 
   state.hastePenalty = 0;
 }
+  function resetEnhancedForNewPuzzle(){
+  // Hard reset: next puzzle always starts with Enhanced OFF
+  state.assist = false;
+  state.assistLocked = false;
+}
+
 function skillPause(){
   state._skillPaused = true;
   state._skillLastTs = performance.now();
@@ -1448,23 +1454,28 @@ document.addEventListener('contextmenu', (e)=>{
 /* =======================
    Enhanced (no persistence)
    ======================= */
-function setEnhanced(on, renderNow=true){
+function setEnhanced(on, renderNow=true, source='auto'){
   const next = !!on;
 
-  // Once Enhanced is enabled for this puzzle, do not allow turning it off.
-  if(state.assistLocked && !next) return;
+  // ✅ Critical rule: Enhanced can ONLY be turned ON by explicit user intent.
+  // Anything else (hints, render, auto-detect, etc.) is blocked.
+  if(next && source !== 'user') return;
+
+  // ✅ Lock rule applies only within a puzzle; allow reset to turn it off.
+  if(state.assistLocked && !next && source !== 'reset') return;
 
   if(state.assist === next) return;
 
   state.assist = next;
 
-  // Lock it on the first time it is enabled
+  // Lock it on the first time the USER enables it (this puzzle only)
   if(next) state.assistLocked = true;
 
-  if(!state.assist) abortDrag();
+  if(!next) abortDrag();
 
   if(renderNow) renderSmart();
 }
+
 /* =======================
    Clue tap enables Enhanced ONCE (capture phase)
    ======================= */
@@ -1478,7 +1489,7 @@ function setEnhanced(on, renderNow=true){
     if(state.assist) return; // already enabled
 
     // enable + lock for the rest of this puzzle
-    setEnhanced(true, true);
+    setEnhanced(true, true, 'user');
   };
 
   // Capture phase so it still works even if inner clue-word handlers stopPropagation()
@@ -3359,12 +3370,12 @@ function onClueWordActivate(group){
 
     if(!state.assist){
       if(group && !state.placed[group]){
-        setEnhanced(true, false);
+        setEnhanced(true, false, 'user');
         lastActionAt = Date.now();
         onClueWordActivate(group);
         return;
       }else{
-        setEnhanced(true, true);
+        setEnhanced(true, true, 'user');
         lastActionAt = 0;
         if(!state.useCustomKB){
           requestAnimationFrame(()=> focusCell(state.focusIdx ?? 0));
@@ -3396,12 +3407,12 @@ function onClueWordActivate(group){
 
     if(!state.assist){
       if(group && !state.placed[group]){
-        setEnhanced(true, false);
+        setEnhanced(true, false, 'user');
         lastActionAt = Date.now();
         onClueWordActivate(group);
         return;
       }else{
-        setEnhanced(true, true);
+        setEnhanced(true, true, 'user');
         lastActionAt = 0;
         return;
       }
@@ -3623,7 +3634,7 @@ function maybeAutoEnableEnhancedForExcluded(){
   computeHintExcludedTrigrams();
   const hasExcluded = state.exclSet && state.exclSet.size > 0;
   if(hasExcluded && !state.assist){
-    setEnhanced(true, false);
+    setEnhanced(true, false, 'user');
   }
 }
 
@@ -3862,6 +3873,7 @@ window.addEventListener('resize', ()=>{
 /* init */
 setCustomKBEnabled(shouldUseCustomKB());
 resetAllForPuzzle();
+resetEnhancedForNewPuzzle();
 state.assist = false;
 state.assistLocked = false;  
 renderSmart();
