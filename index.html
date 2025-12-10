@@ -135,6 +135,7 @@
 .clueWrap{
   position:relative;
   flex:0 0 auto;
+  padding-bottom: 54px;
 }
 
 /* tune this if you want the hint track a bit closer/further from the clue */
@@ -1049,50 +1050,45 @@
       </div>
     </div>
 
-   <div class="clueWrap" id="clueWrap">
-  <div class="clue" id="clue"></div>
+     <div class="clueWrap" id="clueWrap">
+    <div class="clue" id="clue"></div>
 
-<div class="skillDock" id="skillDock" aria-label="Skill badge">
-  <div class="skillBadge" id="skillBadge" aria-hidden="true">
-    <div class="skillBadgeInner">
-      <div class="skillBadgeLabel">Skill</div>
-      <div class="skillBadgeValue" id="skillBadgeValue">—</div>
-    </div>
-  </div>
-</div>
-
-
-
-    <div class="gridDock" id="gridDock">
-      <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
-        <div class="grid" id="grid" style="--n:7"></div>
-      </div>
-    </div>
-
-    <div class="msgSlot" id="msgSlot" aria-live="polite">
-      <div class="msg" id="msg"></div>
-    </div>
-
-    <div class="hintTrack" id="hintTrack" aria-label="Hint tracker">
+    <!-- floating hint track UNDER the clue -->
+    <div class="hintTrack hintTrackTop" id="hintTrack" aria-label="Hint tracker">
       <div class="trackRow" id="trackRow">
         <div class="trackBlock" id="trackW1"></div>
         <div class="trackBlock" id="trackW2"></div>
         <div class="trackBlock" id="trackExtras"></div>
       </div>
-        <div class="skillBadge" id="skillBadge" aria-hidden="true">
-    <div class="skillBadgeInner">
-      <div class="skillBadgeLabel">Skill</div>
-      <div class="skillBadgeValue" id="skillBadgeValue">—</div>
     </div>
   </div>
 
-    </div>
-
-    <div class="btnRow" id="btnRow">
-      <button class="btn hints" id="hintsBtn" type="button">hint 1</button>
-      <button class="btn check" id="checkBtn" type="button">check</button>
+  <div class="gridDock" id="gridDock">
+    <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
+      <div class="grid" id="grid" style="--n:7"></div>
     </div>
   </div>
+
+  <div class="msgSlot" id="msgSlot" aria-live="polite">
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <!-- Skill badge lives in the OLD hint-track slot -->
+  <div class="skillDock" id="skillDock" aria-label="Skill badge">
+    <div class="skillBadge" id="skillBadge" aria-hidden="true">
+      <div class="skillBadgeInner">
+        <div class="skillBadgeLabel">Skill</div>
+        <div class="skillBadgeValue" id="skillBadgeValue">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="btnRow" id="btnRow">
+    <button class="btn hints" id="hintsBtn" type="button">hint 1</button>
+    <button class="btn check" id="checkBtn" type="button">check</button>
+  </div>
+</div>
+
 
   <div class="modalOverlay" id="hintsModal" aria-hidden="true">
     <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="hintsModalTitle">
