@@ -3634,13 +3634,7 @@ function updateHintButtonLabel(){
   el.hintsBtn.textContent = (st === 1) ? "hint 1" : (st === 2) ? "hint 2" : (st === 3) ? "hint 3" : "give up";
 }
 
-function maybeAutoEnableEnhancedForExcluded(){
-  computeHintExcludedTrigrams();
-  const hasExcluded = state.exclSet && state.exclSet.size > 0;
-  if(hasExcluded && !state.assist){
-    setEnhanced(true, false, 'user');
-  }
-}
+
 
 function applyHint(id){
   if(state.finished) return;
@@ -3655,7 +3649,6 @@ function applyHint(id){
     state.hintCount += 1;
 
     scheduleHintFly('w1');              // moved BEFORE render
-    maybeAutoEnableEnhancedForExcluded();
     renderSmart();
     return;
   }
@@ -3673,7 +3666,6 @@ function applyHint(id){
     state.hintCount += 1;
 
     scheduleHintFly('w2');              // moved BEFORE render
-    maybeAutoEnableEnhancedForExcluded();
     renderSmart();
     return;
   }
