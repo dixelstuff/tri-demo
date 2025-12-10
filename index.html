@@ -49,7 +49,7 @@
     #gridDock, #gridDock *,
     #gridWrap, #gridWrap *,
     #hintTrack, #hintTrack *,
-    #extrasFloat, #extrasFloat *,
+    #skillDock, #skillDock *,
     #btnRow, #btnRow *,
     #kbHost, #kbHost *,
     #hintsModal, #hintsModal *{
@@ -131,6 +131,25 @@
       top: -0.1em;
       margin-left:8px;
     }
+/* Wrap clue + floating hint track */
+.clueWrap{
+  position:relative;
+  flex:0 0 auto;
+}
+
+/* tune this if you want the hint track a bit closer/further from the clue */
+:root{ --clue-hint-gap: 10px; }
+
+/* Hint track now floats under the clue (no layout push) */
+.hintTrackTop{
+  position:absolute;
+  left:50%;
+  top: calc(100% + var(--clue-hint-gap));
+  transform: translateX(-50%);
+  margin:0;
+  min-height:0;
+  z-index:30;              /* above background; below/above grid as needed */
+}
 
     .clueWord{
       display:inline-block;
@@ -141,22 +160,6 @@
       font-variant-ligatures: none;
       font-feature-settings: "kern" 0, "liga" 0, "clig" 0;
     }
-/* =========================
-   Hint colouring INSIDE clue words (independent of underline)
-   ========================= */
-.h-w1, .h-w2{
-  pointer-events:none;
-  display:inline-block;
-  padding: 0.02em 0.10em 0.07em;
-  margin: 0 -0.02em;              /* cancels most width growth */
-  border-radius: 0.55em;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-  box-shadow: inset 0 -0.06em 0 rgba(0,0,0,.10);
-}
-.h-w1{ background: rgba(255,243,179,.92); }
-.h-w2{ background: rgba(207,232,255,.92); }
-
 
     .u-w1, .u-w2, .u-red{
       text-decoration: underline;
@@ -401,18 +404,17 @@
 }
 
 
-    .hintTrack{
-      margin: clamp(14px, 3.4vh, 24px) auto 0;
-      width:fit-content;
-      max-width:min(920px,96vw);
-      min-height:78px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      transition:opacity .35s ease;
-      user-select:none;
-      flex:0 0 auto;
-    }
+   /* Hint track (now used as a floating track under the clue) */
+.hintTrack{
+  width:fit-content;
+  max-width:min(920px,96vw);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:opacity .35s ease, transform .35s ease;
+  user-select:none;
+}
+
     /* Lift message + hint grids slightly (does NOT affect button position) */
 :root{
   --lift-msg: 8px;
@@ -428,11 +430,12 @@
 .msgSlot{
   transform: translateY(calc(-1 * var(--lift-msg)));
 }
-.hintTrack{
+
+/* lift the *badge slot* (old hintTrack position), not the floating hint track */
+.skillDock{
   transform: translateY(calc(-1 * var(--lift-hints)));
 }
-/* Remove hint-track during play (keeps solved badge behaviour) */
-.wrap:not(.solved) #hintTrack{ display:none; }
+
 
    /* Keep hintTrack as the layout “slot”, but fade the mini-grid out completely on solve */
 #hintTrack{ position:relative; } /* so the badge can sit in the same spot */
@@ -459,7 +462,8 @@
    Skill badge (tiered) + shine
    ========================= */
 
-#hintTrack{ position:relative; } /* badge sits “in” the hint track slot */
+#skillDock{ position:relative; } /* badge sits in the old hintTrack slot */
+
 
 /* Mini-grid fades away on reveal (keep your existing rules if you already have them) */
 .wrap.solved .trackRow{ opacity:0; transition: opacity .35s ease; }
@@ -556,6 +560,20 @@
   margin-top:2px;
   text-shadow: 0 1px 0 rgba(255,255,255,.45);
 }
+/* Dedicated layout slot where the hintTrack used to be (for Skill badge) */
+.skillDock{
+  margin: clamp(14px, 3.4vh, 24px) auto 0;
+  width:fit-content;
+  max-width:min(920px,96vw);
+  min-height:78px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:opacity .35s ease;
+  user-select:none;
+  flex:0 0 auto;
+  position:relative; /* badge absolute positioning anchor */
+}
 
 /* Sparkle layer */
 .skillBadgeInner::before{
@@ -618,6 +636,10 @@
 .wrap.solved #btnRow{
   opacity:0;
   transform: translateY(6px);
+  pointer-events:none;
+}
+.wrap.solved .hintTrackTop{
+  opacity:0;
   pointer-events:none;
 }
 
@@ -685,25 +707,6 @@
       justify-content:center;
       flex-wrap:nowrap;
     }
-/* =========================
-   Extra letters under the clue
-   ========================= */
-.extrasFloat{
-  position:absolute;
-  left:50%;
-  transform:translateX(-50%);
-  top:0;                 /* JS will set the real top under the clue */
-  margin:0;
-  width:fit-content;
-  max-width:min(940px,94vw);
-  display:none;
-  justify-content:center;
-  align-items:center;
-  z-index:25;
-  pointer-events:auto;
-}
-.extrasFloat.show{ display:flex; }
-
 
     .hintSpotOverlay{
       position:fixed;
@@ -1046,8 +1049,18 @@
       </div>
     </div>
 
-    <div class="clue" id="clue"></div>
-    <div class="extrasFloat" id="extrasFloat" aria-label="Extra letters hint"></div>
+   <div class="clueWrap" id="clueWrap">
+  <div class="clue" id="clue"></div>
+
+<div class="skillDock" id="skillDock" aria-label="Skill badge">
+  <div class="skillBadge" id="skillBadge" aria-hidden="true">
+    <div class="skillBadgeInner">
+      <div class="skillBadgeLabel">Skill</div>
+      <div class="skillBadgeValue" id="skillBadgeValue">—</div>
+    </div>
+  </div>
+</div>
+
 
 
     <div class="gridDock" id="gridDock">
@@ -1179,7 +1192,6 @@ const TR = 3;
 const el = {
   wrap: document.getElementById('wrap'),
   clue: document.getElementById('clue'),
-  extrasFloat: document.getElementById('extrasFloat'),
   gridDock: document.getElementById('gridDock'),
   gridWrap: document.getElementById('gridWrap'),
   grid: document.getElementById('grid'),
@@ -1545,7 +1557,7 @@ function shakeGrid(){
 /* prevent context menu on interactive surface */
 document.addEventListener('contextmenu', (e)=>{
   const t = e.target;
-  if(t && t.closest && t.closest('#clue, #extrasFloat, #gridDock, #gridWrap, #hintTrack, #btnRow, #kbHost, #hintsModal')){
+  if(t && t.closest && t.closest('#clue, #gridDock, #gridWrap, #hintTrack, #skillDock, #btnRow, #kbHost, #hintsModal')){
     e.preventDefault();
   }
 });
@@ -1638,7 +1650,7 @@ function isBackgroundToggleTarget(t){
   if(!t) return false;
 
 if(t.closest && t.closest(
-  'button, a, #clue, #extrasFloat, #gridDock, #gridWrap, #grid, #hintTrack, #btnRow, #kbHost, #hintsModal'
+  'button, a, #clue, #gridDock, #gridWrap, #grid, #hintTrack, #skillDock, #btnRow, #kbHost, #hintsModal'
 )) return false;
 
 
@@ -1909,7 +1921,6 @@ function underlineBySubstrings(token, items){
   const clsAt = new Array(chars.length).fill(null);
   const prio = (cls)=> (cls === "u-red" ? 3 : (cls === "u-w1" || cls === "u-w2" ? 2 : 1));
 
-  // --- underline logic (UNCHANGED) ---
   for(const it of items){
     const sub = norm(it.sub);
     if(!sub) continue;
@@ -1939,65 +1950,21 @@ function underlineBySubstrings(token, items){
     }
   }
 
-// --- NEW: hint colouring (independent of underline; NOT dependent on grid) ---
-const hintClsAt = new Array(chars.length).fill(null);
-
-try{
-  const p = current();
-  const tkn = norm(token);
-
-  const markHint = (tri, cls)=>{
-    tri = norm(tri);
-    if(!tri) return;
-    const pos = clean.indexOf(tri);
-    if(pos < 0) return;
-
-    const startOi = map[pos];
-    const endOi   = map[pos + tri.length - 1];
-    if(startOi == null || endOi == null) return;
-
-    const lo = Math.min(startOi, endOi);
-    const hi = Math.max(startOi, endOi);
-    for(let j=lo; j<=hi; j++) hintClsAt[j] = cls;
-  };
-
-  if(state?.hintsUsed?.w1 && tkn === norm(p.word1)) markHint(p.tri1, "h-w1");
-  if(state?.hintsUsed?.w2 && tkn === norm(p.word2)) markHint(p.tri2, "h-w2");
-}catch{}
-
-// --- output (underline spans as before; hint spans never cross underline boundaries) ---
-let out = "";
-let open = null;   // underline span
-let hOpen = null;  // hint span
-
-for(let i=0;i<chars.length;i++){
-  const c = chars[i];
-  const cls = clsAt[i];
-
-  // if underline boundary changes, close hint first (prevents invalid overlap)
-  if(cls !== open){
-    if(hOpen){ out += "</span>"; hOpen = null; }
-    if(open) out += "</span>";
-    if(cls) out += `<span class="${cls}">`;
-    open = cls || null;
+  let out = "";
+  let open = null;
+  for(let i=0;i<chars.length;i++){
+    const c = chars[i];
+    const cls = clsAt[i];
+    if(cls !== open){
+      if(open) out += "</span>";
+      if(cls) out += `<span class="${cls}">`;
+      open = cls || null;
+    }
+    out += escapeHtml(c);
   }
-
-  const hcls = hintClsAt[i];
-  if(hcls !== hOpen){
-    if(hOpen) out += "</span>";
-    if(hcls) out += `<span class="${hcls}">`;
-    hOpen = hcls || null;
-  }
-
-  out += escapeHtml(c);
+  if(open) out += "</span>";
+  return out;
 }
-
-if(hOpen) out += "</span>";
-if(open) out += "</span>";
-return out;
-
-}
-
 
 /* =======================
    Grid model + focus
@@ -2889,10 +2856,39 @@ function runHintFly(kind){
 }
 
 function scheduleHintFly(kind){
-  // Hint-track removed; no fly animations needed.
-  return;
-}
+  state.pendingFly = kind;
+  state.flyAttempts = 0;
+  const tryRun = ()=>{
+    if(!state.pendingFly) return;
+    state.flyAttempts++;
+    if(runHintFly(state.pendingFly)){
+      state.pendingFly = null;
+      state.flyAttempts = 0;
+      return;
+    }
+    if(state.flyAttempts < 6){
+      requestAnimationFrame(tryRun);
+    }else{
+      const map = {w1:'trackBox-w1', w2:'trackBox-w2', extras:'trackBox-extras'};
+      const id = map[state.pendingFly]||"";
+      const t = document.getElementById(id);
 
+      // If we failed to animate, restore visibility safely (extras are per-letter)
+      if(state.pendingFly === 'extras'){
+        const row = document.getElementById('trackBox-extras');
+        if(row){
+          row.querySelectorAll('.letter').forEach(x => x.style.opacity = "1");
+        }
+      }else{
+        if(t) t.style.opacity = "1";
+      }
+
+      state.pendingFly = null;
+      state.flyAttempts = 0;
+    }
+  };
+  requestAnimationFrame(tryRun);
+}
 
 /* =======================
    Drag ghost + drag logic
@@ -3311,85 +3307,106 @@ function makeTrigramBlock(tri, cls, labelText, onTap, id){
 
   return block;
 }
-  function renderExtrasFloat(){
-  if(!el.extrasFloat) return;
-
-  // only show while playing, and only after hint 3 is taken
-  if(state.finished || !state.hintsUsed.extras){
-    el.extrasFloat.classList.remove('show');
-    el.extrasFloat.innerHTML = "";
-    return;
-  }
-
-  if(state.bank.length === 0) rebuildBank();
-
-  el.extrasFloat.innerHTML = "";
-  el.extrasFloat.classList.add('show');
-
-  const row = document.createElement('div');
-  row.className = "extrasRow";
-positionExtrasFloat();
-
-  for(const tile of state.bank){
-    const box = document.createElement('div');
-    box.className = "letters clickable";
-
-    const d = document.createElement('div');
-    d.className = "letter extra";
-    d.textContent = tile.ch;
-
-    bindTapReliable(d, ()=>{
-      if(state.finished) return;
-      if(state.modalOpen) return;
-      clearTransientOnAnyChange();
-
-      if(!state.assist) setEnhanced(true, false);
-
-      const n = getN();
-      for(let i=0;i<n;i++){
-        if(state.placed.w1 && i>=state.placed.w1.start && i<state.placed.w1.start+3) continue;
-        if(state.placed.w2 && i>=state.placed.w2.start && i<state.placed.w2.start+3) continue;
-        if(state.singles.find(s=>s.idx===i)) continue;
-
-        addEffort(1);
-        state.singles.push({id: uid(), ch: tile.ch, idx: i});
-        state.focusIdx = clamp(i+1,0,n-1);
-        renderSmart();
-        return;
-      }
-      setTransientMsg("No blank spot", 2000);
-    });
-
-    box.appendChild(d);
-    row.appendChild(box);
-  }
-
-  el.extrasFloat.appendChild(row);
-    positionExtrasFloat();
-
-}
-function positionExtrasFloat(){
-  if(!el.extrasFloat || !el.clue) return;
-  const gap = 10; // px under the clue bubble
-  const top = el.clue.offsetTop + el.clue.offsetHeight + gap;
-  el.extrasFloat.style.top = `${top}px`;
-}
-window.addEventListener('resize', ()=>{
-  if(el.extrasFloat && el.extrasFloat.classList.contains('show')) positionExtrasFloat();
-}, {passive:true});
-
 function renderHintTrack(){
-  // Hint-track tiles are removed. We only:
-  // 1) show extra letters under the clue (after hint 3)
-  // 2) keep the solved Skill badge behaviour (hintTrack itself is hidden during play via CSS)
-  renderExtrasFloat();
+  const p = current();
 
-  // ensure old track content can't linger if anything still calls it
-  if(el.trackW1) el.trackW1.innerHTML = "";
-  if(el.trackW2) el.trackW2.innerHTML = "";
-  if(el.trackExtras) el.trackExtras.innerHTML = "";
+  el.trackW1.innerHTML = "";
+  el.trackW2.innerHTML = "";
+  el.trackExtras.innerHTML = "";
+
+  el.trackW1.style.display = "none";
+  el.trackW2.style.display = "none";
+  el.trackExtras.style.display = "none";
+
+  if(state.hintsUsed.w1){
+    el.trackW1.appendChild(
+      makeTrigramBlock(norm(p.tri1), "sel-w1", "word 1 trigram", ()=>{
+        if(state.finished || state.modalOpen) return;
+        if(!state.assist) setEnhanced(true, false);
+        addEffort(2);
+        placeTrigram('w1', norm(p.tri1));
+        renderSmart();
+      }, "trackBox-w1")
+    );
+    el.trackW1.style.display = "";
+
+    // PRE-HIDE during pending fly (prevents flash before overlay animation starts)
+    if(state.pendingFly === 'w1'){
+      const bx = el.trackW1.querySelector('#trackBox-w1');
+      if(bx) bx.style.opacity = "0";
+    }
+  }
+
+  if(state.hintsUsed.w2){
+    el.trackW2.appendChild(
+      makeTrigramBlock(norm(p.tri2), "sel-w2", "word 2 trigram", ()=>{
+        if(state.finished || state.modalOpen) return;
+        if(!state.assist) setEnhanced(true, false);
+        addEffort(2);
+        placeTrigram('w2', norm(p.tri2));
+        renderSmart();
+      }, "trackBox-w2")
+    );
+    el.trackW2.style.display = "";
+
+    // PRE-HIDE during pending fly
+    if(state.pendingFly === 'w2'){
+      const bx = el.trackW2.querySelector('#trackBox-w2');
+      if(bx) bx.style.opacity = "0";
+    }
+  }
+
+  if(state.hintsUsed.extras){
+    if(state.bank.length === 0) rebuildBank();
+
+    const block = document.createElement('div');
+    block.className = "trackBlock";
+
+    const row = document.createElement('div');
+    row.className = "extrasRow";
+    row.id = "trackBox-extras";
+
+    for(const tile of state.bank){
+      const box = document.createElement('div');
+      box.className = "letters clickable";
+
+      const d = document.createElement('div');
+      d.className = "letter extra";
+      d.textContent = tile.ch;
+
+      // PRE-HIDE during pending fly (prevents a single-frame flash)
+      if(state.pendingFly === 'extras') d.style.opacity = "0";
+
+      bindTapReliable(d, ()=>{
+        if(state.finished) return;
+        if(state.modalOpen) return;
+        clearTransientOnAnyChange();
+
+        if(!state.assist) setEnhanced(true, false);
+
+        const n = getN();
+        for(let i=0;i<n;i++){
+          if(state.placed.w1 && i>=state.placed.w1.start && i<state.placed.w1.start+3) continue;
+          if(state.placed.w2 && i>=state.placed.w2.start && i<state.placed.w2.start+3) continue;
+          if(state.singles.find(s=>s.idx===i)) continue;
+           addEffort(1);
+          state.singles.push({id: uid(), ch: tile.ch, idx: i});
+          state.focusIdx = clamp(i+1,0,n-1);
+          renderSmart();
+          return;
+        }
+        setTransientMsg("No blank spot", 2000);
+      });
+
+      box.appendChild(d);
+      row.appendChild(box);
+    }
+
+    block.appendChild(row);
+    el.trackExtras.appendChild(block);
+    el.trackExtras.style.display = "";
+  }
 }
-
 
 /* =======================
    Clue tap behavior
