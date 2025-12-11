@@ -1406,6 +1406,38 @@ function addEffort(units){
   state.effortUnits = (state.effortUnits || 0) + (units || 0);
 }
 
+/* ---- Effort from non-typing grid changes (trigrams, drags, cycles) ---- */
+function snapshotGridChars(){
+  const n = getN();
+  const out = new Array(n);
+  for(let i=0;i<n;i++){
+    out[i] = String(cellChar(i) || "").toLowerCase();
+  }
+  return out;
+}
+
+// Count ONLY cells where a letter exists AFTER and differs from BEFORE.
+// (If a cell becomes empty, it does NOT count.)
+function countEffortFromGridChange(before, after){
+  let units = 0;
+  const n = Math.min(before.length, after.length);
+  for(let i=0;i<n;i++){
+    const a = after[i] || "";
+    if(!a) continue;          // removals don't count
+    const b = before[i] || "";
+    if(a !== b) units++;
+  }
+  return units;
+}
+
+function addEffortFromGridChange(before){
+  if(!before) return;
+  const after = snapshotGridChars();
+  const units = countEffortFromGridChange(before, after);
+  if(units) addEffort(units);
+}
+
+
 /* ---- Hint budgets + hint penalty (sequential only; unchanged maths) ---- */
 function hintCosts(){
   const p = current();
@@ -3370,9 +3402,21 @@ function startDragTrigram(ev, group, tri, idx0, start0){
   ghost.style.height = "40px";
   ghost.style.letterSpacing = ".18em";
 
-  state.drag = { kind:'trigram', group, tri, grabOffset: idx0 - start0, ghost, lastIdx:null };
+  // snapshot BEFORE drag changes start moving things around
+  const beforeChars = snapshotGridChars();
+
+  state.drag = {
+    kind:'trigram',
+    group,
+    tri,
+    grabOffset: idx0 - start0,
+    ghost,
+    lastIdx:null,
+    beforeChars
+  };
   moveGhost(ev);
 }
+
 function pairForDragPinnedThenPush(group, desiredStart, idxNow){
   const mine = state.placed[group];
   const otherGroup = group==='w1' ? 'w2' : 'w1';
@@ -3494,21 +3538,25 @@ function rectDistance(x,y,rect){
 function onDragEnd(e){
   if(!state.drag) return;
   const d = state.drag;
+  const before = d.beforeChars;
+
   try{ d.ghost.remove(); }catch{}
   state.drag = null;
-  addEffort(2);
   state.justDraggedAt = performance.now();
 
   const rect = el.gridWrap.getBoundingClientRect();
   const dist = rectDistance(e.clientX, e.clientY, rect);
   const REMOVE_DIST = 150;
+
   if(dist > REMOVE_DIST){
     deleteTrigramGroup(d.group);
-    renderSmart();
-    return;
   }
+
+  // effort based on net grid change from drag start → drag end
+  addEffortFromGridChange(before);
   renderSmart();
 }
+
 
 /* =======================
    Underline logic
@@ -3576,13 +3624,17 @@ function setMiniHighlightToTri(group, tri){
   }
 }
 function placeTrigram(group, tri){
-  if(!flags().allowClueTapPlace && !flags().allowHintTapPlace) return;
-  if(state.finished) return;
+  if(!flags().allowClueTapPlace && !flags().allowHintTapPlace) return false;
+  if(state.finished) return false;
+
+  // snapshot BEFORE any mutation
+  const before = snapshotGridChars();
+
   clearTransientOnAnyChange();
 
   const n = getN();
   const t = norm(tri);
-  if(!t || t.length !== 3) return;
+  if(!t || t.length !== 3) return false;
 
   const otherGroup = group === 'w1' ? 'w2' : 'w1';
   const other = state.placed[otherGroup];
@@ -3613,7 +3665,7 @@ function placeTrigram(group, tri){
     }
     if(start == null){
       setTransientMsg("can’t place", 1800);
-      return;
+      return false;
     }
   } else {
     if(other){
@@ -3629,7 +3681,7 @@ function placeTrigram(group, tri){
         }
         if(start == null){
           setTransientMsg("can’t place", 1800);
-          return;
+          return false;
         }
       }
     }
@@ -3638,7 +3690,13 @@ function placeTrigram(group, tri){
   state.placed[group] = {start, tri:t};
   removeSinglesInCells(trigramCells(start));
   setMiniHighlightToTri(group, t);
+
+  // effort = cells where a NEW (or changed) letter appears
+  addEffortFromGridChange(before);
+  return true;
 }
+
+
 function cyclePlacedTrigram(group, opts = {}){
   if(!flags().allowClueTapCycle) return;
   if(state.finished) return;
@@ -3731,7 +3789,6 @@ function renderHintTrack(){
       makeTrigramBlock(norm(p.tri1), "sel-w1", "word 1 trigram", ()=>{
         if(state.finished || state.modalOpen) return;
         if(!state.assist) return;
-        addEffort(2);
         placeTrigram('w1', norm(p.tri1));
         renderSmart();
       }, "trackBox-w1")
@@ -3753,7 +3810,6 @@ if(bx1) bx1.classList.toggle('is-in-grid', gridHasExactTrigram(p.tri1));
       makeTrigramBlock(norm(p.tri2), "sel-w2", "word 2 trigram", ()=>{
         if(state.finished || state.modalOpen) return;
         if(!state.assist) return;
-        addEffort(2);
         placeTrigram('w2', norm(p.tri2));
         renderSmart();
       }, "trackBox-w2")
@@ -3842,7 +3898,6 @@ function onClueWordActivate(group){
     if(group === 'w2' && state.hintsUsed.w2) tri = norm(current().tri2);
     if(!tri) tri = firstTrigramOfWord(group);
     if(tri){
-  addEffort(2);
   placeTrigram(group, tri);
 }
 
