@@ -77,6 +77,24 @@
     margin-top:2px;
     flex:0 0 auto;
   }
+
+  .modePill{
+    position:absolute;
+    top:10px;
+    right:14px;
+    padding:4px 9px;
+    border-radius:999px;
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    background:rgba(255,255,255,.34);
+    border:1px solid rgba(0,0,0,.12);
+    color:rgba(0,0,0,.68);
+    font-weight:700;
+    opacity:.85;
+    pointer-events:none; /* purely informational – clue still toggles assist */
+  }
+
   .nav{
     display:flex;
     align-items:center;
@@ -1018,6 +1036,12 @@
     .btn{ font-size:19px; padding:9px 15px; min-width:98px; }
     .kbKey{ height:46px; }
     .hintSpot{ top:40%; }
+        .modePill{
+      top:8px;
+      right:10px;
+      font-size:10px;
+      padding:3px 8px;
+    }
   }
 </style>
 
@@ -1033,7 +1057,8 @@
         <a href="#" id="nextBtn" aria-label="Next puzzle">›</a>
       </div>
     </div>
-
+<div class="modePill" id="modePill" aria-label="Mode: Elite">Elite</div>
+    
      <div class="clueWrap" id="clueWrap">
     <div class="clue" id="clue"></div>
 
@@ -1101,41 +1126,32 @@
    ======================= */
 const PUZZLES = [
   { clue:"Danger mishaps", word1:"danger", word2:"mishaps", answer:"anguish", tri1:"ang", tri2:"ish" },
-  { clue:"Lavish phonons", word1:"lavish", word2:"phonons", answer:"visions", tri1:"vis", tri2:"ons" },
-  { clue:"Horizon swifter", word1:"horizon", word2:"swifter", answer:"shorter", tri1:"hor", tri2:"ter" },
-  { clue:"Muscle voter", word1:"muscle", word2:"voter", answer:"musters", tri1:"mus", tri2:"ter" },
-  { clue:"Greater harken", word1:"greater", word2:"harken", answer:"charter", tri1:"ter", tri2:"har" },
   { clue:"Blast updraft", word1:"blast", word2:"updraft", answer:"drastic", tri1:"ast", tri2:"dra" },
-  { clue:"Fairy drafter", word1:"fairy", word2:"drafter", answer:"fainter", tri1:"fai", tri2:"ter" },
   { clue:"Ultra tinned", word1:"ultra", word2:"tinned", answer:"trained", tri1:"tra", tri2:"ned" },
   { clue:"Carbon refills", word1:"carbon", word2:"refills", answer:"careful", tri1:"car", tri2:"ref" },
   { clue:"Garage excimer", word1:"garage", word2:"excimer", answer:"ragtime", tri1:"rag", tri2:"ime" },
-  { clue:"Flower grieve", word1:"flower", word2:"grieve", answer:"however", tri1:"owe", tri2:"eve" },
+  { clue:"Flower, grieve", word1:"flower", word2:"grieve", answer:"however", tri1:"owe", tri2:"eve" },
   { clue:"Carrot chords", word1:"carrot", word2:"chords", answer:"horrors", tri1:"rro", tri2:"hor" },
-  { clue:"Chimps dacha", word1:"chimps", word2:"dacha", answer:"impeach", tri1:"imp", tri2:"ach" },
-  { clue:"Spikes ralphs", word1:"spikes", word2:"ralphs", answer:"spirals", tri1:"spi", tri2:"ral" },
-  { clue:"Larger caption", word1:"larger", word2:"caption", answer:"clarion", tri1:"lar", tri2:"ion" },
-  { clue:"Bruise purport", word1:"bruise", word2:"purport", answer:"mortise", tri1:"ise", tri2:"ort" },
+  { clue:"Chimp poacher", word1:"chimp", word2:"poacher", answer:"impeach", tri1:"imp", tri2:"ach" },
+  { clue:"Purport bruise", word1:"purport", word2:"bruise", answer:"mortise", tri1:"ort", tri2:"ise" },
   { clue:"Kitten suppose", word1:"kitten", word2:"suppose", answer:"rosette", tri1:"tte", tri2:"ose" },
   { clue:"Coach tinsel", word1:"coach", word2:"tinsel", answer:"coating", tri1:"coa", tri2:"tin" },
   { clue:"Final uniform", word1:"final", word2:"uniform", answer:"knifing", tri1:"fin", tri2:"nif" },
   { clue:"Changed similar", word1:"changed", word2:"similar", answer:"angular", tri1:"ang", tri2:"lar" },
   { clue:"Firefly clotted", word1:"firefly", word2:"clotted", answer:"refuted", tri1:"ref", tri2:"ted" },
   { clue:"Token angels", word1:"token", word2:"angels", answer:"kennels", tri1:"ken", tri2:"els" },
-  { clue:"Disco recess", word1:"disco", word2:"recess", answer:"sconces", tri1:"sco", tri2:"ces" },
   { clue:"Scones rowboat", word1:"scones", word2:"rowboat", answer:"jawbone", tri1:"one", tri2:"wbo" },
   { clue:"Orange museums", word1:"orange", word2:"museums", answer:"mustang", tri1:"ang", tri2:"mus" },
   { clue:"Fairly acute", word1:"fairly", word2:"acute", answer:"haircut", tri1:"air", tri2:"cut" },
   { clue:"Gambit blitz", word1:"gambit", word2:"blitz", answer:"ambling", tri1:"amb", tri2:"bli" },
   { clue:"Greatly mythos", word1:"greatly", word2:"mythos", answer:"ghostly", tri1:"tly", tri2:"hos" },
-  { clue:"Timing psyches", word1:"timing", word2:"psyches", answer:"chewing", tri1:"ing", tri2:"che" },
   { clue:"Claims maximal", word1:"claims", word2:"maximal", answer:"malaise", tri1:"lai", tri2:"mal" },
   { clue:"Gates warmed", word1:"gates", word2:"warmed", answer:"mediate", tri1:"ate", tri2:"med" },
   { clue:"Mirage rides", word1:"mirage", word2:"rides", answer:"tirades", tri1:"ira", tri2:"des" },
-  { clue:"Snuck eyesore", word1:"snuck", word2:"eyesore", answer:"buckeye", tri1:"uck", tri2:"eye" },
+  { clue:"Overt eyesore", word1:"overt", word2:"eyesore", answer:"forever", tri1:"ver", tri2:"ore" },
   { clue:"Planes catchup", word1:"planes", word2:"catchup", answer:"placate", tri1:"pla", tri2:"cat" },
   { clue:"Hover slimmed", word1:"hover", word2:"slimmed", answer:"slivers", tri1:"ver", tri2:"sli" },
-  { clue:"Brand pellet", word1:"brand", word2:"pellet", answer:"braille", tri1:"bra", tri2:"lle" },
+  { clue:"Library trolley", word1:"library", word2:"trolley", answer:"braille", tri1:"bra", tri2:"lle" },
   { clue:"Tables augury", word1:"tables", word2:"augury", answer:"gurgles", tri1:"les", tri2:"gur" },
   { clue:"Sitting decoys", word1:"sitting", word2:"decoys", answer:"decking", tri1:"ing", tri2:"dec" },
   { clue:"Chopped vessel", word1:"chopped", word2:"vessel", answer:"oppress", tri1:"opp", tri2:"ess" },
@@ -1201,7 +1217,10 @@ const el = {
   hintsModal: document.getElementById('hintsModal'),
   hintsModalBody: document.getElementById('hintsModalBody'),
   hintsModalClose: document.getElementById('hintsModalClose'),
+
+  modePill: document.getElementById('modePill'),
 };
+
 
 const TWOTRI_TEXT   = "Two trigrams from same word";
 const OVERLAP_TEXT  = "1-letter overlap allowed ✓";
@@ -1313,6 +1332,16 @@ function flags(){
     showBadCellColor: false,
     checkFeedback: "minimal",
   };
+}
+/* =======================
+   Mode pill (Elite vs Classic)
+   ======================= */
+function updateModePill(){
+  if(!el.modePill) return;
+  const assistOn = !!state.assist;
+  const label = assistOn ? "Classic" : "Elite";
+  el.modePill.textContent = label;
+  el.modePill.setAttribute("aria-label", `Mode: ${label}`);
 }
 
 /* =======================
@@ -1499,18 +1528,24 @@ function setEnhanced(on, renderNow=true, source='auto'){
   if(state.assist === next) return;
 
   state.assist = next;
-  if(next) triggerAssistActivatedUI();
+
+  // No more glow/message – just update the tiny mode pill
+  updateModePill();
 
   if(next) state.assistLocked = true;
   if(!next) abortDrag();
 
   if(renderNow) renderSmart();
 }
+
+
 function resetEnhancedForNewPuzzle(){
   state.assist = false;
   state.assistLocked = false;
   abortDrag();
+  updateModePill();
 }
+
 
 /* =======================
    Messages
@@ -4039,6 +4074,7 @@ window.addEventListener('resize', ()=>{
 });
 
 /* init */
+updateModePill();
 setCustomKBEnabled(shouldUseCustomKB());
 resetAllForPuzzle();
 renderSmart();
