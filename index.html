@@ -208,7 +208,7 @@
   }
 
   .clue .len{
-    opacity:.25;
+    opacity:.31;
     display:inline-block;
     font-size:.92em;
     line-height:1;
@@ -260,7 +260,7 @@
   /* non-trigram letters – fade text only, keep underline strong */
   .clueWord.hint-active .cw-letter.dim{
     opacity: 1;                     /* keep underline at full strength */
-    color: rgba(0,0,0,.25);         /* softer text */
+    color: rgba(0,0,0,.31);         /* softer text */
     filter: none;                   /* no blur */
   }
   .cw-letter{
@@ -274,39 +274,74 @@
   }
 
 
- /* trigram letters – stable styling */
+/* trigram letters – stable styling */
 .clueWord.hint-active .cw-letter.tri{
   opacity: 1;
   color: var(--ink);
   filter: none;
-  background: transparent;            /* no band */
+  background: transparent;  /* no band */
   box-shadow: none;
 }
 
-/* one-shot highlight animation, applied via JS only when the hint is first revealed */
-.clueWord.hint-active .cw-letter.tri-pop{
-  animation: clueTriGlow 700ms ease-out both;
+/* subtle persistent colour glow per word after reveal
+   (keyed off the underline wrappers u-w1 / u-w2) */
+.u-w1 .cw-letter.tri{
+  text-shadow: 0 0 5px rgba(255, 220, 0, .75);
+}
+.u-w2 .cw-letter.tri{
+  text-shadow: 0 0 6px rgba(70, 160, 255, .85);
 }
 
-/* soft halo + brightness pulse, no movement / no scale */
-@keyframes clueTriGlow{
+/* one-shot highlight animation, applied via JS only when the hint is first revealed */
+.clueWord.u-w1.hint-active .cw-letter.tri-pop{
+  animation: clueTriGlowW1 780ms ease-out both;
+}
+.clueWord.u-w2.hint-active .cw-letter.tri-pop{
+  animation: clueTriGlowW2 780ms ease-out both;
+}
+
+/* word1: stronger yellow halo */
+@keyframes clueTriGlowW1{
   0%{
     text-shadow: 0 0 0 rgba(255, 220, 0, 0);
     filter: none;
   }
-  35%{
-    text-shadow: 0 0 16px rgba(255, 220, 0, .95);
-    filter: brightness(1.18);
+  30%{
+    text-shadow: 0 0 26px rgba(255, 220, 0, 1);
+    filter: brightness(1.24);
   }
-  70%{
-    text-shadow: 0 0 10px rgba(255, 220, 0, .65);
-    filter: brightness(1.10);
+  65%{
+    text-shadow: 0 0 18px rgba(255, 220, 0, .88);
+    filter: brightness(1.15);
   }
   100%{
-    text-shadow: 0 0 0 rgba(255, 220, 0, 0);
+    /* land back on the subtle persistent glow */
+    text-shadow: 0 0 5px rgba(255, 220, 0, .75);
     filter: none;
   }
 }
+
+/* word2: blue halo */
+@keyframes clueTriGlowW2{
+  0%{
+    text-shadow: 0 0 0 rgba(70, 160, 255, 0);
+    filter: none;
+  }
+  30%{
+    text-shadow: 0 0 26px rgba(70, 160, 255, 1);
+    filter: brightness(1.24);
+  }
+  65%{
+    text-shadow: 0 0 18px rgba(70, 160, 255, .88);
+    filter: brightness(1.15);
+  }
+  100%{
+    /* land back on the subtle persistent glow */
+    text-shadow: 0 0 6px rgba(70, 160, 255, .85);
+    filter: none;
+  }
+}
+
 
 
 
