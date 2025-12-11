@@ -1435,12 +1435,18 @@ function countEffortFromGridChange(before, after, opts={}){
   return units;
 }
 
-function addEffortFromGridChange(before, opts){
+function addEffortFromGridChange(before, opts={}){
   if(!before) return;
+
   const after = snapshotGridChars();
   const units = countEffortFromGridChange(before, after, opts);
-  if(units) addEffort(units);
+
+  const base = Number(opts.base || 0);   // e.g. 0.5 for drag/replace
+  const total = base + units;
+
+  if(total > 0) addEffort(total);
 }
+
 
 
 
@@ -3558,7 +3564,7 @@ function onDragEnd(e){
     deleteTrigramGroup(d.group);
   }
 
-  addEffortFromGridChange(before, { countDeletes:true });
+  addEffortFromGridChange(before, { countDeletes:true, base:0.5 });
   renderSmart();
 }
 
@@ -3696,7 +3702,7 @@ function placeTrigram(group, tri){
   removeSinglesInCells(trigramCells(start));
   setMiniHighlightToTri(group, t);
 
-  addEffortFromGridChange(before, { countDeletes:true });
+  addEffortFromGridChange(before, { countDeletes:true, base:0.5 });
   return true;
 }
 
