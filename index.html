@@ -274,15 +274,20 @@
   }
 
 
-  /* trigram letters – punchy one-off animation, no permanent highlight */
-  .clueWord.hint-active .cw-letter.tri{
-    opacity: 1;
-    color: var(--ink);
-    filter: none;
-    background: transparent;            /* no band */
-    box-shadow: none;
-    animation: clueTriPunch 420ms cubic-bezier(.18,1.4,.35,1) both;
-  }
+ /* trigram letters – stable styling */
+.clueWord.hint-active .cw-letter.tri{
+  opacity: 1;
+  color: var(--ink);
+  filter: none;
+  background: transparent;            /* no band */
+  box-shadow: none;
+}
+
+/* one-shot punch animation, applied via JS only when the hint is first revealed */
+.clueWord.hint-active .cw-letter.tri-pop{
+  animation: clueTriPunch 420ms cubic-bezier(.18,1.4,.35,1) both;
+}
+
 
 
   @keyframes clueTriPunch{
@@ -306,24 +311,27 @@
 
 
 
-  /* Underlines for trigram matches – work with per-letter .cw-letter spans */
-  .u-w1, .u-w2, .u-red{
-    /* don’t rely on parent decoration any more */
-    text-decoration: none;
-  }
+/* Underlines for trigram matches – use the wrapper span for a continuous band */
+.u-w1,
+.u-w2,
+.u-red{
+  text-decoration-line: underline;
+  text-decoration-thickness: 6px;
+  text-underline-offset: 9px;
+  text-decoration-skip-ink: none;
+}
 
-  .u-w1 .cw-letter,
-  .u-w2 .cw-letter,
-  .u-red .cw-letter{
-    text-decoration: underline;
-    text-decoration-thickness: 6px;
-    text-underline-offset: 9px;
-    pointer-events:none; /* clicks fall through to the parent .clueWord */
-  }
+.u-w1{ text-decoration-color: rgba(255,220,0,.9); }
+.u-w2{ text-decoration-color: rgba(70,160,255,.92); }
+.u-red{ text-decoration-color: rgba(235,80,92,.92); }
 
-  .u-w1 .cw-letter{ text-decoration-color: rgba(255,220,0,.9); }
-  .u-w2 .cw-letter{ text-decoration-color: rgba(70,160,255,.92); }
-  .u-red .cw-letter{ text-decoration-color: rgba(235,80,92,.92); }
+.u-w1 .cw-letter,
+.u-w2 .cw-letter,
+.u-red .cw-letter{
+  text-decoration: inherit;
+  pointer-events:none; /* clicks fall through to the parent .clueWord */
+}
+
 
 
   /* ===== Grid ===== */
@@ -2461,24 +2469,35 @@ function updateClueHintEffects(){
     // hint is active for this word
     wordEl.classList.add('hint-active');
 
+    // If we've already drawn the per-letter state once for this hint,
+    // don't re-twiddle classes on every render — that was restarting
+    // the animations.
+    if(hadVisual){
+      return;
+    }
+
     const w = wordNorms[group];
     const tri = triNorms[group];
     const start = (w && tri) ? w.indexOf(tri) : -1;
 
     const letters = Array.from(wordEl.querySelectorAll('.cw-letter'));
+    const triLetters = [];
+
     letters.forEach(span=>{
       span.classList.remove('dim','tri');
       const li = span.dataset.li ? parseInt(span.dataset.li, 10) : -1;
 
       if(start >= 0 && li >= start && li < start + TR){
         span.classList.add('tri');
+        triLetters.push(span);
       }else{
         span.classList.add('dim');
       }
     });
 
     // one-time micro “pop” when the hint first applies
-    if(used && !hadVisual){
+    if(triLetters.length){
+      // word-level pulse
       wordEl.classList.add('hint-pulse');
       const handler = (ev)=>{
         if(ev.animationName === 'clueHintPulse'){
@@ -2487,11 +2506,20 @@ function updateClueHintEffects(){
       };
       wordEl.addEventListener('animationend', handler, { once:true });
 
-      if(!state.hintVisual) state.hintVisual = { w1:false, w2:false };
-      state.hintVisual[group] = true;
+      // letter-level punch, once only, via .tri-pop
+      triLetters.forEach(span=>{
+        span.classList.add('tri-pop');
+        span.addEventListener('animationend', ()=>{
+          span.classList.remove('tri-pop');
+        }, { once:true });
+      });
     }
+
+    if(!state.hintVisual) state.hintVisual = { w1:false, w2:false };
+    state.hintVisual[group] = true;
   });
 }
+
 
 
 /* =======================
