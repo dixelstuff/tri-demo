@@ -95,6 +95,32 @@
     pointer-events:none; /* purely informational – clue still toggles assist */
   }
 
+  .statsBtn{
+    position:absolute;
+    left:14px;
+    top:10px;
+    width:30px;
+    height:30px;
+    border-radius:999px;
+    border:none;
+    padding:0;
+    margin:0;
+    background:rgba(255,255,255,.34);
+    border:1px solid rgba(0,0,0,.12);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    appearance:none;
+    -webkit-appearance:none;
+  }
+  .statsBtn:active{ transform:translateY(1px); }
+  .statsIcon{
+    width:20px;
+    height:20px;
+    display:block;
+    pointer-events:none;
+  }
 
 
   .nav{
@@ -962,7 +988,134 @@
   }
   .modalX:active{ transform: translateY(1px); }
   .modalBody{ padding: 12px 14px 14px; }
+  /* ===== Stats overlay ===== */
+  .statsOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.26);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:11000;
+    padding:14px;
+  }
+  .statsOverlay.open{ display:flex; }
 
+  .statsCard{
+    width:min(560px,94vw);
+    background:#fff;
+    border-radius:18px;
+    border:2px solid rgba(0,0,0,.15);
+    box-shadow:0 10px 26px rgba(0,0,0,.18);
+    overflow:hidden;
+    text-align:left;
+  }
+  .statsHdr{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 14px 10px;
+    border-bottom:1px solid rgba(0,0,0,.08);
+    gap:10px;
+  }
+  .statsTitle{
+    font-weight:950;
+    font-size:18px;
+    letter-spacing:.01em;
+  }
+  .statsX{
+    border:0;
+    background:transparent;
+    color:var(--ink);
+    font-size:20px;
+    line-height:1;
+    font-weight:300;
+    cursor:pointer;
+    padding:2px 6px;
+    opacity:.9;
+    outline:none !important;
+    box-shadow:none !important;
+    appearance:none;
+    -webkit-appearance:none;
+  }
+  .statsX:active{ transform:translateY(1px); }
+
+  .statsBody{
+    padding:12px 14px 14px;
+    max-height:min(520px,72vh);
+    overflow:auto;
+    font-size:14px;
+  }
+  .statsIntro{
+    margin-bottom:10px;
+    font-size:13px;
+    opacity:.8;
+  }
+  .statsSection{
+    margin-bottom:14px;
+  }
+  .statsSection h3{
+    margin:0 0 4px;
+    font-size:15px;
+  }
+  .statsSummary{
+    margin:0 0 6px;
+    font-size:13px;
+    opacity:.85;
+  }
+  .statsCols{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .statsCol{
+    flex:1 1 0;
+    min-width:0;
+  }
+  .statsCol h4{
+    margin:0 0 4px;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.09em;
+    opacity:.7;
+  }
+  .statRow{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:3px;
+  }
+  .statLabel{
+    flex:0 0 64px;
+    font-size:12px;
+    opacity:.8;
+  }
+  .statBar{
+    flex:1 1 auto;
+    height:7px;
+    border-radius:999px;
+    background:rgba(0,0,0,.06);
+    overflow:hidden;
+  }
+  .statBarFill{
+    display:block;
+    height:100%;
+    border-radius:999px;
+    background:linear-gradient(90deg, rgba(40,120,255,.9), rgba(110,200,255,.9));
+  }
+  .statValue{
+    flex:0 0 auto;
+    min-width:18px;
+    text-align:right;
+    font-size:12px;
+  }
+  .statsEmpty{
+    margin:0 0 4px;
+    font-size:13px;
+    opacity:.75;
+  }
+
+  
   /* ===== Rotate overlay ===== */
   #rotateOverlay{
     display:none;
@@ -1038,13 +1191,22 @@
     .btn{ font-size:19px; padding:9px 15px; min-width:98px; }
     .kbKey{ height:46px; }
     .hintSpot{ top:40%; }
-        .modePill{
+
+    .modePill{
       top:8px;
       right:10px;
       font-size:10px;
       padding:3px 8px;
     }
+
+    .statsBtn{
+      left:10px;
+      top:8px;
+      width:28px;
+      height:28px;
+    }
   }
+
     @media (min-width: 600px){
   .modePill{
     right: calc(50% - 300px + 12px);
@@ -1057,8 +1219,14 @@
 
 <body>
   <div class="wrap" id="wrap">
+
+    <button class="statsBtn" id="statsBtn" type="button" aria-label="Show stats">
+      <img src="stats-icon.svg" alt="" class="statsIcon">
+    </button>
+
     <div class="toprow">
       <div class="nav">
+
         <a href="#" id="prevBtn" aria-label="Previous puzzle">‹</a>
         <span class="count" id="count"></span>
         <a href="#" id="nextBtn" aria-label="Next puzzle">›</a>
@@ -1119,12 +1287,25 @@
   </div>
 
   <div class="kbHost" id="kbHost" aria-label="On-screen keyboard"></div>
-<div id="rotateOverlay" aria-hidden="true">
-  <div class="card" role="alert">
-    <p class="body"><b>Please rotate your device.</b></p>
-    <p class="title">Oops! We can't fit everything on your screen.</p>
+
+  <!-- Stats overlay -->
+  <div class="statsOverlay" id="statsOverlay" aria-hidden="true">
+    <div class="statsCard" role="dialog" aria-modal="true" aria-labelledby="statsTitle">
+      <div class="statsHdr">
+        <div class="statsTitle" id="statsTitle">Your stats</div>
+        <button class="statsX" id="statsClose" type="button" aria-label="Close stats">×</button>
+      </div>
+      <div class="statsBody" id="statsBody"></div>
+    </div>
   </div>
-</div>
+
+  <div id="rotateOverlay" aria-hidden="true">
+    <div class="card" role="alert">
+      <p class="body"><b>Please rotate your device.</b></p>
+      <p class="title">Oops! We can't fit everything on your screen.</p>
+    </div>
+  </div>
+
 
 
 <script>
@@ -1226,7 +1407,14 @@ const el = {
   hintsModalClose: document.getElementById('hintsModalClose'),
 
   modePill: document.getElementById('modePill'),
+
+  // stats
+  statsBtn: document.getElementById('statsBtn'),
+  statsOverlay: document.getElementById('statsOverlay'),
+  statsBody: document.getElementById('statsBody'),
+  statsClose: document.getElementById('statsClose'),
 };
+
 
 
 const TWOTRI_TEXT   = "Two trigrams from same word";
@@ -1502,6 +1690,279 @@ function computeFinalSkill(gaveUp){
   const skillRaw = bandMin + span * Math.exp(-k[h] * L);
   const skill = clamp(Math.round(skillRaw), bandMin, bandMax);
   return { skillRaw, skill };
+}
+/* =======================
+   Local storage + stats
+   ======================= */
+
+const LS_KEY = "trigramGameStats_v1";
+
+function hasLocalStorage(){
+  try{
+    return typeof window !== "undefined" && !!window.localStorage;
+  }catch(e){
+    return false;
+  }
+}
+
+function loadStatsStore(){
+  if(!hasLocalStorage()) return { results:{} };
+  try{
+    const raw = window.localStorage.getItem(LS_KEY);
+    if(!raw) return { results:{} };
+    const data = JSON.parse(raw);
+    if(!data || typeof data !== "object") return { results:{} };
+    if(!data.results || typeof data.results !== "object") data.results = {};
+    return data;
+  }catch(e){
+    return { results:{} };
+  }
+}
+
+function saveStatsStore(data){
+  if(!hasLocalStorage()) return;
+  try{
+    window.localStorage.setItem(LS_KEY, JSON.stringify(data));
+  }catch(e){}
+}
+
+function clearAllStats(){
+  if(!hasLocalStorage()) return;
+  try{
+    window.localStorage.removeItem(LS_KEY);
+  }catch(e){}
+}
+
+// Called whenever an answer is revealed (correct or give up)
+function storeResultForCurrentPuzzle(skill, gaveUp){
+  if(!hasLocalStorage()) return;
+  const data = loadStatsStore();
+  const id = String(state.i); // use puzzle index as key
+
+  data.results[id] = {
+    puzzleIndex: state.i,
+    puzzleNumber: state.i + 1,
+    hints: state.hintCount || 0,
+    skill: skill,
+    mode: state.assist ? "Classic" : "Elite",  // Classic = assist ON, Elite = assist OFF
+    assistOn: !!state.assist,
+    gaveUp: !!gaveUp,
+    ts: Date.now()
+  };
+
+  saveStatsStore(data);
+}
+
+function getResultForPuzzle(idx){
+  const data = loadStatsStore();
+  return data.results[String(idx)] || null;
+}
+
+// First puzzle that does NOT have a stored result
+function firstUnplayedPuzzleIndex(){
+  const data = loadStatsStore();
+  for(let i=0; i<PUZZLES.length; i++){
+    if(!data.results || !Object.prototype.hasOwnProperty.call(data.results, String(i))){
+      return i;
+    }
+  }
+  // All completed; fall back to last puzzle
+  return Math.max(0, PUZZLES.length - 1);
+}
+
+// Apply a stored result (if any) to the CURRENT puzzle index (state.i)
+function applyStoredResultToCurrentPuzzle(){
+  const saved = getResultForPuzzle(state.i);
+  if(!saved) return false;
+
+  const p = current();
+  const ans = norm(p.answer);
+  const n = getN();
+
+  abortDrag();
+  state.placed = {w1:null, w2:null};
+  state.singles = [];
+  for(let i=0; i<n; i++){
+    state.singles.push({ id: uid(), ch: ans[i] || "", idx:i });
+  }
+  state.focusIdx = 0;
+
+  state.finished = true;
+  state.gaveUp = !!saved.gaveUp;
+  state.hintCount = saved.hints || 0;
+
+  state.assist = !!saved.assistOn;
+  state.assistLocked = !!saved.assistOn;
+  updateModePill();
+
+  state.lockMsg = false;
+  clearMsgTimer();
+  setMsg("");
+
+  const line1 = saved.gaveUp
+    ? "You gave up!"
+    : `Correct - ${hintPhraseText(state.hintCount)}!`;
+
+  setResultSkillMsg(line1, saved.skill);
+  renderSmart();
+  return true;
+}
+
+function computeModeStats(modeLabel){
+  const data = loadStatsStore();
+  const all = Object.values(data.results || {});
+  const arr = all.filter(r => r.mode === modeLabel);
+  const count = arr.length;
+  if(!count) return { count:0 };
+
+  let sumHints = 0;
+  let sumSkill = 0;
+  const histSkill = { "88-100":0, "68-87":0, "48-67":0, "30-47":0 };
+  const histHints = { 0:0, 1:0, 2:0, 3:0 };
+
+  for(const r of arr){
+    const h = clamp(r.hints || 0, 0, 3);
+    const s = clamp(r.skill || 0, 0, 100);
+
+    sumHints += h;
+    sumSkill += s;
+
+    if(s >= 88) histSkill["88-100"]++;
+    else if(s >= 68) histSkill["68-87"]++;
+    else if(s >= 48) histSkill["48-67"]++;
+    else histSkill["30-47"]++;
+
+    histHints[h] = (histHints[h] || 0) + 1;
+  }
+  return {
+    count,
+    avgHints: sumHints / count,
+    avgSkill: sumSkill / count,
+    histSkill,
+    histHints
+  };
+}
+
+function formatAvg(x, decimals){
+  if(typeof x !== "number" || !isFinite(x)) return "—";
+  return x.toFixed(decimals);
+}
+
+function totalCompletedCount(){
+  const data = loadStatsStore();
+  return data.results ? Object.keys(data.results).length : 0;
+}
+
+// ?reset in the URL clears stats and progress
+function checkResetParam(){
+  try{
+    const qs = window.location.search || "";
+    if(!qs) return;
+    const params = new URLSearchParams(qs);
+    if(params.has("reset")){
+      clearAllStats();
+    }
+  }catch(e){}
+}
+
+function renderStatsView(){
+  if(!el.statsBody) return;
+
+  const total = totalCompletedCount();
+  const classic = computeModeStats("Classic");
+  const elite   = computeModeStats("Elite");
+
+  function sectionHTML(label, stats){
+    if(!stats || !stats.count){
+      return `
+        <section class="statsSection">
+          <h3>${label}</h3>
+          <p class="statsEmpty">No puzzles completed in this mode yet.</p>
+        </section>`;
+    }
+
+    const hs = stats.histSkill;
+    const hh = stats.histHints;
+    const maxSkill = Math.max(
+      hs["88-100"] || 0,
+      hs["68-87"] || 0,
+      hs["48-67"] || 0,
+      hs["30-47"] || 0
+    );
+    const maxHints = Math.max(
+      hh[0] || 0,
+      hh[1] || 0,
+      hh[2] || 0,
+      hh[3] || 0
+    );
+
+    const skillRow = (lbl, key) => {
+      const v = hs[key] || 0;
+      const w = maxSkill ? Math.round((v / maxSkill) * 100) : 0;
+      return `
+        <div class="statRow">
+          <span class="statLabel">${lbl}</span>
+          <span class="statBar"><span class="statBarFill" style="width:${w}%"></span></span>
+          <span class="statValue">${v}</span>
+        </div>`;
+    };
+
+    const hintRow = (lbl, key) => {
+      const v = hh[key] || 0;
+      const w = maxHints ? Math.round((v / maxHints) * 100) : 0;
+      return `
+        <div class="statRow">
+          <span class="statLabel">${lbl}</span>
+          <span class="statBar"><span class="statBarFill" style="width:${w}%"></span></span>
+          <span class="statValue">${v}</span>
+        </div>`;
+    };
+
+    return `
+      <section class="statsSection">
+        <h3>${label}</h3>
+        <p class="statsSummary">${stats.count} puzzles • Avg hints ${formatAvg(stats.avgHints,1)} • Avg skill ${formatAvg(stats.avgSkill,0)}</p>
+        <div class="statsCols">
+          <div class="statsCol">
+            <h4>Skill</h4>
+            ${skillRow("88–100", "88-100")}
+            ${skillRow("68–87", "68-87")}
+            ${skillRow("48–67", "48-67")}
+            ${skillRow("30–47", "30-47")}
+          </div>
+          <div class="statsCol">
+            <h4>Hints used</h4>
+            ${hintRow("0", 0)}
+            ${hintRow("1", 1)}
+            ${hintRow("2", 2)}
+            ${hintRow("3+", 3)}
+          </div>
+        </div>
+      </section>`;
+  }
+
+  el.statsBody.innerHTML = `
+    <div class="statsIntro">
+      <p><strong>${total}</strong> puzzles completed so far.</p>
+    </div>
+    ${sectionHTML("Classic (assist on)", classic)}
+    ${sectionHTML("Elite (assist off)", elite)}
+  `;
+}
+
+function openStats(){
+  if(!el.statsOverlay) return;
+  el.statsOverlay.classList.add('open');
+  el.statsOverlay.setAttribute('aria-hidden', 'false');
+  renderStatsView();
+  // hide on-screen keyboard if present
+  document.documentElement.classList.remove('has-kb');
+}
+
+function closeStats(){
+  if(!el.statsOverlay) return;
+  el.statsOverlay.classList.remove('open');
+  el.statsOverlay.setAttribute('aria-hidden', 'true');
 }
 
 /* =======================
@@ -2494,11 +2955,15 @@ function onCheck(){
   const p = current();
   const ans = norm(p.answer);
 
-  if(attempt === ans){
+    if(attempt === ans){
     const res = computeFinalSkill(false);
     setResultSkillMsg(`Correct - ${hintPhraseText(state.hintCount)}!`, res.skill);
     state.finished = true;
     state.gaveUp = false;
+
+    // record local-storage result (Classic vs Elite based on state.assist)
+    storeResultForCurrentPuzzle(res.skill, false);
+
     renderSmart();
     return;
   }
@@ -2565,7 +3030,7 @@ function revealAnswerGiveUp(){
   }
   state.focusIdx = 0;
 
-  const res = computeFinalSkill(true);
+    const res = computeFinalSkill(true);
 
   state.finished = true;
   state.gaveUp = true;
@@ -2575,8 +3040,13 @@ function revealAnswerGiveUp(){
   setMsg("");
 
   setResultSkillMsg("You gave up!", res.skill);
+
+  // record local-storage result as a “gave up” game
+  storeResultForCurrentPuzzle(res.skill, true);
+
   renderSmart();
 }
+
 
 /* =======================
    Hint fly animation
@@ -3945,18 +4415,52 @@ el.prevBtn.addEventListener('click', (e)=>{
   e.preventDefault();
   clearTransientOnAnyChange();
   closeModal();
-  state.i=(state.i-1+PUZZLES.length)%PUZZLES.length;
+
+  state.i = (state.i - 1 + PUZZLES.length) % PUZZLES.length;
   resetAllForPuzzle();
-  renderSmart();
+
+ 
+  if (!applyStoredResultToCurrentPuzzle()) {
+    renderSmart();
+  }
 });
+
 el.nextBtn.addEventListener('click', (e)=>{
   e.preventDefault();
   clearTransientOnAnyChange();
   closeModal();
-  state.i=(state.i+1)%PUZZLES.length;
+
+  state.i = (state.i + 1) % PUZZLES.length;
   resetAllForPuzzle();
-  renderSmart();
+
+
+  if (!applyStoredResultToCurrentPuzzle()) {
+    renderSmart();
+  }
 });
+
+  // Stats button wiring
+if(el.statsBtn){
+  el.statsBtn.addEventListener('click', (e)=>{
+    e.preventDefault();
+    openStats();
+  });
+}
+if(el.statsClose){
+  el.statsClose.addEventListener('click', (e)=>{
+    e.preventDefault();
+    closeStats();
+  });
+}
+if(el.statsOverlay){
+  el.statsOverlay.addEventListener('click', (e)=>{
+    if(e.target === el.statsOverlay){
+      e.preventDefault();
+      closeStats();
+    }
+  }, { passive:false });
+}
+
 
 document.addEventListener('keydown', (e)=>{
   if(state.finished) return;
@@ -4082,10 +4586,39 @@ window.addEventListener('resize', ()=>{
 });
 
 /* init */
-updateModePill();
-setCustomKBEnabled(shouldUseCustomKB());
-resetAllForPuzzle();
-renderSmart();
+window.addEventListener('resize', ()=>{
+  const next = shouldUseCustomKB();
+  if(next !== state.useCustomKB) setCustomKBEnabled(next);
+  updateKeyboardHeightVar();
+});
+
+/* init */
+function init(){
+  // 7) Respect ?reset in the URL (clears stored stats/results)
+  checkResetParam();
+
+  // 8) Start on the first unplayed puzzle (falls back to last if all done)
+  state.i = firstUnplayedPuzzleIndex();
+
+  // Default mode pill text (will be overridden if we rehydrate a solved puzzle)
+  updateModePill();
+
+  // Keyboard mode (mobile vs desktop)
+  setCustomKBEnabled(shouldUseCustomKB());
+
+  // Fresh state for this puzzle
+  resetAllForPuzzle();
+
+  // 9) If this puzzle already has a saved result, restore it;
+  // otherwise render a fresh unsolved grid.
+  if (!applyStoredResultToCurrentPuzzle()) {
+    renderSmart();
+  }
+}
+
+// Run init immediately
+init();
+
 </script>
 
 </body>
