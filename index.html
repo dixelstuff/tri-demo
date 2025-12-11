@@ -243,7 +243,7 @@
   }
   @keyframes clueHintPulse{
     0%{ transform:scale(1); }
-    50%{ transform:scale(1.04); }
+    50%{ transform:scale(1.08); }
     100%{ transform:scale(1); }
   }
 
@@ -260,7 +260,7 @@
   /* non-trigram letters – fade text only, keep underline strong */
   .clueWord.hint-active .cw-letter.dim{
     opacity: 1;                     /* keep underline at full strength */
-    color: rgba(0,0,0,.30);         /* softer text */
+    color: rgba(0,0,0,.27);         /* softer text */
     filter: none;                   /* no blur */
   }
   .cw-letter{
@@ -341,12 +341,23 @@
 .u-red,
 .u-red .cw-letter{ text-decoration-color: rgba(235,80,92,.92); }
 
+/* while a hint is animating on this word, temporarily hide any underline */
+.clueWord.hint-active .u-w1,
+.clueWord.hint-active .u-w1 .cw-letter,
+.clueWord.hint-active .u-w2,
+.clueWord.hint-active .u-w2 .cw-letter,
+.clueWord.hint-active .u-red,
+.clueWord.hint-active .u-red .cw-letter{
+  text-decoration-color: transparent !important;
+}
+
 /* clicks still pass through to the parent clue word */
 .u-w1 .cw-letter,
 .u-w2 .cw-letter,
 .u-red .cw-letter{
   pointer-events:none;
 }
+
 
 
 
