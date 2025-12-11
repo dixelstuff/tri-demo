@@ -615,13 +615,13 @@
 
 .skillBadgeInner.gold{
   --txt:#2a1a00;
-  --bdr: rgba(235, 195, 105, .62);
+  --bdr: rgba(245, 200, 95, .66);
 
-  /* warm cream + soft gold (not white, not high-contrast) */
-  --g1: rgba(255, 236, 198, .98);
-  --g2: rgba(245, 212, 140, .96);
-  --g3: rgba(255, 240, 210, .99);
-  --g4: rgba(232, 190, 112, .95);
+  /* brighter / more “gold” without going metallic */
+  --g1: rgba(255, 232, 170, .98);
+  --g2: rgba(250, 208, 110, .96);
+  --g3: rgba(255, 238, 190, .99);
+  --g4: rgba(238, 184, 75,  .95);
 
   box-shadow:
     0 14px 28px rgba(0,0,0,.14),
@@ -629,29 +629,20 @@
 }
 
 .skillBadgeInner.silver{
-  --txt:#1f2328;
-  --bdr: rgba(200, 206, 215, .70);
-
-  /* light steel, but clearly grey */
-  --g1: rgba(238, 242, 247, .99);
-  --g2: rgba(214, 222, 232, .96);
-  --g3: rgba(242, 246, 250, .99);
-  --g4: rgba(203, 212, 223, .95);
-
-  box-shadow:
-    0 12px 24px rgba(0,0,0,.12),
-    0 3px 10px rgba(0,0,0,.20);
+  /* leave as-is (your current silver is good) */
 }
 
 .skillBadgeInner.bronze{
   --txt:#2a1204;
-  --bdr: rgba(210, 140, 95, .60);
 
-  /* beige-copper without “shiny” */
-  --g1: rgba(252, 224, 205, .99);
-  --g2: rgba(228, 182, 150, .96);
-  --g3: rgba(253, 232, 218, .99);
-  --g4: rgba(210, 150, 118, .95);
+  /* more subtle border */
+  --bdr: rgba(190, 130, 95, .46);
+
+  /* a touch more colour, still matte */
+  --g1: rgba(248, 214, 190, .99);
+  --g2: rgba(226, 170, 130, .96);
+  --g3: rgba(250, 222, 205, .99);
+  --g4: rgba(208, 150, 112, .95);
 
   box-shadow:
     0 12px 24px rgba(0,0,0,.12),
@@ -660,21 +651,20 @@
 
 .skillBadgeInner.red{
   --txt:#160405;
-  --bdr: rgba(145, 35, 45, .60);
 
-  /* warm grey-to-brick (avoids candy pink, keeps dark text readable) */
-  --g1: rgba(248, 230, 230, .99);
-  --g2: rgba(226, 170, 168, .96);
-  --g3: rgba(250, 236, 236, .99);
-  --g4: rgba(200, 132, 132, .95);
+  /* softer (less “outlined”) border */
+  --bdr: rgba(150, 55, 60, .42);
+
+  /* less white through the gradient; keep dark text readable */
+  --g1: rgba(242, 208, 208, .99);
+  --g2: rgba(220, 150, 148, .96);
+  --g3: rgba(244, 214, 214, .99);
+  --g4: rgba(195, 120, 120, .95);
 
   box-shadow:
     0 14px 28px rgba(0,0,0,.14),
     0 3px 10px rgba(0,0,0,.20);
 }
-
-
-
 
 
   .skillBadgeLabel{
