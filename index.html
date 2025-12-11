@@ -1481,7 +1481,8 @@ function computeFinalSkill(gaveUp){
   const effNow = (state.effortUnits || 0);
   const effSeg = (typeof state.effortAtSegmentStart === "number") ? state.effortAtSegmentStart : 0;
 
-  const BASE_E = getN(); // baseline "clean solve typing once"
+  const RAW_BASE_E = getN();
+  const BASE_E = Math.max(0, RAW_BASE_E - 2); 
   const de = Math.max(0, (effNow - effSeg) - BASE_E);
 
   const wrongNow = (state.wrongCheckCount || 0);
@@ -1491,9 +1492,9 @@ function computeFinalSkill(gaveUp){
   const wrongEffective = dw + (state.wrongCarry || 0);
   const wrongW = 1.0;
 
-  const Tref = [150, 130, 115, 90];
-  const Eref = [34, 30, 26, 19];
-  const k    = [0.30,0.28,0.26,0.24];
+  const Tref = [130, 130, 115, 90];
+  const Eref = [30, 30, 26, 19];
+  const k    = [0.31,0.29,0.27,0.25];
 
   const L = (dt / Tref[h]) + (de / Eref[h]) + (wrongW * wrongEffective);
   const span = (bandMax - bandMin);
