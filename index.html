@@ -237,13 +237,68 @@
     z-index:30;
   }
 
-  .clueWord{
-    display:inline-block;
-    cursor:pointer;
-    font-kerning:none;
-    font-variant-ligatures:none;
-    font-feature-settings:"kern" 0, "liga" 0, "clig" 0;
+    /* ===== Clue hint letters (per-letter spans, no layout shift) ===== */
+  .clueWord.hint-pulse{
+    animation: clueHintPulse 140ms ease-out;
   }
+  @keyframes clueHintPulse{
+    0%{ transform:scale(1); }
+    50%{ transform:scale(1.04); }
+    100%{ transform:scale(1); }
+  }
+
+  /* each letter in the clue word (wrapped in JS) */
+  .cw-letter{
+    position:relative;
+    display:inline-block;
+    transition:
+      opacity .23s ease,
+      transform .12s ease,
+      filter .22s ease;
+  }
+
+  /* non-trigram letters fade + soften */
+  .clueWord.hint-active .cw-letter.dim{
+    opacity:.38;
+    filter: blur(.25px);
+  }
+
+  /* trigram letters stay crisp + highlighted */
+  .clueWord.hint-active .cw-letter.tri{
+    opacity:1;
+    filter:none;
+  }
+
+  /* soft “band” behind trigram letters */
+  .clueWord.hint-active .cw-letter.tri::before{
+    content:"";
+    position:absolute;
+    inset:-0.12em 0;          /* extends slightly above/below, no width change */
+    border-radius:8px;
+    background:rgba(255,243,179,.96); /* soft yellow; matches w1 feel */
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,.04),
+      0 0 18px rgba(0,0,0,.25);
+    transform-origin:center center;
+    animation: clueTriBand 260ms ease-out both;
+    z-index:-1;               /* keeps band behind letters + underline */
+  }
+
+  @keyframes clueTriBand{
+    0%{
+      opacity:0;
+      transform:scaleY(0.3);
+    }
+    55%{
+      opacity:1;
+      transform:scaleY(1.08);
+    }
+    100%{
+      opacity:1;
+      transform:scaleY(1);
+    }
+  }
+
 
   .u-w1, .u-w2, .u-red{
     text-decoration: underline;
@@ -1506,7 +1561,11 @@ const state = {
   // hint fly
   pendingFly: null,
   flyAttempts: 0,
+
+  // visual state for clue-word hint effects
+  hintVisual: { w1:false, w2:false },
 };
+
 
 /* =======================
    Flags (Enhanced vs minimal)
@@ -1568,8 +1627,13 @@ function startMax(){ return Math.max(0, getN() - TR); }
 
 function renderSmart(){
   render(!state.useCustomKB);
+
+  // after the clue HTML is in the DOM, update the per-letter hint effect
+  updateClueHintEffects();
+
   requestAnimationFrame(updateHintTrackPlacement);
 }
+
 
 /* =======================
    Visible-time stopwatch
@@ -2262,6 +2326,157 @@ function underlineBySubstrings(token, items){
   if(open) out += "</span>";
   return out;
 }
+  /* =======================
+   Clue per-letter decoration + hint effect
+   ======================= */
+
+/**
+ * Recursively walk a clue word node and wrap text characters in <span class="cw-letter">,
+ * preserving existing underline spans (.u-w1, .u-w2, .u-red) so text-decoration still works.
+ */
+function decorateWordLetters(root, letterIndexRef){
+  const children = Array.from(root.childNodes);
+  for(const node of children){
+    if(node.nodeType === Node.TEXT_NODE){
+      const text = node.nodeValue || "";
+      if(!text) continue;
+
+      const frag = document.createDocumentFragment();
+      for(const ch of text){
+        // keep spaces as raw text so widths stay identical
+        if(ch === " " || ch === "\u00A0"){
+          frag.appendChild(document.createTextNode(ch));
+          continue;
+        }
+
+        const span = document.createElement('span');
+        span.className = "cw-letter";
+        span.textContent = ch;
+
+        // letter index only advances for A–Z; matches your norm() logic
+        if(/[A-Za-z]/.test(ch)){
+          span.dataset.li = String(letterIndexRef.i);
+          letterIndexRef.i++;
+        }else{
+          span.dataset.li = "";
+        }
+
+        frag.appendChild(span);
+      }
+
+      root.replaceChild(frag, node);
+    }else if(node.nodeType === Node.ELEMENT_NODE){
+      // already decorated? leave children alone
+      if(node.classList.contains('cw-letter')) continue;
+      decorateWordLetters(node, letterIndexRef);
+    }
+  }
+}
+
+/**
+ * Ensure each .clueWord has its letters wrapped once.
+ * Idempotent: new clue HTML (on puzzle change) has no data-cw-decorated flag.
+ */
+function ensureClueLetterSpans(){
+  if(!el.clue) return;
+  const words = el.clue.querySelectorAll('.clueWord');
+  if(!words.length) return;
+
+  words.forEach(wordEl=>{
+    if(wordEl.dataset.cwDecorated === "1") return;
+    const letterIndexRef = { i: 0 };
+    decorateWordLetters(wordEl, letterIndexRef);
+    wordEl.dataset.cwDecorated = "1";
+  });
+}
+
+function clearClueHintClasses(wordEl){
+  if(!wordEl) return;
+  wordEl.classList.remove('hint-active','hint-pulse');
+  wordEl.querySelectorAll('.cw-letter').forEach(span=>{
+    span.classList.remove('dim','tri');
+  });
+}
+
+/**
+ * Called after each render: if a hint has been used for w1/w2,
+ * dim non-trigram letters and spotlight the three trigram letters.
+ * Uses state.hintsUsed.{w1,w2} and current puzzle’s tri1/tri2.
+ */
+function updateClueHintEffects(){
+  if(!el.clue) return;
+
+  // build per-letter spans (once per puzzle)
+  ensureClueLetterSpans();
+
+  const words = el.clue.querySelectorAll('.clueWord');
+  const wordEls = {
+    w1: words[0] || null,
+    w2: words[1] || null,
+  };
+
+  const p = current();
+  const wordNorms = {
+    w1: norm(p.word1),
+    w2: norm(p.word2),
+  };
+  const triNorms = {
+    w1: norm(p.tri1 || ""),
+    w2: norm(p.tri2 || ""),
+  };
+
+  ['w1','w2'].forEach(group=>{
+    const used = !!state.hintsUsed[group];
+    const hadVisual = !!(state.hintVisual && state.hintVisual[group]);
+    const wordEl = wordEls[group];
+
+    if(!wordEl){
+      if(state.hintVisual) state.hintVisual[group] = false;
+      return;
+    }
+
+    // no hint for this word → clear any previous effects
+    if(!used){
+      clearClueHintClasses(wordEl);
+      if(state.hintVisual) state.hintVisual[group] = false;
+      return;
+    }
+
+    // hint is active for this word
+    wordEl.classList.add('hint-active');
+
+    const w = wordNorms[group];
+    const tri = triNorms[group];
+    const start = (w && tri) ? w.indexOf(tri) : -1;
+
+    const letters = Array.from(wordEl.querySelectorAll('.cw-letter'));
+    letters.forEach(span=>{
+      span.classList.remove('dim','tri');
+      const li = span.dataset.li ? parseInt(span.dataset.li, 10) : -1;
+
+      if(start >= 0 && li >= start && li < start + TR){
+        span.classList.add('tri');
+      }else{
+        span.classList.add('dim');
+      }
+    });
+
+    // one-time micro “pop” when the hint first applies
+    if(used && !hadVisual){
+      wordEl.classList.add('hint-pulse');
+      const handler = (ev)=>{
+        if(ev.animationName === 'clueHintPulse'){
+          wordEl.classList.remove('hint-pulse');
+        }
+      };
+      wordEl.addEventListener('animationend', handler, { once:true });
+
+      if(!state.hintVisual) state.hintVisual = { w1:false, w2:false };
+      state.hintVisual[group] = true;
+    }
+  });
+}
+
 
 /* =======================
    Grid model + focus
