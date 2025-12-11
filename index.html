@@ -319,23 +319,39 @@
 }
 
 
+/* Continuous underline bar (prevents micro-splits between per-letter spans) */
+:root{
+  --u-thick: 6px;   /* underline thickness */
+  --u-rise:  3px;   /* how far ABOVE the bottom of the wrapped text box */
+  --u-pad:   1.5px; /* overhang at each end to hide tiny gaps */
+}
 
-
-
-/* Underlines for trigram matches – draw on the wrapper span (continuous, no per-letter gaps) */
 .u-w1,
 .u-w2,
 .u-red{
-  text-decoration-line: underline;
-  text-decoration-thickness: 6px;
-  text-underline-offset: 9px;
-  text-decoration-skip-ink: none;
+  position:relative;
+  display:inline-block;
+  text-decoration:none !important; /* kill text-decoration entirely */
 }
 
-/* colours (yellow / blue / red) */
-.u-w1{ text-decoration-color: rgba(255,220,0,.9); }
-.u-w2{ text-decoration-color: rgba(70,160,255,.92); }
-.u-red{ text-decoration-color: rgba(235,80,92,.92); }
+.u-w1::after,
+.u-w2::after,
+.u-red::after{
+  content:"";
+  position:absolute;
+  left:  calc(-1 * var(--u-pad));
+  right: calc(-1 * var(--u-pad));
+  height: var(--u-thick);
+  bottom: var(--u-rise);
+  border-radius:999px;
+  pointer-events:none;
+  transform:translateZ(0); /* helps reduce subpixel seams */
+}
+
+.u-w1::after{ background: rgba(255,220,0,.90); }
+.u-w2::after{ background: rgba(70,160,255,.92); }
+.u-red::after{ background: rgba(235,80,92,.92); }
+
 
 /* clicks still pass through (kept as you intended) */
 .u-w1 .cw-letter,
