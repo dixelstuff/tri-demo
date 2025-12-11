@@ -285,28 +285,24 @@
 
 /* per-word glow colours */
 .clueWord{
-  /* peak (brief) */
-  --triGlowPeak:    rgba(255, 220, 0, 1.00);
-  --triGlowPeakSoft:rgba(255, 220, 0, .85);
+  /* peak (brief) – more saturated + brighter */
+  --triGlowPeak:     rgba(255, 205, 0, 1.00);
+  --triGlowPeakSoft: rgba(255, 205, 0, .92);
 
-  /* persistent (bright, but tighter spread to avoid “edge cutoff”) */
-  --triGlowPersist: rgba(255, 220, 0, .78);
-  --triGlowPersistSoft: rgba(255, 220, 0, .55);
+  /* persistent (bright + vibrant) */
+  --triGlowPersist:     rgba(255, 205, 0, .90);
+  --triGlowPersistSoft: rgba(255, 205, 0, .68);
 }
 .clueWord.cw-w2{
-  --triGlowPeak:    rgba(70, 160, 255, 1.00);
-  --triGlowPeakSoft:rgba(70, 160, 255, .85);
+  /* peak */
+  --triGlowPeak:     rgba(45, 145, 255, 1.00);
+  --triGlowPeakSoft: rgba(45, 145, 255, .92);
 
-  --triGlowPersist: rgba(70, 160, 255, .74);
-  --triGlowPersistSoft: rgba(70, 160, 255, .52);
+  /* persistent */
+  --triGlowPersist:     rgba(45, 145, 255, .86);
+  --triGlowPersistSoft: rgba(45, 145, 255, .64);
 }
 
-/* persistent glow once hint is active */
-.clueWord.hint-active .cw-letter.tri{
-  text-shadow:
-    0 0 6px  var(--triGlowPersist),
-    0 0 12px var(--triGlowPersistSoft);
-}
 
 /* one-shot pop: fast peak → small settle → land on persistent */
 .clueWord.hint-active .cw-letter.tri-pop{
