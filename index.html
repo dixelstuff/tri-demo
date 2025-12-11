@@ -3574,20 +3574,56 @@ function moveHintTrackBottom(){
 
   
 function updateHintTrackPlacement(){
-  const docEl = document.documentElement;
+  const track      = el.hintTrack;
+  const topHost    = el.clueWrap;
+  const bottomHost = el.hintDockBottom;
+  const gridDock   = el.gridDock;
+  const btnRow     = el.btnRow;
 
-  // "Keyboard present" = our custom on-screen keyboard is active.
-  // We key off both the HTML class and the state flag for safety.
-  const hasKB = docEl.classList.contains('has-kb') || state.useCustomKB;
+  if(!track || !topHost || !bottomHost || !gridDock || !btnRow) return;
 
-  // With the on-screen keyboard we ALWAYS pin the track under the clue
-  // so the grid + buttons stay still. Otherwise it lives in the bottom dock.
-  if(hasKB){
-    moveHintTrackTop();
+  const root  = document.documentElement;
+  const hasKB = root.classList.contains('has-kb');
+
+  // Measure current layout
+  const gridRect  = gridDock.getBoundingClientRect();
+  const btnRect   = btnRow.getBoundingClientRect();
+  const trackRect = track.getBoundingClientRect();
+
+  // If we can’t measure properly, fall back to bottom
+  if(!gridRect || !btnRect || !trackRect){
+    if(track.parentNode !== bottomHost) bottomHost.appendChild(track);
+    topHost.classList.remove('hasTopTrack');
+    track.classList.remove('hintTrackTop');
+    return;
+  }
+
+
+  const available = btnRect.top - gridRect.bottom;
+
+
+  const MIN_GAP = 10; // breathing room above the bottom row
+  const needTop = hasKB && (available < (trackRect.height + MIN_GAP));
+
+  const currentlyTop = (track.parentNode === topHost);
+
+  if(needTop){
+    // Move to TOP (under clue)
+    if(!currentlyTop){
+      topHost.appendChild(track);
+    }
+    topHost.classList.add('hasTopTrack');
+    track.classList.add('hintTrackTop');
   }else{
-    moveHintTrackBottom();
+    // Keep / move to BOTTOM dock
+    if(currentlyTop || track.parentNode !== bottomHost){
+      bottomHost.appendChild(track);
+    }
+    topHost.classList.remove('hasTopTrack');
+    track.classList.remove('hintTrackTop');
   }
 }
+
 
 window.addEventListener('resize', ()=> requestAnimationFrame(updateHintTrackPlacement), {passive:true});
 if(window.visualViewport){
