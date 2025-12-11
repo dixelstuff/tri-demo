@@ -1416,26 +1416,32 @@ function snapshotGridChars(){
   return out;
 }
 
-// Count ONLY cells where a letter exists AFTER and differs from BEFORE.
-// (If a cell becomes empty, it does NOT count.)
-function countEffortFromGridChange(before, after){
+function countEffortFromGridChange(before, after, opts={}){
+  const countDeletes = !!opts.countDeletes;
   let units = 0;
   const n = Math.min(before.length, after.length);
+
   for(let i=0;i<n;i++){
-    const a = after[i] || "";
-    if(!a) continue;          // removals don't count
     const b = before[i] || "";
-    if(a !== b) units++;
+    const a = after[i] || "";
+    if(a === b) continue;
+
+    // If we're NOT counting deletes, ignore transitions to empty.
+    if(!countDeletes && !a) continue;
+
+    // Otherwise count any change (adds/changes and, optionally, removals)
+    units += 1;
   }
   return units;
 }
 
-function addEffortFromGridChange(before){
+function addEffortFromGridChange(before, opts){
   if(!before) return;
   const after = snapshotGridChars();
-  const units = countEffortFromGridChange(before, after);
+  const units = countEffortFromGridChange(before, after, opts);
   if(units) addEffort(units);
 }
+
 
 
 /* ---- Hint budgets + hint penalty (sequential only; unchanged maths) ---- */
@@ -3552,8 +3558,7 @@ function onDragEnd(e){
     deleteTrigramGroup(d.group);
   }
 
-  // effort based on net grid change from drag start → drag end
-  addEffortFromGridChange(before);
+  addEffortFromGridChange(before, { countDeletes:true });
   renderSmart();
 }
 
@@ -3691,8 +3696,7 @@ function placeTrigram(group, tri){
   removeSinglesInCells(trigramCells(start));
   setMiniHighlightToTri(group, t);
 
-  // effort = cells where a NEW (or changed) letter appears
-  addEffortFromGridChange(before);
+  addEffortFromGridChange(before, { countDeletes:true });
   return true;
 }
 
