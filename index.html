@@ -243,7 +243,7 @@
   }
   @keyframes clueHintPulse{
     0%{ transform:scale(1); }
-    50%{ transform:scale(1.04); }
+    50%{ transform:scale(1.09); }
     100%{ transform:scale(1); }
   }
 
@@ -285,12 +285,12 @@
 
 /* per-word glow colours (default = word1 yellow; word2 overrides to blue) */
 .clueWord{
-  --triGlowStrong: rgba(255, 220, 0, .95);
-  --triGlowSoft:   rgba(255, 220, 0, .65);
+  --triGlowStrong: rgba(255, 220, 0, .98);
+  --triGlowSoft:   rgba(255, 220, 0, .80);
 }
 .clueWord.cw-w2{
-  --triGlowStrong: rgba(70, 160, 255, .95);
-  --triGlowSoft:   rgba(70, 160, 255, .65);
+  --triGlowStrong: rgba(70, 160, 255, .98);
+  --triGlowSoft:   rgba(70, 160, 255, .80);
 }
 
 /* one-shot highlight animation, applied via JS only when the hint is first revealed */
@@ -305,12 +305,12 @@
     filter: none;
   }
   35%{
-    text-shadow: 0 0 16px var(--triGlowStrong);
-    filter: brightness(1.18);
+    text-shadow: 0 0 18px var(--triGlowStrong);
+    filter: brightness(1.25);
   }
   70%{
-    text-shadow: 0 0 10px var(--triGlowSoft);
-    filter: brightness(1.10);
+    text-shadow: 0 0 12px var(--triGlowSoft);
+    filter: brightness(1.15);
   }
   100%{
     text-shadow: 0 0 0 rgba(0,0,0,0);
@@ -1474,7 +1474,7 @@ const PUZZLES = [
   { clue:"Ankles ordeals", word1:"ankles", word2:"ordeals", answer:"realest", tri1:"les", tri2:"eal" },
   { clue:"Pains mudder", word1:"pains", word2:"mudder", answer:"insider", tri1:"ins", tri2:"der" },
   { clue:"Shame redrawn", word1:"shame", word2:"redrawn", answer:"dramedy", tri1:"ame", tri2:"dra" },
-  { clue:"Bu'tch aliens", word1:"butch", word2:"aliens", answer:"halibut", tri1:"but", tri2:"ali" },
+  { clue:"Butch aliens", word1:"butch", word2:"aliens", answer:"halibut", tri1:"but", tri2:"ali" },
   { clue:"Layers exempts", word1:"layers", word2:"exempts", answer:"tempers", tri1:"ers", tri2:"emp" },
   { clue:"Pride earths", word1:"pride", word2:"earths", answer:"sidearm", tri1:"ide", tri2:"ear" },
   { clue:"Space archer", word1:"space", word2:"archer", answer:"apaches", tri1:"pac", tri2:"che" },
