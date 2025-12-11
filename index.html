@@ -285,55 +285,60 @@
 
 /* per-word glow colours (default = word1 yellow; word2 overrides to blue) */
 .clueWord{
-  --triGlowStrong: rgba(255, 220, 0, .99);
-  --triGlowSoft:   rgba(255, 220, 0, .85);
+  --triGlowStrong:  rgba(255, 220, 0, .99);
+  --triGlowSoft:    rgba(255, 220, 0, .85);
+
+  /* NEW: subtle “resting” glow that persists */
+  --triGlowPersist: rgba(255, 220, 0, .42);
 }
 .clueWord.cw-w2{
-  --triGlowStrong: rgba(70, 160, 255, .99);
-  --triGlowSoft:   rgba(70, 160, 255, .85);
+  --triGlowStrong:  rgba(70, 160, 255, .99);
+  --triGlowSoft:    rgba(70, 160, 255, .85);
+  --triGlowPersist: rgba(70, 160, 255, .40);
+}
+
+/* NEW: persistent halo for trigram letters once hint is active */
+.clueWord.hint-active .cw-letter.tri{
+  text-shadow: 0 0 6px var(--triGlowPersist);
+  filter: brightness(1.06);
 }
 
 /* one-shot highlight animation, applied via JS only when the hint is first revealed */
 .clueWord.hint-active .cw-letter.tri-pop{
-  animation: clueTriGlow 4000ms ease-out both;  /* longer */
+  animation: clueTriGlow 1200ms ease-out both;
 }
 
-/* crisper halo + longer hold, no movement / no scale */
+/* ramps up, holds, then settles into the same persistent glow */
 @keyframes clueTriGlow{
   0%{
     text-shadow: 0 0 0 rgba(0,0,0,0);
     filter:none;
   }
-
-  /* ramp up */
   22%{
     text-shadow:
-      0 0 10px  var(--triGlowStrong),  /* tighter core */
-      0 0 14px var(--triGlowStrong);  /* outer halo */
-    filter: brightness(1.4);
-  }
-
-  /* hold (keeps attention longer) */
-  72%{
-    text-shadow:
-      0 0 10px  var(--triGlowStrong),
+      0 0 8px  var(--triGlowStrong),
       0 0 14px var(--triGlowStrong);
-    filter: brightness(1.35);
+    filter: brightness(1.45);
   }
-
-  /* fade down */
+  60%{
+    text-shadow:
+      0 0 8px  var(--triGlowStrong),
+      0 0 14px var(--triGlowStrong);
+    filter: brightness(1.40);
+  }
   85%{
     text-shadow:
       0 0 6px  var(--triGlowSoft),
       0 0 10px var(--triGlowSoft);
-    filter: brightness(1.18);
+    filter: brightness(1.15);
   }
-
   100%{
-    text-shadow: 0 0 0 rgba(0,0,0,0);
-    filter:none;
+    /* land on the persistent state */
+    text-shadow: 0 0 6px var(--triGlowPersist);
+    filter: brightness(1.06);
   }
 }
+
 
 
 
