@@ -283,31 +283,31 @@
   box-shadow: none;
 }
 
-/* one-shot punch animation, applied via JS only when the hint is first revealed */
+/* one-shot highlight animation, applied via JS only when the hint is first revealed */
 .clueWord.hint-active .cw-letter.tri-pop{
-  animation: clueTriPunch 420ms cubic-bezier(.18,1.4,.35,1) both;
+  animation: clueTriGlow 700ms ease-out both;
 }
 
-
-
-  @keyframes clueTriPunch{
-    0%{
-      transform: scale(.4) translateY(-6px);
-      text-shadow: 0 0 0 rgba(0,0,0,0);
-    }
-    40%{
-      transform: scale(1.28) translateY(-2px);
-      text-shadow: 0 4px 12px rgba(0,0,0,.45);
-    }
-    70%{
-      transform: scale(.96) translateY(1px);
-      text-shadow: 0 2px 6px rgba(0,0,0,.28);
-    }
-    100%{
-      transform: scale(1) translateY(0);
-      text-shadow: none;                /* back to plain black text */
-    }
+/* soft halo + brightness pulse, no movement / no scale */
+@keyframes clueTriGlow{
+  0%{
+    text-shadow: 0 0 0 rgba(255, 220, 0, 0);
+    filter: none;
   }
+  35%{
+    text-shadow: 0 0 16px rgba(255, 220, 0, .95);
+    filter: brightness(1.18);
+  }
+  70%{
+    text-shadow: 0 0 10px rgba(255, 220, 0, .65);
+    filter: brightness(1.10);
+  }
+  100%{
+    text-shadow: 0 0 0 rgba(255, 220, 0, 0);
+    filter: none;
+  }
+}
+
 
 
 
