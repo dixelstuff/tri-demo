@@ -328,9 +328,10 @@
 .u-w1 .cw-letter,
 .u-w2 .cw-letter,
 .u-red .cw-letter{
-  text-decoration: inherit;
+  /* let the parent span control the underline (colour + thickness) */
   pointer-events:none; /* clicks fall through to the parent .clueWord */
 }
+
 
 
 
@@ -2418,7 +2419,7 @@ function clearClueHintClasses(wordEl){
   if(!wordEl) return;
   wordEl.classList.remove('hint-active','hint-pulse');
   wordEl.querySelectorAll('.cw-letter').forEach(span=>{
-    span.classList.remove('dim','tri');
+    span.classList.remove('dim','tri','tri-pop');
   });
 }
 
@@ -2469,22 +2470,16 @@ function updateClueHintEffects(){
     // hint is active for this word
     wordEl.classList.add('hint-active');
 
-    // If we've already drawn the per-letter state once for this hint,
-    // don't re-twiddle classes on every render — that was restarting
-    // the animations.
-    if(hadVisual){
-      return;
-    }
-
-    const w = wordNorms[group];
+    const w   = wordNorms[group];
     const tri = triNorms[group];
     const start = (w && tri) ? w.indexOf(tri) : -1;
 
-    const letters = Array.from(wordEl.querySelectorAll('.cw-letter'));
+    const letters    = Array.from(wordEl.querySelectorAll('.cw-letter'));
     const triLetters = [];
 
+    // ALWAYS re-apply dim/tri classes on the current DOM
     letters.forEach(span=>{
-      span.classList.remove('dim','tri');
+      span.classList.remove('dim','tri','tri-pop');
       const li = span.dataset.li ? parseInt(span.dataset.li, 10) : -1;
 
       if(start >= 0 && li >= start && li < start + TR){
@@ -2495,8 +2490,8 @@ function updateClueHintEffects(){
       }
     });
 
-    // one-time micro “pop” when the hint first applies
-    if(triLetters.length){
+    // Only run the "pop" animation the first time the hint appears
+    if(triLetters.length && !hadVisual){
       // word-level pulse
       wordEl.classList.add('hint-pulse');
       const handler = (ev)=>{
@@ -2519,6 +2514,7 @@ function updateClueHintEffects(){
     state.hintVisual[group] = true;
   });
 }
+
 
 
 
