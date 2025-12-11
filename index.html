@@ -285,60 +285,73 @@
 
 /* per-word glow colours (default = word1 yellow; word2 overrides to blue) */
 .clueWord{
-  --triGlowStrong:  rgba(255, 220, 0, .99);
-  --triGlowSoft:    rgba(255, 220, 0, .85);
+  --triGlowStrong:  rgba(255, 220, 0, 1.00);
+  --triGlowSoft:    rgba(255, 220, 0, .92);
 
-  /* NEW: subtle “resting” glow that persists */
-  --triGlowPersist: rgba(255, 220, 0, .42);
+  /* stronger “resting” glow */
+  --triGlowPersist: rgba(255, 220, 0, .72);
 }
 .clueWord.cw-w2{
-  --triGlowStrong:  rgba(70, 160, 255, .99);
-  --triGlowSoft:    rgba(70, 160, 255, .85);
-  --triGlowPersist: rgba(70, 160, 255, .40);
+  --triGlowStrong:  rgba(70, 160, 255, 1.00);
+  --triGlowSoft:    rgba(70, 160, 255, .92);
+  --triGlowPersist: rgba(70, 160, 255, .68);
 }
 
-/* NEW: persistent halo for trigram letters once hint is active */
+/* persistent halo for trigram letters once hint is active */
 .clueWord.hint-active .cw-letter.tri{
-  text-shadow: 0 0 6px var(--triGlowPersist);
-  filter: brightness(1.06);
+  text-shadow:
+    0 0 7px  var(--triGlowPersist),
+    0 0 13px var(--triGlowPersist);
+  filter: brightness(1.12);
 }
 
 /* one-shot highlight animation, applied via JS only when the hint is first revealed */
 .clueWord.hint-active .cw-letter.tri-pop{
-  animation: clueTriGlow 1200ms ease-out both;
+  animation: clueTriGlow 3000ms ease-out both;  /* longer overall */
 }
 
-/* ramps up, holds, then settles into the same persistent glow */
+/* bright ramp → LONG HOLD → late drop to persistent */
 @keyframes clueTriGlow{
   0%{
     text-shadow: 0 0 0 rgba(0,0,0,0);
     filter:none;
   }
-  22%{
+
+  /* ramp up quickly */
+  12%{
     text-shadow:
-      0 0 8px  var(--triGlowStrong),
-      0 0 14px var(--triGlowStrong);
-    filter: brightness(1.45);
+      0 0 14px var(--triGlowStrong),
+      0 0 26px var(--triGlowStrong),
+      0 0 38px var(--triGlowStrong);
+    filter: brightness(1.75);
   }
-  60%{
+
+  /* hold bright for most of the duration */
+  78%{
     text-shadow:
-      0 0 8px  var(--triGlowStrong),
-      0 0 14px var(--triGlowStrong);
-    filter: brightness(1.40);
+      0 0 14px var(--triGlowStrong),
+      0 0 26px var(--triGlowStrong),
+      0 0 38px var(--triGlowStrong);
+    filter: brightness(1.70);
   }
-  85%{
+
+  /* begin softening near the end */
+  92%{
     text-shadow:
-      0 0 6px  var(--triGlowSoft),
-      0 0 10px var(--triGlowSoft);
-    filter: brightness(1.15);
+      0 0 11px var(--triGlowSoft),
+      0 0 21px var(--triGlowSoft),
+      0 0 30px var(--triGlowSoft);
+    filter: brightness(1.35);
   }
+
+  /* land on the persistent state */
   100%{
-    /* land on the persistent state */
-    text-shadow: 0 0 6px var(--triGlowPersist);
-    filter: brightness(1.06);
+    text-shadow:
+      0 0 7px  var(--triGlowPersist),
+      0 0 13px var(--triGlowPersist);
+    filter: brightness(1.12);
   }
 }
-
 
 
 
