@@ -295,28 +295,46 @@
 
 /* one-shot highlight animation, applied via JS only when the hint is first revealed */
 .clueWord.hint-active .cw-letter.tri-pop{
-  animation: clueTriGlow 700ms ease-out both;
+  animation: clueTriGlow 2000ms ease-out both;  /* longer */
 }
 
-/* soft halo + brightness pulse, no movement / no scale */
+/* crisper halo + longer hold, no movement / no scale */
 @keyframes clueTriGlow{
   0%{
     text-shadow: 0 0 0 rgba(0,0,0,0);
-    filter: none;
+    filter:none;
   }
-  35%{
-    text-shadow: 0 0 19px var(--triGlowStrong);
-    filter: brightness(1.5);
+
+  /* ramp up */
+  22%{
+    text-shadow:
+      0 0 8px  var(--triGlowStrong),  /* tighter core */
+      0 0 14px var(--triGlowStrong);  /* outer halo */
+    filter: brightness(1.45);
   }
-  70%{
-    text-shadow: 0 0 12px var(--triGlowSoft);
-    filter: brightness(1.3);
+
+  /* hold (keeps attention longer) */
+  72%{
+    text-shadow:
+      0 0 8px  var(--triGlowStrong),
+      0 0 14px var(--triGlowStrong);
+    filter: brightness(1.40);
   }
+
+  /* fade down */
+  85%{
+    text-shadow:
+      0 0 6px  var(--triGlowSoft),
+      0 0 10px var(--triGlowSoft);
+    filter: brightness(1.18);
+  }
+
   100%{
     text-shadow: 0 0 0 rgba(0,0,0,0);
-    filter: none;
+    filter:none;
   }
 }
+
 
 
 /* Continuous underline bar (prevents micro-splits between per-letter spans) */
