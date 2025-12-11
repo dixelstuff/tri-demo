@@ -647,6 +647,19 @@
       0 3px 10px rgba(0,0,0,.22);
   }
 
+.skillBadgeInner.red{
+  --txt:#2a0707;
+  --bdr: rgba(255, 165, 175, .66);
+  --g1: rgba(255, 228, 232, .97);
+  --g2: rgba(225, 70, 85,  .93);
+  --g3: rgba(255, 238, 242, .98);
+  --g4: rgba(165, 18, 35,  .90);
+  box-shadow:
+    0 14px 28px rgba(225, 70, 85, .18),
+    0 3px 10px rgba(0,0,0,.22);
+}
+
+
   .skillBadgeLabel{
     font-size:12px;
     font-weight:900;
@@ -1731,8 +1744,8 @@ function setResultSkillMsg(line1, skill){
   // Tier class
   const inner = document.querySelector('#skillBadge .skillBadgeInner');
   if(inner){
-    inner.classList.remove('gold','silver','bronze');
-    const tier = (skill >= 85) ? 'gold' : (skill >= 70) ? 'silver' : 'bronze';
+    inner.classList.remove('gold','silver','bronze', 'red');
+    const tier = (skill >= 88) ? 'gold' : (skill >= 68) ? 'silver' : (skill >= 48) ? 'bronze' : 'red';
     inner.classList.add(tier);
   }
 
