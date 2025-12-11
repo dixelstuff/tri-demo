@@ -45,10 +45,8 @@
   }
 
   /* prevent selection / tap highlight inside the app */
-  .wrap, .wrap *,
-  #wrap, #wrap *,
-  #rotateOverlay, #rotateOverlay *,
-  #hintsModal, #hintsModal *{
+  :is(.wrap,#wrap,#rotateOverlay,#hintsModal),
+  :is(.wrap,#wrap,#rotateOverlay,#hintsModal) *{
     -webkit-user-select:none;
     user-select:none;
     -webkit-touch-callout:none;
@@ -57,7 +55,7 @@
   }
 
   /* ===== Layout ===== */
-  .wrap, #wrap{
+  :is(.wrap, #wrap){
     height:100dvh;
     max-height:100dvh;
     width:100%;
@@ -85,7 +83,7 @@
     gap:10px;
     font-weight:900;
   }
-  .nav a, .nav button{
+  .nav :is(a, button){
     color:var(--ink);
     text-decoration:none;
     font-weight:900;
@@ -98,7 +96,7 @@
     -webkit-appearance:none;
     font:inherit;
   }
-  .nav a:active, .nav button:active{ transform:translateY(1px); }
+  .nav :is(a, button):active{ transform:translateY(1px); }
   .count{ font-weight:900; opacity:.7; min-width:58px; text-align:center; }
 
   /* ===== Clue + floating hint track ===== */
@@ -117,45 +115,43 @@
     font-weight:400;
     flex:0 0 auto;
   }
+
   /* ===== Assist activation flash (clue glow) ===== */
-.clue.assist-glow{
-  animation: assistClueGlow 3.2s ease-out both;
-}
-
-@keyframes assistClueGlow{
-  0%{
-    box-shadow:
-      0 2px 6px rgba(0,0,0,.08),
-      0 0 0 4px rgba(70,255,150,.95),   /* green ring */
-      0 0 40px rgba(70,255,150,.75);    /* green glow */
+  .clue.assist-glow{
+    animation: assistClueGlow 3.2s ease-out both;
   }
-  55%{
-    box-shadow:
-      0 2px 6px rgba(0,0,0,.08),
-      0 0 0 4px rgba(70,255,150,.72),
-      0 0 54px rgba(70,255,150,.6);
+  @keyframes assistClueGlow{
+    0%{
+      box-shadow:
+        0 2px 6px rgba(0,0,0,.08),
+        0 0 0 4px rgba(70,255,150,.95),   /* green ring */
+        0 0 40px rgba(70,255,150,.75);    /* green glow */
+    }
+    55%{
+      box-shadow:
+        0 2px 6px rgba(0,0,0,.08),
+        0 0 0 4px rgba(70,255,150,.72),
+        0 0 54px rgba(70,255,150,.6);
+    }
+    100%{
+      box-shadow:
+        0 2px 6px rgba(0,0,0,.08),
+        0 0 0 0 rgba(70,255,150,0),
+        0 0 0 rgba(70,255,150,0);
+    }
   }
-  100%{
-    box-shadow:
-      0 2px 6px rgba(0,0,0,.08),
-      0 0 0 0 rgba(70,255,150,0),
-      0 0 0 rgba(70,255,150,0);
+
+  /* ===== Assist activation flash (message) ===== */
+  .msg.assistFlash{
+    /* runs without needing .show; it fades in then down+out */
+    animation: assistMsgFlash 4.2s ease-in-out both;
   }
-}
-
-
-/* ===== Assist activation flash (message) ===== */
-.msg.assistFlash{
-  /* runs without needing .show; it fades in then down+out */
-  animation: assistMsgFlash 4.2s ease-in-out both;
-}
-
-@keyframes assistMsgFlash{
-  0%   { opacity:0;   transform: translateX(-50%) translateY(-6px); }
-  12%  { opacity:.92; transform: translateX(-50%) translateY(0px); }
-  75%  { opacity:.92; transform: translateX(-50%) translateY(0px); }
-  100% { opacity:0;   transform: translateX(-50%) translateY(10px); }
-}
+  @keyframes assistMsgFlash{
+    0%   { opacity:0;   transform: translateX(-50%) translateY(-6px); }
+    12%  { opacity:.92; transform: translateX(-50%) translateY(0px); }
+    75%  { opacity:.92; transform: translateX(-50%) translateY(0px); }
+    100% { opacity:0;   transform: translateX(-50%) translateY(10px); }
+  }
 
   .clue .len{
     opacity:.55;
@@ -206,7 +202,7 @@
   .u-red{ text-decoration-color: rgba(235,80,92,.92); }
 
   /* ===== Grid ===== */
-  .gridDock, #gridDock{
+  :is(.gridDock, #gridDock){
     display:block;
     width:fit-content;
     margin: 100px auto 0;
@@ -220,14 +216,13 @@
     isolation:isolate;
   }
   @media (pointer:coarse) and (max-width: 920px){
-    .gridDock, #gridDock{ margin-top: clamp(36px, 6.1vh, 62px); }
+    :is(.gridDock, #gridDock){ margin-top: clamp(36px, 6.1vh, 62px); }
   }
-  html.has-kb .gridDock, html.has-kb #gridDock{ margin: 80px auto 0; }
+  html.has-kb :is(.gridDock, #gridDock){ margin: 80px auto 0; }
 
-  .gridDock.shake, #gridDock.shake{ animation:shake .16s linear 0s 2; }
+  :is(.gridDock, #gridDock).shake{ animation:shake .16s linear 0s 2; }
 
-  .wrap.solved:not(.gaveup) .gridDock,
-  .wrap.solved:not(.gaveup) #gridDock{
+  .wrap.solved:not(.gaveup) :is(.gridDock, #gridDock){
     pointer-events:none;
     transform: translate3d(0,-16px,0) scale(1.01);
     box-shadow:
@@ -236,8 +231,7 @@
       0 14px 26px rgba(0,0,0,.14);
     animation: solvedPop .46s ease-out both, glowPulse 1.15s ease-in-out 0s 2;
   }
-  .wrap.gaveup .gridDock,
-  .wrap.gaveup #gridDock{
+  .wrap.gaveup :is(.gridDock, #gridDock){
     pointer-events:none;
     transform: translate3d(0,-16px,0) scale(1.01);
     box-shadow:
@@ -300,7 +294,7 @@
     100%{ transform:translateX(0); }
   }
 
-  .gridWrap, #gridWrap{
+  :is(.gridWrap, #gridWrap){
     display:block;
     border:4px solid var(--ink);
     border-radius:14px;
@@ -381,7 +375,7 @@
   html.has-kb .cell input{ pointer-events:none; }
 
   /* ===== Messages ===== */
-  .msgSlot, #msgSlot{
+  :is(.msgSlot, #msgSlot){
     position:relative;
     height:78px;
     width:100%;
@@ -391,38 +385,40 @@
     pointer-events:none;
     transform: translateY(calc(-1 * var(--lift-msg) + var(--msg-drop)));
   }
-  .wrap.solved .msgSlot, .wrap.solved #msgSlot{
+  .wrap.solved :is(.msgSlot, #msgSlot){
     margin-top: clamp(0px, 0.4vh, 4px);
   }
 
-.msg{
-  position:absolute;
-  left:50%;
-  top: 18px;
-  margin:0;
-  font-weight:900;
-  opacity:0;
-  transition:opacity .18s ease, transform .18s ease;
-  font-style:italic;
-  font-size:22px;
-  pointer-events:none;
-  width:max-content;
-  max-width:min(92vw,760px);
-  white-space: pre-line;
-  line-height:1.15;
-  text-align:center;
+  .msg{
+    position:absolute;
+    left:50%;
+    top: 18px;
+    margin:0;
+    font-weight:900;
+    opacity:0;
+    transition:opacity .18s ease, transform .18s ease;
+    font-style:italic;
+    font-size:22px;
+    pointer-events:none;
+    width:max-content;
+    max-width:min(92vw,760px);
+    white-space: pre-line;
+    line-height:1.15;
+    text-align:center;
 
-  /* keep X-centering, and allow per-type Y nudges via transforms */
-  transform: translateX(-50%) translateY(0px);
-}
+    /* keep X-centering, and allow per-type Y nudges via transforms */
+    transform: translateX(-50%) translateY(0px);
+  }
 
   .msg.show{ opacity:.92; }
   .msg.warn{ opacity:.92; font-size:20px; }
-  .msg.result{
-  top:12px;
-  font-size:29px; 
-}
 
+  /* (merged: you had .msg.result in two places) */
+  .msg.result{
+    top:12px;
+    font-size:29px;
+    transform: translateX(-50%) translateY(calc(var(--result-drop) - var(--msg-drop)));
+  }
 
   .msg .msgLine{ display:block; }
   .msg.result .msgLine.score{
@@ -434,12 +430,9 @@
     opacity:.55;
     margin-top:4px;
   }
-.msg.result{
-  transform: translateX(-50%) translateY(calc(var(--result-drop) - var(--msg-drop)));
-}
 
   /* ===== Hint track + tiles ===== */
-  .hintTrack, #hintTrack{
+  :is(.hintTrack, #hintTrack){
     width:fit-content;
     max-width:min(920px,96vw);
     display:flex;
@@ -447,6 +440,7 @@
     justify-content:center;
     transition:opacity .35s ease, transform .35s ease;
   }
+
   /* ===== Bottom hint-track dock (dynamic placement) ===== */
   .hintDockBottom{
     width:100%;
@@ -558,7 +552,7 @@
   .hintSpot.hex .letter{ background: rgba(255,255,255,.97); }
 
   /* ===== Skill dock + badge ===== */
-  .skillDock, #skillDock{
+  :is(.skillDock, #skillDock){
     margin: clamp(0px, 0.5vh, 6px) auto 0;
     width:fit-content;
     max-width:min(920px,96vw);
@@ -613,68 +607,66 @@
       0 3px 10px rgba(0,0,0,.22);
   }
 
-.skillBadgeInner.gold{
-  --txt:#2a1a00;
-  --bdr: rgba(255, 220, 130, .70);
-  --g1: rgba(255, 238, 190, .96);
-  --g2: rgba(255, 205, 105, .94);
-  --g3: rgba(255, 246, 210, .97);
-  --g4: rgba(255, 185, 70,  .93);
-  box-shadow:
-    0 14px 28px rgba(255, 205, 95, .18),
-    0 3px 10px rgba(0,0,0,.22);
-}
+  .skillBadgeInner.gold{
+    --txt:#2a1a00;
+    --bdr: rgba(255, 220, 130, .70);
+    --g1: rgba(255, 238, 190, .96);
+    --g2: rgba(255, 205, 105, .94);
+    --g3: rgba(255, 246, 210, .97);
+    --g4: rgba(255, 185, 70,  .93);
+    box-shadow:
+      0 14px 28px rgba(255, 205, 95, .18),
+      0 3px 10px rgba(0,0,0,.22);
+  }
 
+  .skillBadgeInner.silver{
+    --txt:#1f2328;
+    --bdr: rgba(200, 206, 215, .70);
 
-.skillBadgeInner.silver{
-  --txt:#1f2328;
-  --bdr: rgba(200, 206, 215, .70);
+    /* light steel, but clearly grey */
+    --g1: rgba(238, 242, 247, .99);
+    --g2: rgba(214, 222, 232, .96);
+    --g3: rgba(242, 246, 250, .99);
+    --g4: rgba(203, 212, 223, .95);
 
-  /* light steel, but clearly grey */
-  --g1: rgba(238, 242, 247, .99);
-  --g2: rgba(214, 222, 232, .96);
-  --g3: rgba(242, 246, 250, .99);
-  --g4: rgba(203, 212, 223, .95);
+    box-shadow:
+      0 12px 24px rgba(0,0,0,.12),
+      0 3px 10px rgba(0,0,0,.20);
+  }
 
-  box-shadow:
-    0 12px 24px rgba(0,0,0,.12),
-    0 3px 10px rgba(0,0,0,.20);
-}
+  .skillBadgeInner.bronze{
+    --txt:#2a1204;
 
-.skillBadgeInner.bronze{
-  --txt:#2a1204;
+    /* more subtle border */
+    --bdr: rgba(190, 130, 95, .46);
 
-  /* more subtle border */
-  --bdr: rgba(190, 130, 95, .46);
+    /* a touch more colour, still matte */
+    --g1: rgba(248, 214, 190, .99);
+    --g2: rgba(226, 170, 130, .96);
+    --g3: rgba(250, 222, 205, .99);
+    --g4: rgba(208, 150, 112, .95);
 
-  /* a touch more colour, still matte */
-  --g1: rgba(248, 214, 190, .99);
-  --g2: rgba(226, 170, 130, .96);
-  --g3: rgba(250, 222, 205, .99);
-  --g4: rgba(208, 150, 112, .95);
+    box-shadow:
+      0 12px 24px rgba(0,0,0,.12),
+      0 3px 10px rgba(0,0,0,.20);
+  }
 
-  box-shadow:
-    0 12px 24px rgba(0,0,0,.12),
-    0 3px 10px rgba(0,0,0,.20);
-}
+  .skillBadgeInner.red{
+    --txt:#160405;
 
-.skillBadgeInner.red{
-  --txt:#160405;
+    /* softer (less “outlined”) border */
+    --bdr: rgba(150, 55, 60, .42);
 
-  /* softer (less “outlined”) border */
-  --bdr: rgba(150, 55, 60, .42);
+    /* less white through the gradient; keep dark text readable */
+    --g1: rgba(242, 208, 208, .99);
+    --g2: rgba(220, 150, 148, .96);
+    --g3: rgba(244, 214, 214, .99);
+    --g4: rgba(195, 120, 120, .95);
 
-  /* less white through the gradient; keep dark text readable */
-  --g1: rgba(242, 208, 208, .99);
-  --g2: rgba(220, 150, 148, .96);
-  --g3: rgba(244, 214, 214, .99);
-  --g4: rgba(195, 120, 120, .95);
-
-  box-shadow:
-    0 14px 28px rgba(0,0,0,.14),
-    0 3px 10px rgba(0,0,0,.20);
-}
-
+    box-shadow:
+      0 14px 28px rgba(0,0,0,.14),
+      0 3px 10px rgba(0,0,0,.20);
+  }
 
   .skillBadgeLabel{
     font-size:12px;
@@ -732,7 +724,7 @@
   }
 
   /* ===== Buttons ===== */
-  .btnRow, #btnRow{
+  :is(.btnRow, #btnRow){
     margin-top: clamp(18px, 3.8vh, 26px);
     display:flex;
     justify-content:center;
@@ -744,7 +736,7 @@
   }
 
   /* fade buttons + floating hint track away on reveal */
-  .wrap.solved #btnRow, .wrap.solved .btnRow{
+  .wrap.solved :is(#btnRow, .btnRow){
     opacity:0;
     transform: translateY(6px);
     pointer-events:none;
@@ -784,7 +776,7 @@
     box-shadow: 0 7px 0 rgba(0,0,0,.10);
   }
 
-  html.has-kb .btnRow, html.has-kb #btnRow{
+  html.has-kb :is(.btnRow, #btnRow){
     position:fixed;
     left:0; right:0;
     bottom: calc(var(--kb-h) + env(safe-area-inset-bottom) + 36px);
@@ -804,7 +796,7 @@
   }
 
   /* ===== Keyboard ===== */
-  .kbHost, #kbHost{
+  :is(.kbHost, #kbHost){
     position:fixed;
     left:0; right:0;
     bottom:0;
@@ -816,7 +808,7 @@
     -webkit-backdrop-filter: blur(10px);
     border-top:2px solid rgba(0,0,0,.14);
   }
-  html.has-kb .kbHost, html.has-kb #kbHost{ display:block; }
+  html.has-kb :is(.kbHost, #kbHost){ display:block; }
 
   .kb{
     max-width:560px;
@@ -877,12 +869,12 @@
     background: rgba(0,0,0,.07);
   }
   .kbKey.reset{
-  font-size:13px;
-  color: rgba(0, 0, 0, 0.6); 
-  letter-spacing:.01em;
-  font-weight:700;
-  background: rgba(0,0,0,.07); /* same as Delete */
-}
+    font-size:13px;
+    color: rgba(0, 0, 0, 0.6);
+    letter-spacing:.01em;
+    font-weight:700;
+    background: rgba(0,0,0,.07); /* same as Delete */
+  }
 
   .kbKey.is-disabled{
     opacity:.38;
@@ -989,8 +981,8 @@
 
   @media (pointer: coarse) and (orientation: landscape) and (max-height: 430px){
     #rotateOverlay{ display:flex; }
-    #wrap, .wrap{ pointer-events:none; opacity:.25; filter: blur(2px); }
-    #kbHost, .kbHost{ display:none !important; }
+    :is(#wrap, .wrap){ pointer-events:none; opacity:.25; filter: blur(2px); }
+    :is(#kbHost, .kbHost){ display:none !important; }
     #hintsModal{ display:none !important; }
   }
 
@@ -1001,7 +993,7 @@
       --lift-hints: 88px;
     }
 
-    .nav a, .nav button{ padding:4px 9px; }
+    .nav :is(a, button){ padding:4px 9px; }
 
     .clue{
       font-size:clamp(32px,6.6vw,38px);
@@ -1025,6 +1017,7 @@
     .hintSpot{ top:40%; }
   }
 </style>
+
 
 </head>
 
