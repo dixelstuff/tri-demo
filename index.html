@@ -95,29 +95,36 @@
     pointer-events:none; /* purely informational – clue still toggles assist */
   }
 
-  .statsBtn{
+   .statsBtn{
     position:absolute;
     left:14px;
     top:10px;
-    width:30px;
-    height:30px;
+    width:32px;   /* slightly bigger */
+    height:32px;  /* slightly bigger */
     border-radius:999px;
-    border:none;
     padding:0;
     margin:0;
     background:rgba(255,255,255,.34);
-    border:1px solid rgba(0,0,0,.12);
+    border:none;          /* remove white border */
     display:flex;
     align-items:center;
     justify-content:center;
     cursor:pointer;
     appearance:none;
     -webkit-appearance:none;
+    outline:none;         
+    box-shadow:none;
   }
-  .statsBtn:active{ transform:translateY(1px); }
+  .statsBtn:focus{
+    outline:none;
+    box-shadow:none;
+  }
+  .statsBtn:active{
+    transform:translateY(1px);
+  }
   .statsIcon{
-    width:20px;
-    height:20px;
+    width:22px;   
+    height:22px;  
     display:block;
     pointer-events:none;
   }
@@ -1202,8 +1209,8 @@
     .statsBtn{
       left:10px;
       top:8px;
-      width:28px;
-      height:28px;
+      width:30px;
+      height:30px;
     }
   }
 
@@ -1211,7 +1218,11 @@
   .modePill{
     right: calc(50% - 300px + 12px);
   }
+  .statsBtn{
+    left: calc(50% - 300px + 12px);
+  }
 }
+
 </style>
 
 
@@ -1955,9 +1966,8 @@ function openStats(){
   el.statsOverlay.classList.add('open');
   el.statsOverlay.setAttribute('aria-hidden', 'false');
   renderStatsView();
-  // hide on-screen keyboard if present
-  document.documentElement.classList.remove('has-kb');
 }
+
 
 function closeStats(){
   if(!el.statsOverlay) return;
