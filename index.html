@@ -25,8 +25,8 @@
     --lift-msg: 38px;
     --lift-hints: 96px;
     --msg-drop: 35px;        /* grid → warning msg down */
-    --result-drop: 30px;     /* grid → result msg down (total, not extra) */
-    --badge-drop: 74px;      /* result msg → badge down */
+    --result-drop: 32px;     /* grid → result msg down (total, not extra) */
+    --badge-drop: 72px;      /* result msg → badge down */
   }
 
   *{ box-sizing:border-box; }
@@ -416,7 +416,7 @@
   /* (merged: you had .msg.result in two places) */
   .msg.result{
     top:12px;
-    font-size:29px;
+    font-size:27px;
     transform: translateX(-50%) translateY(calc(var(--result-drop) - var(--msg-drop)));
   }
 
@@ -1013,7 +1013,7 @@
     .msgSlot{ height:84px; }
     .msg{ top:12px; font-size:20px; }
     .msg.warn{ font-size:19px; }
-    .msg.result{ top:14px; font-size:28px; }
+    .msg.result{ top:14px; font-size:25px; }
 
     .btn{ font-size:19px; padding:9px 15px; min-width:98px; }
     .kbKey{ height:46px; }
