@@ -448,9 +448,12 @@
     margin: 8px auto 0;
     display:flex;
     justify-content:center;
+    align-items:center;
     flex:0 0 auto;
     z-index:25;
+    min-height:40px;
   }
+
 
   /* When using custom KB, buttons become fixed; keep the dock pinned above them */
   html.has-kb .hintDockBottom{
@@ -2727,6 +2730,10 @@ function scheduleHintFly(kind){
     if(!state.pendingFly) return;
     state.flyAttempts++;
 
+    // Make sure the hint track is already in its correct slot
+    // (top under the clue when keyboard is present, bottom dock otherwise)
+    updateHintTrackPlacement();
+
     if(runHintFly(state.pendingFly)){
       state.pendingFly = null;
       state.flyAttempts = 0;
@@ -2754,6 +2761,7 @@ function scheduleHintFly(kind){
 
   requestAnimationFrame(tryRun);
 }
+
 
 /* =======================
    Drag ghost + drag logic
@@ -3542,37 +3550,45 @@ function applyHintTrackMode(mode){
     if(el.clueWrap) el.clueWrap.classList.remove('hasTopTrack');
   }
 }
-function updateHintTrackPlacement(){
-  if(!el.hintTrack || !el.hintDockBottom || !el.msgSlot || !el.btnRow) return;
+/* =======================
+   Hint track placement (top vs bottom)
+   ======================= */
 
-  updateBtnRowHeightVar();
-  if(state.useCustomKB) updateKeyboardHeightVar();
+function moveHintTrackTop(){
+  if(!el.hintTrack || !el.clueWrap) return;
+  if(el.hintTrack.parentElement === el.clueWrap) return;
 
-  const vh = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
-  const kbH = (state.useCustomKB && el.kbHost) ? (el.kbHost.getBoundingClientRect().height || 0) : 0;
-  const kbRatio = (vh > 0) ? (kbH / vh) : 0;
-
-  if(state.useCustomKB && kbRatio >= KB_FORCE_TOP_RATIO){
-    applyHintTrackMode('top');
-    return;
-  }
-
-  applyHintTrackMode('bottom');
-
-  requestAnimationFrame(()=>{
-    if(_hintTrackMode !== 'bottom') return;
-
-    const msgRect   = el.msgSlot.getBoundingClientRect();
-    const btnRect   = el.btnRow.getBoundingClientRect();
-    const trackRect = el.hintTrack.getBoundingClientRect();
-
-    const fits =
-      (trackRect.top    >= msgRect.bottom + HINT_PAD) &&
-      (trackRect.bottom <= btnRect.top     - HINT_PAD);
-
-    if(!fits) applyHintTrackMode('top');
-  });
+  el.clueWrap.appendChild(el.hintTrack);
+  el.clueWrap.classList.add('hasTopTrack');
+  el.hintTrack.classList.add('hintTrackTop');
 }
+
+function moveHintTrackBottom(){
+  if(!el.hintTrack || !el.hintDockBottom) return;
+  if(el.hintTrack.parentElement === el.hintDockBottom) return;
+
+  el.hintDockBottom.appendChild(el.hintTrack);
+  el.clueWrap.classList.remove('hasTopTrack');
+  el.hintTrack.classList.remove('hintTrackTop');
+}
+
+  
+function updateHintTrackPlacement(){
+  const docEl = document.documentElement;
+
+  // "Keyboard present" = our custom on-screen keyboard is active.
+  // We key off both the HTML class and the state flag for safety.
+  const hasKB = docEl.classList.contains('has-kb') || state.useCustomKB;
+
+  // With the on-screen keyboard we ALWAYS pin the track under the clue
+  // so the grid + buttons stay still. Otherwise it lives in the bottom dock.
+  if(hasKB){
+    moveHintTrackTop();
+  }else{
+    moveHintTrackBottom();
+  }
+}
+
 window.addEventListener('resize', ()=> requestAnimationFrame(updateHintTrackPlacement), {passive:true});
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize', ()=> requestAnimationFrame(updateHintTrackPlacement), {passive:true});
