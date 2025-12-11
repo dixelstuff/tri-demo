@@ -311,7 +311,7 @@
 
 
 
-/* Underlines for trigram matches – use the wrapper span for a continuous band */
+/* Underlines for trigram matches – apply to cw-letter spans so they survive inline-block */
 .u-w1,
 .u-w2,
 .u-red{
@@ -321,15 +321,31 @@
   text-decoration-skip-ink: none;
 }
 
-.u-w1{ text-decoration-color: rgba(255,220,0,.9); }
-.u-w2{ text-decoration-color: rgba(70,160,255,.92); }
-.u-red{ text-decoration-color: rgba(235,80,92,.92); }
-
+/* actually draw the underline on each letter span */
 .u-w1 .cw-letter,
 .u-w2 .cw-letter,
 .u-red .cw-letter{
-  /* let the parent span control the underline (colour + thickness) */
-  pointer-events:none; /* clicks fall through to the parent .clueWord */
+  text-decoration-line: underline;
+  text-decoration-thickness: 6px;
+  text-underline-offset: 9px;
+  text-decoration-skip-ink: none;
+}
+
+/* colours (yellow / blue / red) */
+.u-w1,
+.u-w1 .cw-letter{ text-decoration-color: rgba(255,220,0,.9); }
+
+.u-w2,
+.u-w2 .cw-letter{ text-decoration-color: rgba(70,160,255,.92); }
+
+.u-red,
+.u-red .cw-letter{ text-decoration-color: rgba(235,80,92,.92); }
+
+/* clicks still pass through to the parent clue word */
+.u-w1 .cw-letter,
+.u-w2 .cw-letter,
+.u-red .cw-letter{
+  pointer-events:none;
 }
 
 
