@@ -283,75 +283,64 @@
   box-shadow: none;
 }
 
-/* per-word glow colours (default = word1 yellow; word2 overrides to blue) */
+/* per-word glow colours */
 .clueWord{
-  --triGlowStrong:  rgba(255, 220, 0, 1.00);
-  --triGlowSoft:    rgba(255, 220, 0, .92);
+  /* peak (brief) */
+  --triGlowPeak:    rgba(255, 220, 0, 1.00);
+  --triGlowPeakSoft:rgba(255, 220, 0, .85);
 
-  /* stronger “resting” glow */
-  --triGlowPersist: rgba(255, 220, 0, .72);
+  /* persistent (bright, but tighter spread to avoid “edge cutoff”) */
+  --triGlowPersist: rgba(255, 220, 0, .78);
+  --triGlowPersistSoft: rgba(255, 220, 0, .55);
 }
 .clueWord.cw-w2{
-  --triGlowStrong:  rgba(70, 160, 255, 1.00);
-  --triGlowSoft:    rgba(70, 160, 255, .92);
-  --triGlowPersist: rgba(70, 160, 255, .68);
+  --triGlowPeak:    rgba(70, 160, 255, 1.00);
+  --triGlowPeakSoft:rgba(70, 160, 255, .85);
+
+  --triGlowPersist: rgba(70, 160, 255, .74);
+  --triGlowPersistSoft: rgba(70, 160, 255, .52);
 }
 
-/* persistent halo for trigram letters once hint is active */
+/* persistent glow once hint is active */
 .clueWord.hint-active .cw-letter.tri{
   text-shadow:
-    0 0 7px  var(--triGlowPersist),
-    0 0 13px var(--triGlowPersist);
-  filter: brightness(1.12);
+    0 0 6px  var(--triGlowPersist),
+    0 0 12px var(--triGlowPersistSoft);
 }
 
-/* one-shot highlight animation, applied via JS only when the hint is first revealed */
+/* one-shot pop: fast peak → small settle → land on persistent */
 .clueWord.hint-active .cw-letter.tri-pop{
-  animation: clueTriGlow 3000ms ease-out both;  /* longer overall */
+  animation: clueTriGlow 520ms ease-out both;
 }
 
-/* bright ramp → LONG HOLD → late drop to persistent */
 @keyframes clueTriGlow{
   0%{
     text-shadow: 0 0 0 rgba(0,0,0,0);
-    filter:none;
   }
 
-  /* ramp up quickly */
-  12%{
+  /* get bright quickly (but keep radius tighter so it doesn’t hit the bubble edge) */
+  18%{
     text-shadow:
-      0 0 14px var(--triGlowStrong),
-      0 0 26px var(--triGlowStrong),
-      0 0 38px var(--triGlowStrong);
-    filter: brightness(1.75);
+      0 0 8px  var(--triGlowPeak),
+      0 0 16px var(--triGlowPeak),
+      0 0 22px var(--triGlowPeakSoft);
   }
 
-  /* hold bright for most of the duration */
-  78%{
+  /* settle a touch */
+  42%{
     text-shadow:
-      0 0 14px var(--triGlowStrong),
-      0 0 26px var(--triGlowStrong),
-      0 0 38px var(--triGlowStrong);
-    filter: brightness(1.70);
+      0 0 7px  var(--triGlowPeak),
+      0 0 14px var(--triGlowPeakSoft);
   }
 
-  /* begin softening near the end */
-  92%{
-    text-shadow:
-      0 0 11px var(--triGlowSoft),
-      0 0 21px var(--triGlowSoft),
-      0 0 30px var(--triGlowSoft);
-    filter: brightness(1.35);
-  }
-
-  /* land on the persistent state */
+  /* finish exactly at the persistent state */
   100%{
     text-shadow:
-      0 0 7px  var(--triGlowPersist),
-      0 0 13px var(--triGlowPersist);
-    filter: brightness(1.12);
+      0 0 6px  var(--triGlowPersist),
+      0 0 12px var(--triGlowPersistSoft);
   }
 }
+
 
 
 
