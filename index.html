@@ -267,48 +267,50 @@
   .clueWord.hint-active .cw-letter.tri{
     opacity:1;
     filter:none;
-  }
-
-  /* soft “band” behind trigram letters */
-  .clueWord.hint-active .cw-letter.tri::before{
-    content:"";
-    position:absolute;
-    inset:-0.12em 0;          /* extends slightly above/below, no width change */
+    background:rgba(255,243,179,.96); /* soft yellow band */
     border-radius:8px;
-    background:rgba(255,243,179,.96); /* soft yellow; matches w1 feel */
     box-shadow:
       0 0 0 1px rgba(0,0,0,.04),
       0 0 18px rgba(0,0,0,.25);
-    transform-origin:center center;
     animation: clueTriBand 260ms ease-out both;
-    z-index:-1;               /* keeps band behind letters + underline */
   }
 
   @keyframes clueTriBand{
     0%{
       opacity:0;
-      transform:scaleY(0.3);
+      transform:scale(0.88);
     }
     55%{
       opacity:1;
-      transform:scaleY(1.08);
+      transform:scale(1.06);
     }
     100%{
       opacity:1;
-      transform:scaleY(1);
+      transform:scale(1);
     }
   }
 
 
+
+  /* Underlines for trigram matches – work with per-letter .cw-letter spans */
   .u-w1, .u-w2, .u-red{
+    /* don’t rely on parent decoration any more */
+    text-decoration: none;
+  }
+
+  .u-w1 .cw-letter,
+  .u-w2 .cw-letter,
+  .u-red .cw-letter{
     text-decoration: underline;
     text-decoration-thickness: 6px;
     text-underline-offset: 9px;
-    pointer-events:none;
+    pointer-events:none; /* clicks fall through to the parent .clueWord */
   }
-  .u-w1{ text-decoration-color: rgba(255,220,0,.9); }
-  .u-w2{ text-decoration-color: rgba(70,160,255,.92); }
-  .u-red{ text-decoration-color: rgba(235,80,92,.92); }
+
+  .u-w1 .cw-letter{ text-decoration-color: rgba(255,220,0,.9); }
+  .u-w2 .cw-letter{ text-decoration-color: rgba(70,160,255,.92); }
+  .u-red .cw-letter{ text-decoration-color: rgba(235,80,92,.92); }
+
 
   /* ===== Grid ===== */
   :is(.gridDock, #gridDock){
