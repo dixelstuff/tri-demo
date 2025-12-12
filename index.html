@@ -1460,8 +1460,16 @@ function startMax(){ return current()._startMax; }
 
 function renderSmart(){
   render(!state.useCustomKB);
+
+  // If any hints have been used and the puzzle isn't finished,
+  // persist current state (hints + grid letters + mode + focus).
+  if((state.hintsUsed.w1 || state.hintsUsed.w2 || state.hintsUsed.extras) && !state.finished){
+    saveInProgressForCurrentPuzzle();
+  }
+
   requestAnimationFrame(updateHintTrackPlacement);
 }
+
 
 /* =======================
    Visible-time stopwatch
@@ -1609,6 +1617,7 @@ function loadStatsStore(){
   }
 }
 
+
 function saveStatsStore(data){
   if(!hasLocalStorage()) return;
   try{ window.localStorage.setItem(LS_KEY, JSON.stringify(data)); }catch(e){}
@@ -1622,7 +1631,7 @@ function storeResultForCurrentPuzzle(skill, gaveUp){
   const data = loadStatsStore();
   const id = String(state.i);
 
-  // Store the finished result as before
+  // Store the finished result
   data.results[id] = {
     puzzleIndex: state.i,
     puzzleNumber: state.i + 1,
@@ -1634,7 +1643,7 @@ function storeResultForCurrentPuzzle(skill, gaveUp){
     ts: Date.now()
   };
 
-  // Once it's finished, there should be no in-progress state for this puzzle
+  // Once it's finished, remove any in-progress state for this puzzle
   if(data.progress && typeof data.progress === "object"){
     delete data.progress[id];
   }
@@ -1642,10 +1651,104 @@ function storeResultForCurrentPuzzle(skill, gaveUp){
   saveStatsStore(data);
 }
 
+
 function getResultForPuzzle(idx){
   const data = loadStatsStore();
   return data.results[String(idx)] || null;
 }
+  function getProgressForPuzzle(idx){
+  const data = loadStatsStore();
+  return (data.progress && data.progress[String(idx)]) || null;
+}
+
+/**
+ * Save minimal in-progress state for the current puzzle:
+ *  - which hints have been used
+ *  - total hintCount
+ *  - whether assist mode is on
+ *  - current grid letters
+ *  - current focusIdx
+ *
+ * If the puzzle is finished, or no hints used, the progress entry is removed.
+ */
+function saveInProgressForCurrentPuzzle(){
+  if(!hasLocalStorage()) return;
+  const data = loadStatsStore();
+  const id = String(state.i);
+
+  if(!data.progress || typeof data.progress !== "object"){
+    data.progress = {};
+  }
+
+  const anyHintUsed = !!(state.hintsUsed?.w1 || state.hintsUsed?.w2 || state.hintsUsed?.extras);
+
+  if(state.finished || !anyHintUsed){
+    // Nothing to persist / or puzzle is done → clear any leftover progress
+    delete data.progress[id];
+  }else{
+    const gridChars = snapshotGridChars();
+    const n = getN();
+    const focus = clamp(state.focusIdx ?? 0, 0, n-1);
+
+    data.progress[id] = {
+      puzzleIndex: state.i,
+      hintsUsed: {
+        w1: !!(state.hintsUsed && state.hintsUsed.w1),
+        w2: !!(state.hintsUsed && state.hintsUsed.w2),
+        extras: !!(state.hintsUsed && state.hintsUsed.extras),
+      },
+      hintCount: clamp(state.hintCount || 0, 0, 3),
+      assistOn: !!state.assist,
+      grid: gridChars,
+      focusIdx: focus,
+      ts: Date.now()
+    };
+  }
+
+  saveStatsStore(data);
+}
+
+/**
+ * Apply stored in-progress hint + grid state to the current puzzle index.
+ * Returns true if anything was applied.
+ */
+function applyStoredProgressToCurrentPuzzle(){
+  const saved = getProgressForPuzzle(state.i);
+  if(!saved) return false;
+
+  const p = current();
+  const n = getN();
+
+  // Restore hints + mode
+  state.hintsUsed = {
+    w1: !!(saved.hintsUsed && saved.hintsUsed.w1),
+    w2: !!(saved.hintsUsed && saved.hintsUsed.w2),
+    extras: !!(saved.hintsUsed && saved.hintsUsed.extras),
+  };
+  state.hintCount = clamp(saved.hintCount || 0, 0, 3);
+
+  state.assist = !!saved.assistOn;
+  state.assistLocked = !!saved.assistOn;
+
+  // Restore grid letters as singles (no placed trigrams; they can be auto-promoted again if needed)
+  state.placed = { w1:null, w2:null };
+  state.singles = [];
+  const chars = Array.isArray(saved.grid) ? saved.grid : [];
+
+  for(let i=0; i<Math.min(n, chars.length); i++){
+    const ch = String(chars[i] || "").toLowerCase();
+    if(ch && isAlpha(ch)){
+      state.singles.push({ id: uid(), ch, idx:i });
+    }
+  }
+
+  const focus = (typeof saved.focusIdx === "number") ? clamp(saved.focusIdx, 0, n-1) : 0;
+  state.focusIdx = focus;
+
+  updateModePill();
+  return true;
+}
+
   function getProgressForPuzzle(idx){
   const data = loadStatsStore();
   return (data.progress && data.progress[String(idx)]) || null;
@@ -1809,12 +1912,23 @@ function totalCompletedCount(){
 
 function checkResetParam(){
   try{
-    const qs = window.location.search || "";
-    if(!qs) return;
-    const params = new URLSearchParams(qs);
-    if(params.has("reset")) clearAllStats();
-  }catch(e){}
+    const url = new URL(window.location.href);
+    if(!url.searchParams.has("reset")) return;
+
+    // Clear all stored stats/progress
+    clearAllStats();
+
+    // Remove the "reset" param from the URL so refreshes don't re-trigger it
+    url.searchParams.delete("reset");
+    const newSearch = url.searchParams.toString();
+    const newUrl = url.pathname + (newSearch ? `?${newSearch}` : "") + url.hash;
+
+    window.history.replaceState({}, document.title, newUrl);
+  }catch(e){
+    // swallow errors – better to fail silently than break init()
+  }
 }
+
 
 function renderStatsView(){
   if (!el.statsBody) return;
@@ -4008,7 +4122,7 @@ function applyHint(id){
     state.hintsUsed.w1 = true;
     state.hintCount += 1;
 
-    saveInProgressForCurrentPuzzle();   // <-- NEW
+    saveInProgressForCurrentPuzzle();
 
     scheduleHintFly('w1');
     renderSmart();
@@ -4023,7 +4137,7 @@ function applyHint(id){
     state.hintsUsed.w2 = true;
     state.hintCount += 1;
 
-    saveInProgressForCurrentPuzzle();   // <-- NEW
+    saveInProgressForCurrentPuzzle();
 
     scheduleHintFly('w2');
     renderSmart();
@@ -4039,13 +4153,14 @@ function applyHint(id){
     state.hintCount += 1;
     if(state.bank.length === 0) rebuildBank();
 
-    saveInProgressForCurrentPuzzle();   // <-- NEW
+    saveInProgressForCurrentPuzzle();
 
     scheduleHintFly('extras');
     renderSmart();
     return;
   }
 }
+
 
 
 /* =======================
@@ -4116,6 +4231,7 @@ el.nextBtn.addEventListener('click', (e)=>{
   }
   renderSmart();
 });
+
 
 
 // Stats button wiring
@@ -4274,6 +4390,7 @@ function init(){
 
   renderSmart();
 }
+
 
 init();
 </script>
