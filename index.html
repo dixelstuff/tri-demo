@@ -649,6 +649,17 @@
     z-index:25;
     min-height:40px;
   }
+/* ===== Extras-only hint track ===== */
+#trackW1, #trackW2{ display:none !important; }
+
+/* We no longer ever use the bottom dock */
+#hintDockBottom{ display:none !important; }
+
+/* Hide the whole track until Hint 3 (extras) is revealed */
+.hintTrack.track-hidden{
+  opacity:0;
+  pointer-events:none;
+}
 
 
   /* When using custom KB, buttons become fixed; keep the dock pinned above them */
@@ -1391,15 +1402,16 @@
      <div class="clueWrap" id="clueWrap">
     <div class="clue" id="clue"></div>
 
-    <!-- floating hint track UNDER the clue -->
-    <div class="hintTrack hintTrackTop" id="hintTrack" aria-label="Hint tracker">
-      <div class="trackRow" id="trackRow">
-        <div class="trackBlock" id="trackW1"></div>
-        <div class="trackBlock" id="trackW2"></div>
-        <div class="trackBlock" id="trackExtras"></div>
-      </div>
-    </div>
+<div class="hintTrack hintTrackTop track-hidden" id="hintTrack" aria-label="Hint tracker">
+  <div class="trackRow" id="trackRow">
+    <div class="trackBlock" id="trackExtras"></div>
+
+    <!-- kept for backward-compat (script may reference them), but hidden via CSS -->
+    <div class="trackBlock" id="trackW1" aria-hidden="true"></div>
+    <div class="trackBlock" id="trackW2" aria-hidden="true"></div>
   </div>
+</div>
+
 
   <div class="gridDock" id="gridDock">
     <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
@@ -1653,6 +1665,38 @@ const state = {
   hintVisual: { w1:false, w2:false },
 };
 
+/* =======================
+   Fly-in: Extras only
+   (Ignore fly requests for hint 1/2)
+   ======================= */
+(function(){
+  let _pendingFly = state.pendingFly;
+
+  Object.defineProperty(state, "pendingFly", {
+    configurable: true,
+    enumerable: true,
+    get(){ return _pendingFly; },
+    set(v){
+      if(v == null){ _pendingFly = null; return; }
+
+      // Try common identifiers used by fly payloads
+      let id = null;
+      if(typeof v === "string") id = v;
+      else if(typeof v === "object"){
+        id = v.id || v.kind || v.group || v.hintId || v.which || v.type || null;
+      }
+
+      // Allow extras-only (be tolerant: some code uses "hex" for extras fly class)
+      const ok = (id == null) || (String(id) === HINT_IDS.extras) || (String(id) === "hex");
+      if(!ok){
+        _pendingFly = null;     // drop any w1/w2 fly requests
+        return;
+      }
+
+      _pendingFly = v;
+    }
+  });
+})();
 
 /* =======================
    Flags (Enhanced vs minimal)
@@ -4420,55 +4464,21 @@ function moveHintTrackBottom(){
 
   
 function updateHintTrackPlacement(){
-  const track      = el.hintTrack;
-  const topHost    = el.clueWrap;
-  const bottomHost = el.hintDockBottom;
-  const gridDock   = el.gridDock;
-  const btnRow     = el.btnRow;
+  if(!el.hintTrack || !el.clueWrap) return;
 
-  if(!track || !topHost || !bottomHost || !gridDock || !btnRow) return;
-
-  const root  = document.documentElement;
-  const hasKB = root.classList.contains('has-kb');
-
-  // Measure current layout
-  const gridRect  = gridDock.getBoundingClientRect();
-  const btnRect   = btnRow.getBoundingClientRect();
-  const trackRect = track.getBoundingClientRect();
-
-  // If we can’t measure properly, fall back to bottom
-  if(!gridRect || !btnRect || !trackRect){
-    if(track.parentNode !== bottomHost) bottomHost.appendChild(track);
-    topHost.classList.remove('hasTopTrack');
-    track.classList.remove('hintTrackTop');
-    return;
+  // Always keep the hint track under the clue
+  if(el.hintTrack.parentElement !== el.clueWrap){
+    el.clueWrap.appendChild(el.hintTrack);
   }
+  el.hintTrack.classList.add('hintTrackTop');
 
+  // Only show/reserve space when Hint 3 (extras) is active
+  const showExtras = !!(state.hintsUsed && state.hintsUsed.extras);
 
-  const available = btnRect.top - gridRect.bottom;
-
-
-  const MIN_GAP = 12; // breathing room above the bottom row
-  const needTop = hasKB && (available < (trackRect.height + MIN_GAP));
-
-  const currentlyTop = (track.parentNode === topHost);
-
-  if(needTop){
-    // Move to TOP (under clue)
-    if(!currentlyTop){
-      topHost.appendChild(track);
-    }
-    topHost.classList.add('hasTopTrack');
-    track.classList.add('hintTrackTop');
-  }else{
-    // Keep / move to BOTTOM dock
-    if(currentlyTop || track.parentNode !== bottomHost){
-      bottomHost.appendChild(track);
-    }
-    topHost.classList.remove('hasTopTrack');
-    track.classList.remove('hintTrackTop');
-  }
+  el.hintTrack.classList.toggle('track-hidden', !showExtras);
+  el.clueWrap.classList.toggle('hasTopTrack', showExtras);
 }
+
 
 
 window.addEventListener('resize', ()=> requestAnimationFrame(updateHintTrackPlacement), {passive:true});
