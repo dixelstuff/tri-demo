@@ -285,21 +285,22 @@
 
 /* per-word glow colours */
 .clueWord{
-  /* peak (brief) – hotter gold */
-  --triGlowPeak:        rgba(255, 200, 0, 1.00);
-  --triGlowPeakSoft:    rgba(255, 200, 0, .92);
+  /* peak (brief) */
+  --triGlowPeak:    rgba(255, 220, 0, 1.00);
+  --triGlowPeakSoft:rgba(255, 220, 0, .85);
 
-  /* persistent (vibrant, still tight spread) */
-  --triGlowPersist:     rgba(255, 200, 0, .94);
-  --triGlowPersistSoft: rgba(255, 200, 0, .82);
+  /* persistent (bright, but tighter spread to avoid “edge cutoff”) */
+  --triGlowPersist: rgba(255, 220, 0, .88);
+  --triGlowPersistSoft: rgba(255, 220, 0, .75);
 }
-.clueWord.cw-w2{
-  /* brighter sky-blue so black text stays readable */
-  --triGlowPeak:     rgba(95, 205, 255, 1.00);
-  --triGlowPeakSoft: rgba(95, 205, 255, .92);
 
-  --triGlowPersist:     rgba(95, 205, 255, .96);
-  --triGlowPersistSoft: rgba(95, 205, 255, .84);
+.clueWord.cw-w2{
+  /* just a touch “whiter”/lighter than before */
+  --triGlowPeak:     rgba(105, 210, 255, 1.00);
+  --triGlowPeakSoft: rgba(105, 210, 255, .92);
+
+  --triGlowPersist:     rgba(105, 210, 255, .96);
+  --triGlowPersistSoft: rgba(105, 210, 255, .84);
 }
 
 /* persistent glow once hint is active */
