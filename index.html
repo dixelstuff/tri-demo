@@ -4413,12 +4413,7 @@ function buildKeyboard(){
   requestAnimationFrame(()=> updateKeyboardHeightVar());
 }
 
-/* =======================
-   Hint track placement (TOP vs BOTTOM)
-   ======================= */
-const KB_FORCE_TOP_RATIO = 0.8;
-const HINT_PAD = 10;
-let _hintTrackMode = null;
+
 
 function updateBtnRowHeightVar(){
   const r = el.btnRow?.getBoundingClientRect?.();
@@ -4426,57 +4421,27 @@ function updateBtnRowHeightVar(){
     document.documentElement.style.setProperty('--btn-row-h', `${Math.ceil(r.height)}px`);
   }
 }
-function applyHintTrackMode(mode){
-  if(_hintTrackMode === mode) return;
-  _hintTrackMode = mode;
 
-  if(mode === 'top'){
-    if(el.clue) el.clue.insertAdjacentElement('afterend', el.hintTrack);
-    el.hintTrack.classList.add('hintTrackTop');
-    if(el.clueWrap) el.clueWrap.classList.add('hasTopTrack');
-  }else{
-    if(el.hintDockBottom) el.hintDockBottom.appendChild(el.hintTrack);
-    el.hintTrack.classList.remove('hintTrackTop');
-    if(el.clueWrap) el.clueWrap.classList.remove('hasTopTrack');
-  }
-}
-/* =======================
-   Hint track placement (top vs bottom)
-   ======================= */
-
-function moveHintTrackTop(){
-  if(!el.hintTrack || !el.clueWrap) return;
-  if(el.hintTrack.parentElement === el.clueWrap) return;
-
-  el.clueWrap.appendChild(el.hintTrack);
-  el.clueWrap.classList.add('hasTopTrack');
-  el.hintTrack.classList.add('hintTrackTop');
-}
-
-function moveHintTrackBottom(){
-  if(!el.hintTrack || !el.hintDockBottom) return;
-  if(el.hintTrack.parentElement === el.hintDockBottom) return;
-
-  el.hintDockBottom.appendChild(el.hintTrack);
-  el.clueWrap.classList.remove('hasTopTrack');
-  el.hintTrack.classList.remove('hintTrackTop');
-}
 
   
 function updateHintTrackPlacement(){
-  if(!el.hintTrack || !el.clueWrap) return;
-
-  // Always keep the hint track under the clue
-  if(el.hintTrack.parentElement !== el.clueWrap){
-    el.clueWrap.appendChild(el.hintTrack);
-  }
-  el.hintTrack.classList.add('hintTrackTop');
+  if(!el.hintTrack || !el.clue) return;
 
   // Only show/reserve space when Hint 3 (extras) is active
   const showExtras = !!(state.hintsUsed && state.hintsUsed.extras);
 
+  // IMPORTANT: put the hint track *immediately* under the clue element,
+  // not "at the end of #clueWrap" (which can be down near the bottom buttons).
+  if(el.clue.nextElementSibling !== el.hintTrack){
+    el.clue.insertAdjacentElement('afterend', el.hintTrack);
+  }
+
+  el.hintTrack.classList.add('hintTrackTop');
+
   el.hintTrack.classList.toggle('track-hidden', !showExtras);
-  el.clueWrap.classList.toggle('hasTopTrack', showExtras);
+  if(el.clueWrap){
+    el.clueWrap.classList.toggle('hasTopTrack', showExtras);
+  }
 }
 
 
