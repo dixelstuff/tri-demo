@@ -1070,6 +1070,29 @@
     .modePill{ right:calc(50% - 300px + 12px); }
     .statsBtn{ left:calc(50% - 300px + 12px); }
   }
+
+  /* Stats overlay typography boost */
+.statsTitle{
+  font-size: 1.4rem;         /* bigger, “headliney” */
+  font-weight: 700;
+}
+
+.statsSection h3{
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.statsSummary{
+  font-size: 0.98rem;        /* up from typical body size */
+  line-height: 1.45;
+}
+
+.statsEmpty,
+.statsIntro{
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
 </style>
 
 
@@ -1713,6 +1736,18 @@ function renderStatsView(){
   const classic = computeModeStats("Classic");
   const elite   = computeModeStats("Elite");
 
+  // Update the overlay title: "N puzzles played"
+  const titleEl = document.getElementById("statsTitle");
+  if (titleEl){
+    if (!total){
+      titleEl.textContent = "No puzzles played yet";
+    } else if (total === 1){
+      titleEl.textContent = "1 puzzle played";
+    } else {
+      titleEl.textContent = `${total} puzzles played`;
+    }
+  }
+
   // helper to render one mode block
   function modeSection(label, stats){
     if (!stats || !stats.count){
@@ -1746,10 +1781,9 @@ function renderStatsView(){
   if (!total){
     html = `<p class="statsEmpty">No puzzles completed yet. Solve a few, then check back here!</p>`;
   } else {
+    // We’ve moved the “N puzzles played” up into the title,
+    // so we skip the old intro line here.
     html += `
-      <div class="statsIntro">
-        <p><strong>${total}</strong> puzzles played so far.</p>
-      </div>
       ${modeSection("Classic", classic)}
       ${modeSection("Elite", elite)}
     `;
