@@ -92,8 +92,10 @@
     color:rgba(0,0,0,.68);
     font-weight:700;
     opacity:.85;
-    pointer-events:none;
+    pointer-events:auto;
+    cursor:pointer;
   }
+
 
   /* Top-left icon buttons */
   .statsBtn,
@@ -996,6 +998,25 @@
     opacity:.7;
   }
 
+    .helpModeLink{
+    margin-top:8px;
+    font-size:13px;
+  }
+  .linkBtn{
+    border:0;
+    padding:0;
+    margin:0;
+    background:none;
+    color:#1a4ed8;
+    font:inherit;
+    text-decoration:underline;
+    cursor:pointer;
+  }
+  .linkBtn:active{
+    transform:translateY(1px);
+  }
+
+
   .statRow{ display:flex; align-items:center; gap:6px; margin-bottom:3px; }
   .statLabel{ flex:0 0 64px; font-size:12px; opacity:.8; }
   .statBar{
@@ -1014,6 +1035,8 @@
   .statValue{ flex:0 0 auto; min-width:18px; text-align:right; font-size:12px; }
   .statsEmpty{ margin:0 0 4px; font-size:13px; opacity:.75; }
 
+
+  
   /* ===== Rotate overlay ===== */
   #rotateOverlay{
     display:none;
@@ -1214,30 +1237,46 @@
         <button class="modalX" id="helpClose" type="button" aria-label="Close how to play">×</button>
       </div>
       <div class="modalBody" id="helpBody">
-        <p><strong>Goal:</strong> Find the 7-letter word that shares:</p>
+        <!-- (new help body from step 3 goes here) -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Mode info modal -->
+  <div class="modalOverlay" id="modeOverlay" aria-hidden="true">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="modeTitle">
+      <div class="modalHdr">
+        <div class="modalTitle" id="modeTitle">Elite vs Classic</div>
+        <button class="modalX" id="modeClose" type="button" aria-label="Close mode info">×</button>
+      </div>
+      <div class="modalBody" id="modeBody">
+        <p>
+          <strong>Elite mode</strong> is the default. You type everything yourself into the grid.
+          You can still use hints, but there are no assist tools on the clue.
+        </p>
+        <p>
+          <strong>Classic mode</strong> turns on assisted play. Tap the clue at any time to toggle Classic
+          mode on or off for the current puzzle. In Classic you can:
+        </p>
         <ul>
-          <li>One 3-letter trigram with clue <strong>Word&nbsp;1</strong>, and</li>
-          <li>One 3-letter trigram from clue <strong>Word&nbsp;2</strong>.</li>
+          <li>Tap a clue word to try each possible trigram in the grid, and</li>
+          <li>Drag trigrams or letters around to rearrange your attempt.</li>
         </ul>
         <p>
-          Trigrams are three consecutive letters in the same order. In the answer word the trigrams are allowed to overlap by 1-letter which means 
-          you'll need one or two extra letters to solve it. There is only ever ONE legitimate 7-letter 
-          English word answer!
+          Your <strong>skill score</strong> is tracked separately for Elite and Classic.
+          Classic gives you more tools to avoid hints, so its scores are shown in a separate column on the stats screen.
         </p>
-        <p><strong>Hint 1</strong> reveals the correct trigram from the first clue word.</p>
-        <p><strong>Hint 2</strong> reveals the trigram from the second clue word.</p>
-        <p><strong>Hint 3</strong> gives you the remaining letter/s you need.</p>
-      
         <p>
-          <b>Tap the clue to engage assisted mode</b> where you can add and replace
-          trigrams by tapping a word, and drag trigrams around the grid. Your skill score 
-          depends on time, wrong guesses, "fiddling" and hints!
+          You can switch between Elite and Classic at any time while solving.
+          The mode shown in the top-right pill is the one used when your solve (or give-up)
+          is recorded.
         </p>
       </div>
     </div>
   </div>
 
   <div class="kbHost" id="kbHost" aria-label="On-screen keyboard"></div>
+
 
   <!-- Stats overlay -->
   <div class="statsOverlay" id="statsOverlay" aria-hidden="true">
@@ -1349,7 +1388,11 @@ const el = {
   helpBtn: document.getElementById('helpBtn'),
   helpOverlay: document.getElementById('helpOverlay'),
   helpClose: document.getElementById('helpClose'),
+  modeOverlay: document.getElementById('modeOverlay'),
+  modeClose: document.getElementById('modeClose'),
+  helpModeLearnMore: document.getElementById('helpModeLearnMore'),
 };
+
 
 
 const TWOTRI_TEXT   = "Two trigrams from same word";
@@ -2061,6 +2104,7 @@ function closeStats(){
   el.statsOverlay.classList.remove('open');
   el.statsOverlay.setAttribute('aria-hidden', 'true');
 }
+
 function openHelp(){
   if(!el.helpOverlay) return;
   el.helpOverlay.classList.add('open');
@@ -2072,6 +2116,19 @@ function closeHelp(){
   el.helpOverlay.classList.remove('open');
   el.helpOverlay.setAttribute('aria-hidden', 'true');
 }
+
+function openModeInfo(){
+  if(!el.modeOverlay) return;
+  el.modeOverlay.classList.add('open');
+  el.modeOverlay.setAttribute('aria-hidden', 'false');
+}
+
+function closeModeInfo(){
+  if(!el.modeOverlay) return;
+  el.modeOverlay.classList.remove('open');
+  el.modeOverlay.setAttribute('aria-hidden', 'true');
+}
+
 
 /* =======================
    UI small helpers
@@ -4293,8 +4350,6 @@ el.nextBtn.addEventListener('click', (e)=>{
   renderSmart();
 });
 
-
-
 // Stats button wiring
 if(el.statsBtn){
   el.statsBtn.addEventListener('click', (e)=>{ e.preventDefault(); openStats(); });
@@ -4326,6 +4381,38 @@ if(el.helpOverlay){
     }
   }, { passive:false });
 }
+
+// Mode info wiring
+if(el.modePill){
+  el.modePill.addEventListener('click', (e)=>{
+    e.preventDefault();
+    openModeInfo();
+  });
+}
+if(el.modeClose){
+  el.modeClose.addEventListener('click', (e)=>{
+    e.preventDefault();
+    closeModeInfo();
+  });
+}
+if(el.modeOverlay){
+  el.modeOverlay.addEventListener('click', (e)=>{
+    if(e.target === el.modeOverlay){
+      e.preventDefault();
+      closeModeInfo();
+    }
+  }, { passive:false });
+}
+
+// "Learn more" inside How to play → close help, open mode modal
+if(el.helpModeLearnMore){
+  el.helpModeLearnMore.addEventListener('click', (e)=>{
+    e.preventDefault();
+    closeHelp();
+    openModeInfo();
+  });
+}
+
 
 document.addEventListener('keydown', (e)=>{
   if(state.finished) return;
