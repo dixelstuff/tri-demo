@@ -260,7 +260,7 @@
   /* non-trigram letters – fade text only, keep underline strong */
   .clueWord.hint-active .cw-letter.dim{
     opacity: 1;                     /* keep underline at full strength */
-    color: rgba(0,0,0,.22);         /* softer text */
+    color: rgba(0,0,0,.27);         /* softer text */
     filter: none;                   /* no blur */
   }
   .cw-letter{
@@ -294,11 +294,12 @@
   --triGlowPersistSoft: rgba(255, 220, 0, .75);
 }
 .clueWord.cw-w2{
-  --triGlowPeak:    rgba(70, 160, 255, 1.00);
-  --triGlowPeakSoft:rgba(70, 160, 255, .85);
+  /* brighter sky-blue so black text stays readable */
+  --triGlowPeak:     rgba(95, 205, 255, 1.00);
+  --triGlowPeakSoft: rgba(95, 205, 255, .92);
 
-  --triGlowPersist: rgba(70, 160, 255, .88);
-  --triGlowPersistSoft: rgba(70, 160, 255, .75);
+  --triGlowPersist:     rgba(95, 205, 255, .96);
+  --triGlowPersistSoft: rgba(95, 205, 255, .84);
 }
 
 /* persistent glow once hint is active */
