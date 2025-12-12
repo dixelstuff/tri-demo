@@ -147,10 +147,11 @@
   }
   .nav :is(a,button):active{ transform:translateY(1px); }
 
-  /* Nudge caret icons inside nav buttons upward a little */
-.nav :is(a,button) {
-  position: relative;
-  top: -4px;   /* adjust to -1px if you want a smaller lift */
+
+.nav .navCaret{
+  display:inline-block;
+  position:relative;
+  top:-2px; 
 }
 
 
@@ -1117,12 +1118,16 @@
     </button>
 
     <div class="toprow">
-      <div class="nav">
+    <div class="nav">
+  <a href="#" id="prevBtn" aria-label="Previous puzzle">
+    <span class="navCaret">‹</span>
+  </a>
+  <span class="count" id="count"></span>
+  <a href="#" id="nextBtn" aria-label="Next puzzle">
+    <span class="navCaret">›</span>
+  </a>
+</div>
 
-        <a href="#" id="prevBtn" aria-label="Previous puzzle">‹</a>
-        <span class="count" id="count"></span>
-        <a href="#" id="nextBtn" aria-label="Next puzzle">›</a>
-      </div>
     </div>
 <div class="modePill" id="modePill" aria-label="Mode: Elite">Elite</div>
     
