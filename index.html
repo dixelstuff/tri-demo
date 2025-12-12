@@ -1366,7 +1366,7 @@ const PUZZLES = [
   { clue:"Ankles ordeals", word1:"ankles", word2:"ordeals", answer:"realest", tri1:"les", tri2:"eal" },
   { clue:"Pains mudder", word1:"pains", word2:"mudder", answer:"insider", tri1:"ins", tri2:"der" },
   { clue:"Shame redrawn", word1:"shame", word2:"redrawn", answer:"dramedy", tri1:"ame", tri2:"dra" },
-  { clue:"Aliens butch", word1:"aliens", word2:"butch", answer:"halibut", tri1:"ali", tri2:"but" },
+  { clue:"Butch aliens", word1:"butch", word2:"aliens", answer:"halibut", tri1:"but", tri2:"ali" },
   { clue:"Layers exempts", word1:"layers", word2:"exempts", answer:"tempers", tri1:"ers", tri2:"emp" },
   { clue:"Pride earths", word1:"pride", word2:"earths", answer:"sidearm", tri1:"ide", tri2:"ear" },
   { clue:"Space archer", word1:"space", word2:"archer", answer:"apaches", tri1:"pac", tri2:"che" },
@@ -1393,40 +1393,28 @@ const el = {
   gridWrap: document.getElementById('gridWrap'),
   grid: document.getElementById('grid'),
   msg: document.getElementById('msg'),
-
   clueWrap: document.getElementById('clueWrap'),
-  msgSlot: document.getElementById('msgSlot'),
   hintDockBottom: document.getElementById('hintDockBottom'),
-
   hintTrack: document.getElementById('hintTrack'),
   trackW1: document.getElementById('trackW1'),
   trackW2: document.getElementById('trackW2'),
   trackExtras: document.getElementById('trackExtras'),
-
   hintsBtn: document.getElementById('hintsBtn'),
   checkBtn: document.getElementById('checkBtn'),
   btnRow: document.getElementById('btnRow'),
-
   prevBtn: document.getElementById('prevBtn'),
   nextBtn: document.getElementById('nextBtn'),
   count: document.getElementById('count'),
-
   kbHost: document.getElementById('kbHost'),
-
   hintsModal: document.getElementById('hintsModal'),
   hintsModalBody: document.getElementById('hintsModalBody'),
   hintsModalClose: document.getElementById('hintsModalClose'),
-
   modePill: document.getElementById('modePill'),
-
-  // stats
   statsBtn: document.getElementById('statsBtn'),
   statsOverlay: document.getElementById('statsOverlay'),
   statsBody: document.getElementById('statsBody'),
   statsClose: document.getElementById('statsClose'),
 };
-
-
 
 const TWOTRI_TEXT   = "Two trigrams from same word";
 const OVERLAP_TEXT  = "1-letter overlap allowed ✓";
@@ -1444,7 +1432,7 @@ const state = {
   hintCount: 0,
   hintsUsed: { w1:false, w2:false, extras:false },
 
-  assist: false,        // Enhanced mode (OFF by default)
+  assist: false,        // Classic (assist ON) vs Elite (assist OFF); OFF by default
   assistLocked: false,  // once ON this puzzle, can't be turned OFF (except reset)
 
   sel1: null,
@@ -1462,13 +1450,6 @@ const state = {
   msgTransientEndsAt: 0,
   lockMsg: false,
 
-  // Assist activation flash override
-  assistFlashOn: false,
-  assistFlashTimer: null,
-  assistGlowTimer: null,
-  assistPrevMsg: null,
-  assistMsgQueue: null,
-
   // Skill scoring
   cycleCount: 0,
   wrongCheckCount: 0,
@@ -1476,7 +1457,6 @@ const state = {
   postHint1Cycles: 0,
   effortUnits: 0,
 
-  // segment scoring markers
   visibleMsAtPuzzleStart: 0,
   visibleMsAtSegmentStart: 0,
   effortAtSegmentStart: 0,
@@ -1498,9 +1478,7 @@ const state = {
   exclTris: { w1: new Set(), w2: new Set() },
 
   overlapMsgOn: false,
-
   useCustomKB: false,
-
   modalOpen: false,
 
   // hint fly
@@ -1509,43 +1487,40 @@ const state = {
 };
 
 /* =======================
-   Flags (Enhanced vs minimal)
+   Flags (prebuilt objects; avoids realloc each call)
    ======================= */
-function flags(){
-  if(state.assist){
-    return {
-      allowClueTapPlace: true,
-      allowClueTapCycle: true,
-      allowHintTapPlace: true,
-      allowHint3TapInsert: true,
-      allowDragTrigrams: true,
-      allowAutoPromote: true,
-      showGridColors: true,
-      showStatusMessages: true,
-      showBadCellColor: true,
-      checkFeedback: "detailed",
-    };
-  }
-  return {
-    allowClueTapPlace: false,
-    allowClueTapCycle: false,
-    allowHintTapPlace: false,
-    allowHint3TapInsert: false,
-    allowDragTrigrams: false,
-    allowAutoPromote: false,
-    showGridColors: false,
-    showStatusMessages: true,
-    showBadCellColor: false,
-    checkFeedback: "minimal",
-  };
-}
+const FLAGS_CLASSIC = {
+  allowClueTapPlace: true,
+  allowClueTapCycle: true,
+  allowHintTapPlace: true,
+  allowHint3TapInsert: true,
+  allowDragTrigrams: true,
+  allowAutoPromote: true,
+  showGridColors: true,
+  showStatusMessages: true,
+  showBadCellColor: true,
+  checkFeedback: "detailed",
+};
+const FLAGS_ELITE = {
+  allowClueTapPlace: false,
+  allowClueTapCycle: false,
+  allowHintTapPlace: false,
+  allowHint3TapInsert: false,
+  allowDragTrigrams: false,
+  allowAutoPromote: false,
+  showGridColors: false,
+  showStatusMessages: true,
+  showBadCellColor: false,
+  checkFeedback: "minimal",
+};
+function flags(){ return state.assist ? FLAGS_CLASSIC : FLAGS_ELITE; }
+
 /* =======================
    Mode pill (Elite vs Classic)
    ======================= */
 function updateModePill(){
   if(!el.modePill) return;
-  const assistOn = !!state.assist;
-  const label = assistOn ? "Classic" : "Elite";
+  const label = state.assist ? "Classic" : "Elite";
   el.modePill.textContent = label;
   el.modePill.setAttribute("aria-label", `Mode: ${label}`);
 }
@@ -1555,16 +1530,54 @@ function updateModePill(){
    ======================= */
 function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
 function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
-function current(){ return PUZZLES[state.i]; }
 function norm(s){ return String(s||"").toLowerCase().replace(/[^a-z]/g,""); }
 function isAlpha(ch){ return /^[a-z]$/i.test(ch); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function getN(){
-  const a = norm(current().answer);
-  return clamp(a.length || 7, 6, 8);
+function ensurePuzzleDerived(p){
+  if(!p || p._derived) return;
+
+  // Normalised fields cached for speed
+  p._ans = norm(p.answer);
+  p._n   = clamp(p._ans.length || 7, 6, 8);
+  p._startMax = Math.max(0, p._n - TR);
+
+  p._w1 = norm(p.word1);
+  p._w2 = norm(p.word2);
+
+  p.tri1 = norm(p.tri1 || "");
+  p.tri2 = norm(p.tri2 || "");
+
+  // Allowed trigram sets per word (used by auto-promotion + overlap checks)
+  p._allowed = { w1:new Set(), w2:new Set() };
+  if(p._w1.length >= TR) for(let i=0;i<=p._w1.length-TR;i++) p._allowed.w1.add(p._w1.slice(i,i+TR));
+  if(p._w2.length >= TR) for(let i=0;i<=p._w2.length-TR;i++) p._allowed.w2.add(p._w2.slice(i,i+TR));
+
+  // Tri positions (used by hint 3 extras)
+  if(typeof p.tri1_pos !== "number"){
+    p.tri1_pos = (p.tri1 && p._ans.includes(p.tri1)) ? p._ans.indexOf(p.tri1) : 0;
+  }
+  if(typeof p.tri2_pos !== "number"){
+    if(p.tri2 && p._ans.includes(p.tri2)){
+      const first = p._ans.indexOf(p.tri2);
+      const second = p._ans.indexOf(p.tri2, first + 1);
+      p.tri2_pos = first;
+      if(p.tri1 && p.tri2 && first === p.tri1_pos && second !== -1) p.tri2_pos = second;
+    }else{
+      p.tri2_pos = 0;
+    }
+  }
+
+  p._derived = true;
 }
-function startMax(){ return Math.max(0, getN() - TR); }
+
+function current(){
+  const p = PUZZLES[state.i];
+  ensurePuzzleDerived(p);
+  return p;
+}
+function getN(){ return current()._n; }
+function startMax(){ return current()._startMax; }
 
 function renderSmart(){
   render(!state.useCustomKB);
@@ -1576,7 +1589,6 @@ function renderSmart(){
    ======================= */
 let _visibleMsTotal = 0;
 let _visibleStartTs = document.hidden ? null : performance.now();
-
 function _visibleOnHide(){
   const now = performance.now();
   if(_visibleStartTs != null){
@@ -1595,7 +1607,6 @@ document.addEventListener('visibilitychange', ()=>{
     _visibleOnShow();
   }
 }, { passive:true });
-
 function getVisibleMsNow(){
   const now = performance.now();
   return _visibleMsTotal + (_visibleStartTs != null ? (now - _visibleStartTs) : 0);
@@ -1607,17 +1618,14 @@ function getVisibleMsNow(){
 function skillResetForPuzzle(){
   const vNow = getVisibleMsNow();
   state.visibleMsAtPuzzleStart = vNow;
-
   state.visibleMsAtSegmentStart = vNow;
   state.effortAtSegmentStart = (state.effortUnits || 0);
   state.wrongCheckCountAtSegmentStart = (state.wrongCheckCount || 0);
   state.wrongCarry = 0;
 }
-
 function addEffort(units){
   state.effortUnits = (state.effortUnits || 0) + (units || 0);
 }
-
 function snapshotGridChars(){
   const n = getN();
   const out = new Array(n);
@@ -1652,7 +1660,6 @@ function skillBandForHints(h){
   if(h === 2) return { min: 48, max: 67 };
   return { min: 30, max: 47 };
 }
-
 function skillStartNewSegmentAfterHint(){
   const wrongNow = (state.wrongCheckCount || 0);
   const wrongStart = (state.wrongCheckCountAtSegmentStart || 0);
@@ -1666,7 +1673,6 @@ function skillStartNewSegmentAfterHint(){
   state.effortAtSegmentStart = (state.effortUnits || 0);
   state.wrongCheckCountAtSegmentStart = wrongNow;
 }
-
 function computeFinalSkill(gaveUp){
   if(gaveUp) return { skillRaw: 30, skill: 30 };
 
@@ -1680,8 +1686,7 @@ function computeFinalSkill(gaveUp){
   const effNow = (state.effortUnits || 0);
   const effSeg = (typeof state.effortAtSegmentStart === "number") ? state.effortAtSegmentStart : 0;
 
-  const RAW_BASE_E = getN();
-  const BASE_E = Math.max(0, RAW_BASE_E - 2); 
+  const BASE_E = Math.max(0, getN() - 2);
   const de = Math.max(0, (effNow - effSeg) - BASE_E);
 
   const wrongNow = (state.wrongCheckCount || 0);
@@ -1702,20 +1707,14 @@ function computeFinalSkill(gaveUp){
   const skill = clamp(Math.round(skillRaw), bandMin, bandMax);
   return { skillRaw, skill };
 }
+
 /* =======================
    Local storage + stats
    ======================= */
-
 const LS_KEY = "trigramGameStats_v1";
-
 function hasLocalStorage(){
-  try{
-    return typeof window !== "undefined" && !!window.localStorage;
-  }catch(e){
-    return false;
-  }
+  try{ return typeof window !== "undefined" && !!window.localStorage; }catch(e){ return false; }
 }
-
 function loadStatsStore(){
   if(!hasLocalStorage()) return { results:{} };
   try{
@@ -1729,71 +1728,53 @@ function loadStatsStore(){
     return { results:{} };
   }
 }
-
 function saveStatsStore(data){
   if(!hasLocalStorage()) return;
-  try{
-    window.localStorage.setItem(LS_KEY, JSON.stringify(data));
-  }catch(e){}
+  try{ window.localStorage.setItem(LS_KEY, JSON.stringify(data)); }catch(e){}
 }
-
 function clearAllStats(){
   if(!hasLocalStorage()) return;
-  try{
-    window.localStorage.removeItem(LS_KEY);
-  }catch(e){}
+  try{ window.localStorage.removeItem(LS_KEY); }catch(e){}
 }
-
-// Called whenever an answer is revealed (correct or give up)
 function storeResultForCurrentPuzzle(skill, gaveUp){
   if(!hasLocalStorage()) return;
   const data = loadStatsStore();
-  const id = String(state.i); // use puzzle index as key
-
+  const id = String(state.i);
   data.results[id] = {
     puzzleIndex: state.i,
     puzzleNumber: state.i + 1,
     hints: state.hintCount || 0,
     skill: skill,
-    mode: state.assist ? "Classic" : "Elite",  // Classic = assist ON, Elite = assist OFF
+    mode: state.assist ? "Classic" : "Elite",
     assistOn: !!state.assist,
     gaveUp: !!gaveUp,
     ts: Date.now()
   };
-
   saveStatsStore(data);
 }
-
 function getResultForPuzzle(idx){
   const data = loadStatsStore();
   return data.results[String(idx)] || null;
 }
-
-// First puzzle that does NOT have a stored result
 function firstUnplayedPuzzleIndex(){
   const data = loadStatsStore();
   for(let i=0; i<PUZZLES.length; i++){
-    if(!data.results || !Object.prototype.hasOwnProperty.call(data.results, String(i))){
-      return i;
-    }
+    if(!data.results || !Object.prototype.hasOwnProperty.call(data.results, String(i))) return i;
   }
-  // All completed; fall back to last puzzle
   return Math.max(0, PUZZLES.length - 1);
 }
-
-// Apply a stored result (if any) to the CURRENT puzzle index (state.i)
 function applyStoredResultToCurrentPuzzle(){
   const saved = getResultForPuzzle(state.i);
   if(!saved) return false;
 
   const p = current();
-  const ans = norm(p.answer);
+  const ans = p._ans;
   const n = getN();
 
   abortDrag();
   state.placed = {w1:null, w2:null};
   state.singles = [];
-  for(let i=0; i<n; i++){
+  for(let i=0;i<n;i++){
     state.singles.push({ id: uid(), ch: ans[i] || "", idx:i });
   }
   state.focusIdx = 0;
@@ -1810,11 +1791,9 @@ function applyStoredResultToCurrentPuzzle(){
   clearMsgTimer();
   setMsg("");
 
-  const line1 = saved.gaveUp
-    ? "You gave up!"
-    : `Correct - ${hintPhraseText(state.hintCount)}!`;
-
+  const line1 = saved.gaveUp ? "You gave up!" : `Correct - ${hintPhraseText(state.hintCount)}!`;
   setResultSkillMsg(line1, saved.skill);
+
   renderSmart();
   return true;
 }
@@ -1826,17 +1805,14 @@ function computeModeStats(modeLabel){
   const count = arr.length;
   if(!count) return { count:0 };
 
-  let sumHints = 0;
-  let sumSkill = 0;
+  let sumHints = 0, sumSkill = 0;
   const histSkill = { "88-100":0, "68-87":0, "48-67":0, "30-47":0 };
   const histHints = { 0:0, 1:0, 2:0, 3:0 };
 
   for(const r of arr){
     const h = clamp(r.hints || 0, 0, 3);
     const s = clamp(r.skill || 0, 0, 100);
-
-    sumHints += h;
-    sumSkill += s;
+    sumHints += h; sumSkill += s;
 
     if(s >= 88) histSkill["88-100"]++;
     else if(s >= 68) histSkill["68-87"]++;
@@ -1845,37 +1821,24 @@ function computeModeStats(modeLabel){
 
     histHints[h] = (histHints[h] || 0) + 1;
   }
-  return {
-    count,
-    avgHints: sumHints / count,
-    avgSkill: sumSkill / count,
-    histSkill,
-    histHints
-  };
+  return { count, avgHints: sumHints / count, avgSkill: sumSkill / count, histSkill, histHints };
 }
-
 function formatAvg(x, decimals){
   if(typeof x !== "number" || !isFinite(x)) return "—";
   return x.toFixed(decimals);
 }
-
 function totalCompletedCount(){
   const data = loadStatsStore();
   return data.results ? Object.keys(data.results).length : 0;
 }
-
-// ?reset in the URL clears stats and progress
 function checkResetParam(){
   try{
     const qs = window.location.search || "";
     if(!qs) return;
     const params = new URLSearchParams(qs);
-    if(params.has("reset")){
-      clearAllStats();
-    }
+    if(params.has("reset")) clearAllStats();
   }catch(e){}
 }
-
 function renderStatsView(){
   if(!el.statsBody) return;
 
@@ -1885,48 +1848,18 @@ function renderStatsView(){
 
   function sectionHTML(label, stats){
     if(!stats || !stats.count){
-      return `
-        <section class="statsSection">
-          <h3>${label}</h3>
-          <p class="statsEmpty">No puzzles completed in this mode yet.</p>
-        </section>`;
+      return `<section class="statsSection"><h3>${label}</h3><p class="statsEmpty">No puzzles completed in this mode yet.</p></section>`;
     }
 
     const hs = stats.histSkill;
     const hh = stats.histHints;
-    const maxSkill = Math.max(
-      hs["88-100"] || 0,
-      hs["68-87"] || 0,
-      hs["48-67"] || 0,
-      hs["30-47"] || 0
-    );
-    const maxHints = Math.max(
-      hh[0] || 0,
-      hh[1] || 0,
-      hh[2] || 0,
-      hh[3] || 0
-    );
 
-    const skillRow = (lbl, key) => {
-      const v = hs[key] || 0;
-      const w = maxSkill ? Math.round((v / maxSkill) * 100) : 0;
-      return `
-        <div class="statRow">
-          <span class="statLabel">${lbl}</span>
-          <span class="statBar"><span class="statBarFill" style="width:${w}%"></span></span>
-          <span class="statValue">${v}</span>
-        </div>`;
-    };
+    const maxSkill = Math.max(hs["88-100"]||0, hs["68-87"]||0, hs["48-67"]||0, hs["30-47"]||0);
+    const maxHints = Math.max(hh[0]||0, hh[1]||0, hh[2]||0, hh[3]||0);
 
-    const hintRow = (lbl, key) => {
-      const v = hh[key] || 0;
-      const w = maxHints ? Math.round((v / maxHints) * 100) : 0;
-      return `
-        <div class="statRow">
-          <span class="statLabel">${lbl}</span>
-          <span class="statBar"><span class="statBarFill" style="width:${w}%"></span></span>
-          <span class="statValue">${v}</span>
-        </div>`;
+    const row = (lbl, v, max)=> {
+      const w = max ? Math.round((v / max) * 100) : 0;
+      return `<div class="statRow"><span class="statLabel">${lbl}</span><span class="statBar"><span class="statBarFill" style="width:${w}%"></span></span><span class="statValue">${v}</span></div>`;
     };
 
     return `
@@ -1936,39 +1869,34 @@ function renderStatsView(){
         <div class="statsCols">
           <div class="statsCol">
             <h4>Skill</h4>
-            ${skillRow("88–100", "88-100")}
-            ${skillRow("68–87", "68-87")}
-            ${skillRow("48–67", "48-67")}
-            ${skillRow("30–47", "30-47")}
+            ${row("88–100", hs["88-100"]||0, maxSkill)}
+            ${row("68–87", hs["68-87"]||0, maxSkill)}
+            ${row("48–67", hs["48-67"]||0, maxSkill)}
+            ${row("30–47", hs["30-47"]||0, maxSkill)}
           </div>
           <div class="statsCol">
             <h4>Hints used</h4>
-            ${hintRow("0", 0)}
-            ${hintRow("1", 1)}
-            ${hintRow("2", 2)}
-            ${hintRow("3+", 3)}
+            ${row("0", hh[0]||0, maxHints)}
+            ${row("1", hh[1]||0, maxHints)}
+            ${row("2", hh[2]||0, maxHints)}
+            ${row("3+", hh[3]||0, maxHints)}
           </div>
         </div>
       </section>`;
   }
 
   el.statsBody.innerHTML = `
-    <div class="statsIntro">
-      <p><strong>${total}</strong> puzzles completed so far.</p>
-    </div>
+    <div class="statsIntro"><p><strong>${total}</strong> puzzles completed so far.</p></div>
     ${sectionHTML("Classic (assist on)", classic)}
     ${sectionHTML("Elite (assist off)", elite)}
   `;
 }
-
 function openStats(){
   if(!el.statsOverlay) return;
   el.statsOverlay.classList.add('open');
   el.statsOverlay.setAttribute('aria-hidden', 'false');
   renderStatsView();
 }
-
-
 function closeStats(){
   if(!el.statsOverlay) return;
   el.statsOverlay.classList.remove('open');
@@ -1984,7 +1912,6 @@ function shakeGrid(){
   el.gridDock.classList.add('shake');
   setTimeout(()=> el.gridDock.classList.remove('shake'), 420);
 }
-
 document.addEventListener('contextmenu', (e)=>{
   const t = e.target;
   if(t && t.closest && t.closest('#clue, #gridDock, #gridWrap, #hintTrack, #skillDock, #btnRow, #kbHost, #hintsModal')){
@@ -2007,8 +1934,6 @@ function setEnhanced(on, renderNow=true, source='auto'){
   if(state.assist === next) return;
 
   state.assist = next;
-
-  // No more glow/message – just update the tiny mode pill
   updateModePill();
 
   if(next) state.assistLocked = true;
@@ -2016,8 +1941,6 @@ function setEnhanced(on, renderNow=true, source='auto'){
 
   if(renderNow) renderSmart();
 }
-
-
 function resetEnhancedForNewPuzzle(){
   state.assist = false;
   state.assistLocked = false;
@@ -2025,19 +1948,17 @@ function resetEnhancedForNewPuzzle(){
   updateModePill();
 }
 
-
 /* =======================
-   Messages
+   Messages (simplified: removed unused assist-flash queue system)
    ======================= */
 function clearMsgTimer(){
   if(state.msgTimer){ clearTimeout(state.msgTimer); state.msgTimer=null; }
   state.msgTransient = false;
   state.msgTransientEndsAt = 0;
 }
-
 function setMsgDirect(text, kind){
   clearMsgTimer();
-  el.msg.classList.remove('show','warn','result','assistFlash');
+  el.msg.classList.remove('show','warn','result');
   el.msg.textContent = text || "";
   if(!text) return;
   void el.msg.offsetWidth;
@@ -2045,36 +1966,24 @@ function setMsgDirect(text, kind){
   if(kind === 'warn') el.msg.classList.add('warn');
   if(kind === 'result') el.msg.classList.add('result');
 }
-function setMsg(text, kind){
-  if(state.assistFlashOn){
-    state.assistMsgQueue = { text: text || "", kind: kind || null, transient:false };
-    return;
-  }
-  setMsgDirect(text, kind);
-}
+function setMsg(text, kind){ setMsgDirect(text, kind); }
+
 function setTransientMsgDirect(text, ms=2400, kind=null){
   setMsgDirect(text, kind);
   state.msgTransient = true;
   state.msgTransientEndsAt = performance.now() + ms;
 
   state.msgTimer = setTimeout(()=>{
-    el.msg.classList.remove('show','warn','result','assistFlash');
+    el.msg.classList.remove('show','warn','result');
     el.msg.textContent = "";
     state.msgTimer = null;
     state.msgTransient = false;
     state.msgTransientEndsAt = 0;
   }, ms);
 }
-function setTransientMsg(text, ms=2400, kind=null){
-  if(state.assistFlashOn){
-    state.assistMsgQueue = { text: text || "", kind: kind || null, transient:true, ms: ms || 2400 };
-    return;
-  }
-  setTransientMsgDirect(text, ms, kind);
-}
+function setTransientMsg(text, ms=2400, kind=null){ setTransientMsgDirect(text, ms, kind); }
 
 function clearTransientOnAnyChange(){
-  if(state.assistFlashOn) return;
   if(state.lockMsg){
     state.lockMsg = false;
     setMsg("");
@@ -2085,105 +1994,29 @@ function clearTransientOnAnyChange(){
     clearMsgTimer();
   }
 }
-
 function excludedMsgText(){
   const n = (state.exclTris?.w1?.size || 0) + (state.exclTris?.w2?.size || 0);
   return (n >= 2) ? "Your hints excluded these trigrams" : "Your hint excluded this trigram";
 }
 
-const ASSIST_FLASH_MS = 4200;
-const CLUE_GLOW_MS    = 3200;
-
-function triggerAssistActivatedUI(){
-  if(state.finished) return;
-
-  // glow flash on clue
-  if(state.assistGlowTimer){ clearTimeout(state.assistGlowTimer); state.assistGlowTimer = null; }
-  if(el.clue){
-    el.clue.classList.remove('assist-glow');
-    void el.clue.offsetWidth;
-    el.clue.classList.add('assist-glow');
-    state.assistGlowTimer = setTimeout(()=>{
-      el.clue.classList.remove('assist-glow');
-      state.assistGlowTimer = null;
-    }, CLUE_GLOW_MS);
-  }
-
-  // capture current message (pause transient timer if needed)
-  const now = performance.now();
-  state.assistPrevMsg = {
-    text: el.msg.textContent || "",
-    kind: el.msg.classList.contains('warn') ? 'warn'
-         : el.msg.classList.contains('result') ? 'result'
-         : null,
-    wasShown: el.msg.classList.contains('show') && !!el.msg.textContent,
-    transient: state.msgTransient,
-    remaining: state.msgTransient ? Math.max(0, (state.msgTransientEndsAt || 0) - now) : 0
-  };
-
-  if(state.msgTransient && state.msgTimer){
-    clearTimeout(state.msgTimer);
-    state.msgTimer = null;
-  }
-  state.msgTransient = false;
-  state.msgTransientEndsAt = 0;
-
-  state.assistMsgQueue = null;
-  state.assistFlashOn = true;
-
-  el.msg.classList.remove('show','warn','result');
-  el.msg.textContent = "Assist mode activated";
-  void el.msg.offsetWidth;
-  el.msg.classList.add('assistFlash');
-
-  if(state.assistFlashTimer){ clearTimeout(state.assistFlashTimer); state.assistFlashTimer = null; }
-  state.assistFlashTimer = setTimeout(()=>{
-    state.assistFlashOn = false;
-    state.assistFlashTimer = null;
-
-    el.msg.classList.remove('assistFlash');
-    el.msg.textContent = "";
-    el.msg.classList.remove('show','warn','result');
-
-    const q = state.assistMsgQueue;
-    state.assistMsgQueue = null;
-    if(q && q.text){
-      if(q.transient) setTransientMsgDirect(q.text, q.ms, q.kind);
-      else setMsgDirect(q.text, q.kind);
-      state.assistPrevMsg = null;
-      return;
-    }
-
-    const prev = state.assistPrevMsg;
-    state.assistPrevMsg = null;
-    if(prev && prev.wasShown && prev.text){
-      if(prev.transient && prev.remaining > 0) setTransientMsgDirect(prev.text, prev.remaining, prev.kind);
-      else setMsgDirect(prev.text, prev.kind);
-      return;
-    }
-
-    updateStatusMessages();
-  }, ASSIST_FLASH_MS);
-}
-
 /* =======================
-   Modal
+   Modal (kept; lightweight)
    ======================= */
 function closeModal(){
   if(!state.modalOpen) return;
   el.hintsModal.classList.remove('open');
   el.hintsModal.setAttribute('aria-hidden', 'true');
   state.modalOpen = false;
-
-  requestAnimationFrame(()=>{
-    if(!state.useCustomKB && !state.finished) focusCell(state.focusIdx ?? 0);
-  });
+  requestAnimationFrame(()=>{ if(!state.useCustomKB && !state.finished) focusCell(state.focusIdx ?? 0); });
 }
-el.hintsModal.addEventListener('pointerdown', (e)=>{
-  if(e.target === el.hintsModal){ e.preventDefault(); e.stopPropagation(); closeModal(); }
-},{passive:false});
-el.hintsModalClose.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeModal(); });
-
+if(el.hintsModal){
+  el.hintsModal.addEventListener('pointerdown', (e)=>{
+    if(e.target === el.hintsModal){ e.preventDefault(); e.stopPropagation(); closeModal(); }
+  },{passive:false});
+}
+if(el.hintsModalClose){
+  el.hintsModalClose.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeModal(); });
+}
 document.addEventListener('keydown', (e)=>{
   if(!state.modalOpen) return;
   if(e.key === "Escape"){
@@ -2205,7 +2038,6 @@ function splitClueTwoWords(clue){
   const parts = s.split(/\s+/).filter(Boolean);
   return [parts[0]||"", parts[1]||""];
 }
-
 function underlineBySubstrings(token, items){
   const chars = Array.from(token);
   const map=[];
@@ -2230,7 +2062,6 @@ function underlineBySubstrings(token, items){
         if(!cur || prio(it.cls) >= prio(cur)) clsAt[oi] = it.cls;
       }
 
-      // underline apostrophes inside match span
       const oi0 = map[pos];
       const oi1 = map[pos + sub.length - 1];
       if(oi0 != null && oi1 != null){
@@ -2242,7 +2073,6 @@ function underlineBySubstrings(token, items){
           }
         }
       }
-
       pos = clean.indexOf(sub, pos + 1);
     }
   }
@@ -2267,7 +2097,6 @@ function underlineBySubstrings(token, items){
    Grid model + focus
    ======================= */
 function trigramCells(start){ return [start, start+1, start+2]; }
-
 function gridIndexFromPoint(x,y){
   const els = document.elementsFromPoint ? document.elementsFromPoint(x,y) : [document.elementFromPoint(x,y)];
   for(const n of els){
@@ -2280,19 +2109,18 @@ function gridIndexFromPoint(x,y){
   }
   return null;
 }
-
 function overlapCount(aStart, bStart){
-  const aset = new Set(trigramCells(aStart));
-  let c=0;
-  for(const i of trigramCells(bStart)) if(aset.has(i)) c++;
-  return c;
+  const a0=aStart, b0=bStart;
+  return (a0===b0) ? 3
+    : (Math.abs(a0-b0)===1 ? 2
+    : (Math.abs(a0-b0)===2 ? 1 : 0));
 }
 function overlapMatchIdx(aStart, bStart){
-  const aset = new Set(trigramCells(aStart));
-  for(const i of trigramCells(bStart)) if(aset.has(i)) return i;
+  const a = trigramCells(aStart);
+  const b = trigramCells(bStart);
+  for(const i of a) if(b.includes(i)) return i;
   return null;
 }
-
 function trigramAtIndex(idx){
   for(const group of ['w1','w2']){
     const pl = state.placed[group];
@@ -2303,9 +2131,7 @@ function trigramAtIndex(idx){
   }
   return null;
 }
-function singleAt(idx){
-  return state.singles.find(s => s.idx === idx) || null;
-}
+function singleAt(idx){ return state.singles.find(s => s.idx === idx) || null; }
 function cellChar(idx){
   const t = trigramAtIndex(idx);
   if(t) return t.tri[t.offset];
@@ -2357,7 +2183,6 @@ function focusCell(idx){
 function gridHasExactTrigram(tri){
   const t = norm(tri);
   if(!t || t.length !== 3) return false;
-
   const n = getN();
   for(let s=0; s<=n-3; s++){
     const a = cellChar(s), b = cellChar(s+1), c = cellChar(s+2);
@@ -2366,7 +2191,6 @@ function gridHasExactTrigram(tri){
   }
   return false;
 }
-
 function updateExtrasHintFade(){
   const row = document.getElementById('trackBox-extras');
   if(!row) return;
@@ -2379,8 +2203,9 @@ function updateExtrasHintFade(){
   }
   const remaining = Object.assign(Object.create(null), counts);
 
-  row.querySelectorAll('.letter').forEach(l => l.classList.remove('is-in-grid'));
-  row.querySelectorAll('.letter').forEach(l=>{
+  const letters = row.querySelectorAll('.letter');
+  letters.forEach(l => l.classList.remove('is-in-grid'));
+  letters.forEach(l=>{
     const ch = String(l.textContent || "").trim().toLowerCase();
     if(remaining[ch] > 0){
       l.classList.add('is-in-grid');
@@ -2401,11 +2226,9 @@ function nextEditableFrom(startIdx, dir){
   }
   return null;
 }
-
 function typeLetterAtIndex(idx, ch){
   const n = getN();
   const lower = ch.toLowerCase();
-
   const prev = String(cellChar(idx) || "").toLowerCase();
   if(prev !== lower) addEffort(1);
 
@@ -2415,7 +2238,6 @@ function typeLetterAtIndex(idx, ch){
   const next = nextEditableFrom(idx + 1, +1);
   state.focusIdx = (next == null) ? clamp(idx + 1, 0, n-1) : next;
 }
-
 function typeLetterIntoGrid(letter){
   if(state.finished) return false;
   if(state.modalOpen) return false;
@@ -2437,7 +2259,6 @@ function typeLetterIntoGrid(letter){
   renderSmart();
   return true;
 }
-
 function backspaceAtIndex(i){
   const n = getN();
   const idx = clamp(i ?? (state.focusIdx ?? 0), 0, n-1);
@@ -2463,7 +2284,6 @@ function backspaceAtIndex(i){
   state.focusIdx = clamp(idx - 1, 0, n-1);
   return true;
 }
-
 function deleteFromEnd(){
   if(state.finished) return false;
   const n = getN();
@@ -2481,21 +2301,18 @@ function deleteFromEnd(){
 }
 
 /* =======================
-   Typed trigram auto-promotion (Enhanced only)
+   Typed trigram auto-promotion (Classic only)
    ======================= */
 function allowedSet(group){
   const p = current();
-  const w = norm(group==='w1' ? p.word1 : p.word2);
-  const out = new Set();
-  if(w.length < TR) return out;
-  for(let i=0;i<=w.length-TR;i++) out.add(w.slice(i,i+TR));
-  return out;
+  return p._allowed[group] || new Set();
 }
 function overlapIsValid(aStart, aTri, bStart, bTri){
   const ol = overlapCount(aStart, bStart);
   if(ol === 0) return true;
   if(ol !== 1) return false;
   const common = overlapMatchIdx(aStart, bStart);
+  if(common == null) return false;
   const aCh = aTri[common - aStart];
   const bCh = bTri[common - bStart];
   return aCh === bCh;
@@ -2523,7 +2340,7 @@ function candidatesForTyped(group){
         borrowed++;
         chars.push(t.tri[t.offset]);
       }else{
-        const sn = state.singles.find(x=>x.idx===idx);
+        const sn = singleAt(idx);
         if(!sn){ ok = false; break; }
         chars.push(sn.ch);
       }
@@ -2549,16 +2366,11 @@ function candidatesForTyped(group){
 }
 function setMiniHighlightToTri(group, tri){
   const p = current();
-  const w = norm(group==='w1' ? p.word1 : p.word2);
+  const w = group==='w1' ? p._w1 : p._w2;
   const pos = w.indexOf(tri);
   const maxStart = Math.max(0, w.length - TR);
-  if(pos >= 0){
-    if(group==='w1') state.sel1 = clamp(pos, 0, maxStart);
-    else state.sel2 = clamp(pos, 0, maxStart);
-  }else{
-    if(group==='w1') state.sel1 = 0;
-    else state.sel2 = 0;
-  }
+  if(group==='w1') state.sel1 = (pos >= 0) ? clamp(pos, 0, maxStart) : 0;
+  else state.sel2 = (pos >= 0) ? clamp(pos, 0, maxStart) : 0;
 }
 function promoteTypedCandidate(group, cand){
   if(!cand) return false;
@@ -2604,7 +2416,6 @@ function autoPromoteTypedTrigrams(){
     if(w1Cand && !state.placed.w1) if(promoteTypedCandidate('w1', w1Cand)) changed = true;
     if(w2Cand && !state.placed.w2) if(promoteTypedCandidate('w2', w2Cand)) changed = true;
   }
-
   return changed;
 }
 
@@ -2631,29 +2442,6 @@ function computeOverlapIdxSet(){
 }
 
 /* =======================
-   Puzzle derivation (tri positions)
-   ======================= */
-function ensurePuzzleDerived(p){
-  const ans = norm(p.answer);
-  p.tri1 = norm(p.tri1 || "");
-  p.tri2 = norm(p.tri2 || "");
-
-  if(typeof p.tri1_pos !== "number"){
-    p.tri1_pos = (p.tri1 && ans.includes(p.tri1)) ? ans.indexOf(p.tri1) : 0;
-  }
-  if(typeof p.tri2_pos !== "number"){
-    if(p.tri2 && ans.includes(p.tri2)){
-      const first = ans.indexOf(p.tri2);
-      const second = ans.indexOf(p.tri2, first + 1);
-      p.tri2_pos = first;
-      if(p.tri1 && p.tri2 && first === p.tri1_pos && second !== -1) p.tri2_pos = second;
-    }else{
-      p.tri2_pos = 0;
-    }
-  }
-}
-
-/* =======================
    Invalid / excluded detection
    ======================= */
 function compressMaximalStrings(arr){
@@ -2665,12 +2453,11 @@ function compressMaximalStrings(arr){
   }
   return kept;
 }
-
 function computeMax3Invalid(){
   const n = getN();
   const p = current();
-  const w1 = norm(p.word1);
-  const w2 = norm(p.word2);
+  const w1 = p._w1;
+  const w2 = p._w2;
 
   state.badSet = new Set();
   state.badTris = { w1: new Set(), w2: new Set() };
@@ -2687,13 +2474,16 @@ function computeMax3Invalid(){
     const len = j - i;
 
     if(len >= 4){
-      for(let a=i; a<j; a++){
-        for(let b=a+4; b<=j; b++){
-          const s = chars.slice(a,b).join("").toLowerCase();
+      const run = chars.slice(i,j).join("").toLowerCase();
+      for(let a=0; a<=len-4; a++){
+        for(let b=a+4; b<=len; b++){
+          const s = run.slice(a,b);
           const inW1 = (w1 && w1.includes(s));
           const inW2 = (w2 && w2.includes(s));
           if(inW1 || inW2){
-            for(let k=a;k<b;k++) state.badSet.add(k);
+            const ga = i + a;
+            const gb = i + b;
+            for(let k=ga;k<gb;k++) state.badSet.add(k);
             for(let t=0; t<=s.length-3; t++){
               const tri = s.slice(t,t+3);
               if(inW1) state.badTris.w1.add(tri);
@@ -2711,12 +2501,11 @@ function computeMax3Invalid(){
   state.badRuns.w1 = compressMaximalStrings(runsW1);
   state.badRuns.w2 = compressMaximalStrings(runsW2);
 }
-
 function computeTwoTrigramsInvalid(){
   const n = getN();
   const p = current();
-  const w1 = norm(p.word1);
-  const w2 = norm(p.word2);
+  const w1 = p._w1;
+  const w2 = p._w2;
 
   state.twoSet = new Set();
   state.twoTris = { w1: new Set(), w2: new Set() };
@@ -2740,7 +2529,6 @@ function computeTwoTrigramsInvalid(){
     }
   }
 }
-
 function computeHintExcludedTrigrams(){
   state.exclSet = new Set();
   state.exclTris = { w1: new Set(), w2: new Set() };
@@ -2749,38 +2537,33 @@ function computeHintExcludedTrigrams(){
   const p = current();
   const chars = Array.from({length:n}, (_,i)=>cellChar(i));
 
-  function scan(group, word, locked){
-    const w = norm(word);
-    if(!w) return;
+  function scan(group, wNorm, locked){
+    if(!wNorm) return;
     for(let s=0; s<=n-3; s++){
       if(!chars[s] || !chars[s+1] || !chars[s+2]) continue;
       const tri = (chars[s]+chars[s+1]+chars[s+2]).toLowerCase();
       if(locked && tri === locked) continue;
-      if(w.includes(tri)){
+      if(wNorm.includes(tri)){
         state.exclTris[group].add(tri);
         state.exclSet.add(s); state.exclSet.add(s+1); state.exclSet.add(s+2);
       }
     }
   }
 
-  if(state.hintsUsed.w1) scan('w1', p.word1, norm(p.tri1));
-  if(state.hintsUsed.w2) scan('w2', p.word2, norm(p.tri2));
+  if(state.hintsUsed.w1) scan('w1', p._w1, p.tri1);
+  if(state.hintsUsed.w2) scan('w2', p._w2, p.tri2);
 }
-
 function computeTwoLetterOverlapInvalid(){
   state.ol2Set = new Set();
   state.ol2Tris = { w1: new Set(), w2: new Set() };
 
   const n = getN();
   const p = current();
-  const w1 = norm(p.word1);
-  const w2 = norm(p.word2);
+  const w1 = p._w1, w2 = p._w2;
   if(!w1 || !w2) return;
 
-  const set1 = new Set();
-  const set2 = new Set();
-  for(let i=0;i<=w1.length-TR;i++) set1.add(w1.slice(i,i+TR));
-  for(let i=0;i<=w2.length-TR;i++) set2.add(w2.slice(i,i+TR));
+  const set1 = p._allowed.w1;
+  const set2 = p._allowed.w2;
 
   const a = state.placed?.w1;
   const b = state.placed?.w2;
@@ -2821,6 +2604,12 @@ function computeTwoLetterOverlapInvalid(){
     }
   }
 }
+function recomputeInvalids(){
+  computeTwoLetterOverlapInvalid();
+  computeMax3Invalid();
+  computeTwoTrigramsInvalid();
+  computeHintExcludedTrigrams();
+}
 
 /* =======================
    Hint extras letters
@@ -2828,11 +2617,11 @@ function computeTwoLetterOverlapInvalid(){
 function computeHint3Letters(){
   const n = getN();
   const p = current();
-  const ans = norm(p.answer);
+  const ans = p._ans;
   const covered = new Set();
+
   const t1 = clamp(p.tri1_pos || 0, 0, n-3);
   const t2 = clamp(p.tri2_pos || 0, 0, n-3);
-
   for(let k=0;k<3;k++) covered.add(t1 + k);
   for(let k=0;k<3;k++) covered.add(t2 + k);
 
@@ -2841,49 +2630,25 @@ function computeHint3Letters(){
   leftover.sort();
   return leftover;
 }
-function rebuildBank(){
-  state.bank = computeHint3Letters().map(ch => ({id: uid(), ch}));
-}
+function rebuildBank(){ state.bank = computeHint3Letters().map(ch => ({id: uid(), ch})); }
 
 /* =======================
-   Status messages
+   Status messages (now assumes invalids already computed by renderGrid)
    ======================= */
 function updateStatusMessages(){
-  if(state.assistFlashOn) return;
   if(state.finished) return;
   if(state.lockMsg) return;
   if(state.msgTransient) return;
 
-  computeTwoLetterOverlapInvalid();
-  computeMax3Invalid();
-  computeTwoTrigramsInvalid();
-  computeHintExcludedTrigrams();
+  const hasOL2  = state.ol2Set.size > 0;
+  const hasMax3 = state.badSet.size > 0;
+  const hasTwo  = state.twoSet.size > 0;
+  const hasExcl = state.exclSet.size > 0;
 
-  const hasOL2  = (state.ol2Set && state.ol2Set.size > 0);
-  const hasMax3 = (state.badSet && state.badSet.size > 0);
-  const hasTwo  = (state.twoSet && state.twoSet.size > 0);
-  const hasExcl = (state.exclSet && state.exclSet.size > 0);
-
-  if(hasOL2){
-    setMsg(OVERLAP2_TEXT, 'warn');
-    state.overlapMsgOn = false;
-    return;
-  }
-  if(hasMax3){
-    setMsg("Max 3 contiguous letters allowed", "warn");
-    state.overlapMsgOn = false;
-    return;
-  }
-  if(hasTwo){
-    setMsg(TWOTRI_TEXT, "warn");
-    state.overlapMsgOn = false;
-    return;
-  }
-  if(hasExcl){
-    setMsg(excludedMsgText(), "warn");
-    state.overlapMsgOn = false;
-    return;
-  }
+  if(hasOL2){ setMsg(OVERLAP2_TEXT, 'warn'); state.overlapMsgOn = false; return; }
+  if(hasMax3){ setMsg("Max 3 contiguous letters allowed", "warn"); state.overlapMsgOn = false; return; }
+  if(hasTwo){ setMsg(TWOTRI_TEXT, "warn"); state.overlapMsgOn = false; return; }
+  if(hasExcl){ setMsg(excludedMsgText(), "warn"); state.overlapMsgOn = false; return; }
 
   if(el.msg.classList.contains('warn')) setMsg("");
 
@@ -2906,27 +2671,24 @@ function canEnableCheckNow(){
   for(let i=0;i<n;i++) if(!cellChar(i)) return false;
   return true;
 }
-function countTrigramsInWord(attempt, word){
+function countTrigramsInWordCount(attempt, wNorm){
   const n = attempt.length;
-  const w = norm(word);
-  const found = [];
-  if(!w) return found;
+  if(!wNorm) return 0;
+  let c=0;
   for(let s=0; s<=n-3; s++){
     const tri = attempt.slice(s, s+3);
-    if(w.includes(tri)) found.push(tri);
+    if(wNorm.includes(tri)) c++;
   }
-  return found;
+  return c;
 }
 function hintPhraseText(h){
   if(h === 0) return "with no hints";
   if(h === 1) return "with 1 hint";
   return `with ${h} hints`;
 }
-
 function setResultSkillMsg(line1, skill){
   clearMsgTimer();
   el.msg.classList.remove('show','warn','result');
-
   el.msg.innerHTML = `<div class="msgLine">${escapeHtml(line1)}</div>`;
 
   const badgeVal = document.getElementById('skillBadgeValue');
@@ -2945,7 +2707,6 @@ function setResultSkillMsg(line1, skill){
   void el.msg.offsetWidth;
   el.msg.classList.add('show','result');
 }
-
 function onCheck(){
   if(state.finished) return;
   if(state.modalOpen) return;
@@ -2957,23 +2718,21 @@ function onCheck(){
     return;
   }
 
+  // Need invalid sets for detailed feedback & enforcement
   computeMax3Invalid();
   computeTwoTrigramsInvalid();
   computeHintExcludedTrigrams();
 
   const attempt = Array.from({length:n}, (_,i)=>cellChar(i)).join("").toLowerCase();
   const p = current();
-  const ans = norm(p.answer);
+  const ans = p._ans;
 
-    if(attempt === ans){
+  if(attempt === ans){
     const res = computeFinalSkill(false);
     setResultSkillMsg(`Correct - ${hintPhraseText(state.hintCount)}!`, res.skill);
     state.finished = true;
     state.gaveUp = false;
-
-    // record local-storage result (Classic vs Elite based on state.assist)
     storeResultForCurrentPuzzle(res.skill, false);
-
     renderSmart();
     return;
   }
@@ -2990,14 +2749,14 @@ function onCheck(){
   if(state.twoSet.size){ setMsg(TWOTRI_TEXT, "warn"); renderSmart(); return; }
   if(state.exclSet.size){ setMsg(excludedMsgText(), "warn"); renderSmart(); return; }
 
-  const w1Hits = countTrigramsInWord(attempt, p.word1);
-  const w2Hits = countTrigramsInWord(attempt, p.word2);
+  const w1Hits = countTrigramsInWordCount(attempt, p._w1);
+  const w2Hits = countTrigramsInWordCount(attempt, p._w2);
 
   let msg = "";
-  if(w1Hits.length === 0 && w2Hits.length === 0) msg = "You didn’t use any trigrams";
-  else if(w1Hits.length === 0) msg = "No trigram from word 1";
-  else if(w2Hits.length === 0) msg = "No trigram from word 2";
-  else if(w1Hits.length > 1 || w2Hits.length > 1) msg = TWOTRI_TEXT;
+  if(w1Hits === 0 && w2Hits === 0) msg = "You didn’t use any trigrams";
+  else if(w1Hits === 0) msg = "No trigram from word 1";
+  else if(w2Hits === 0) msg = "No trigram from word 2";
+  else if(w1Hits > 1 || w2Hits > 1) msg = TWOTRI_TEXT;
 
   if(msg){
     state.lockMsg = true;
@@ -3012,24 +2771,19 @@ function onCheck(){
 /* =======================
    Give up
    ======================= */
-function extrasUnlocked(){
-  return state.hintsUsed.w1 && state.hintsUsed.w2;
-}
-
+function extrasUnlocked(){ return state.hintsUsed.w1 && state.hintsUsed.w2; }
 function abortDrag(){
   if(!state.drag) return;
   try{ state.drag.ghost?.remove(); }catch{}
   state.drag = null;
 }
-
 window.addEventListener('blur', ()=> abortDrag());
-window.addEventListener('focus', ()=>{}); // intentional no-op; keep behavior stable
 
 function revealAnswerGiveUp(){
   if(state.finished) return;
 
   const p = current();
-  const ans = norm(p.answer);
+  const ans = p._ans;
   const n = getN();
 
   abortDrag();
@@ -3040,7 +2794,7 @@ function revealAnswerGiveUp(){
   }
   state.focusIdx = 0;
 
-    const res = computeFinalSkill(true);
+  const res = computeFinalSkill(true);
 
   state.finished = true;
   state.gaveUp = true;
@@ -3050,16 +2804,12 @@ function revealAnswerGiveUp(){
   setMsg("");
 
   setResultSkillMsg("You gave up!", res.skill);
-
-  // record local-storage result as a “gave up” game
   storeResultForCurrentPuzzle(res.skill, true);
-
   renderSmart();
 }
 
-
 /* =======================
-   Hint fly animation
+   Hint fly animation (unchanged behaviour)
    ======================= */
 function makeSpotLettersHTML(chars, mode){
   const spot = document.createElement('div');
@@ -3083,7 +2833,6 @@ function makeSpotLettersHTML(chars, mode){
   spot.appendChild(wrap);
   return spot;
 }
-
 function hintFlyKeyframes(dx, dy, startScale){
   const SH0 = 'drop-shadow(0 22px 22px rgba(0,0,0,.26))';
   const SH1 = 'drop-shadow(0 14px 14px rgba(0,0,0,.18))';
@@ -3106,14 +2855,12 @@ function hintFlyKeyframes(dx, dy, startScale){
     { transform: `translate(-50%,-50%) translate3d(${dx}px, ${dy}px, 0) scale(1.00)`, filter: SH4, opacity: 1, offset: 1.00 }
   ];
 }
-
 function revealTargetInstant(tEl){
   if(!tEl) return;
   tEl.style.transition = 'none';
   tEl.style.opacity = '';
   requestAnimationFrame(()=> requestAnimationFrame(()=>{ tEl.style.transition = ''; }));
 }
-
 function runHintFlyExtrasSequential(targetRow, chars){
   if(!targetRow) return false;
   const targets = Array.from(targetRow.querySelectorAll('.letter'));
@@ -3181,7 +2928,6 @@ function runHintFlyExtrasSequential(targetRow, chars){
   requestAnimationFrame(flyOne);
   return true;
 }
-
 function runHintFly(kind){
   let target = null;
   let mode = 'hex';
@@ -3192,11 +2938,11 @@ function runHintFly(kind){
   if(kind === 'w1'){
     target = document.getElementById('trackBox-w1');
     mode = 'h1';
-    chars = Array.from(norm(p.tri1));
+    chars = Array.from(p.tri1);
   }else if(kind === 'w2'){
     target = document.getElementById('trackBox-w2');
     mode = 'h2';
-    chars = Array.from(norm(p.tri2));
+    chars = Array.from(p.tri2);
   }else if(kind === 'extras'){
     const row = document.getElementById('trackBox-extras');
     if(state.bank.length === 0) rebuildBank();
@@ -3244,7 +2990,6 @@ function runHintFly(kind){
 
   return true;
 }
-
 function scheduleHintFly(kind){
   state.pendingFly = kind;
   state.flyAttempts = 0;
@@ -3253,8 +2998,6 @@ function scheduleHintFly(kind){
     if(!state.pendingFly) return;
     state.flyAttempts++;
 
-    // Make sure the hint track is already in its correct slot
-    // (top under the clue when keyboard is present, bottom dock otherwise)
     updateHintTrackPlacement();
 
     if(runHintFly(state.pendingFly)){
@@ -3285,22 +3028,16 @@ function scheduleHintFly(kind){
   requestAnimationFrame(tryRun);
 }
 
-
 /* =======================
    Drag ghost + drag logic
    ======================= */
 function trigramIsRedAtStart(start){
-  computeTwoLetterOverlapInvalid();
-  computeMax3Invalid();
-  computeTwoTrigramsInvalid();
-  computeHintExcludedTrigrams();
-
+  recomputeInvalids();
   for(const idx of trigramCells(start)){
     if(state.ol2Set.has(idx) || state.badSet.has(idx) || state.twoSet.has(idx) || state.exclSet.has(idx)) return true;
   }
   return false;
 }
-
 function makeGhostBox(text, bg){
   const ghost = document.createElement('div');
   ghost.className = "ghost";
@@ -3378,7 +3115,6 @@ function startDragTrigram(ev, group, tri, idx0, start0){
   };
   moveGhost(ev);
 }
-
 function pairForDragPinnedThenPush(group, desiredStart, idxNow){
   const mine = state.placed[group];
   const otherGroup = group==='w1' ? 'w2' : 'w1';
@@ -3455,7 +3191,6 @@ function pairForDragPinnedThenPush(group, desiredStart, idxNow){
   if(!best) return { mineStart: clamp(desiredStart,0,startMax()), otherStart: currO };
   return { mineStart: best.sM, otherStart: best.sO };
 }
-
 function onDragMove(e){
   if(!state.drag) return;
   moveGhost(e);
@@ -3493,7 +3228,6 @@ function onDragMove(e){
   removeSinglesInCells(trigramCells(other.start));
   renderSmart();
 }
-
 function rectDistance(x,y,rect){
   const dx = (x < rect.left) ? (rect.left - x) : (x > rect.right ? x - rect.right : 0);
   const dy = (y < rect.top) ? (rect.top - y) : (y > rect.bottom ? y - rect.bottom : 0);
@@ -3537,30 +3271,22 @@ function errorItemsForGroup(group){
   }
   return [];
 }
-
 function inferredSingleTrigram(group){
   const n = getN();
   const p = current();
-  const w = norm(group === 'w1' ? p.word1 : p.word2);
+  const w = (group === 'w1') ? p._w1 : p._w2;
   if(!w) return null;
 
-  const found = [];
+  let seen = null;
   for(let s=0; s<=n-3; s++){
     const a = cellChar(s), b = cellChar(s+1), c = cellChar(s+2);
     if(!a || !b || !c) continue;
     const tri = (a+b+c).toLowerCase();
-    if(w.includes(tri)) found.push(tri);
+    if(!w.includes(tri)) continue;
+    if(seen == null) seen = tri;
+    else if(seen !== tri) return null; // early-out (more than one unique)
   }
-
-  const uniq = [];
-  const seen = new Set();
-  for(const t of found){
-    if(seen.has(t)) continue;
-    seen.add(t);
-    uniq.push(t);
-  }
-
-  return (uniq.length === 1) ? uniq[0] : null;
+  return seen;
 }
 function triForClue(group){
   const pl = state.placed[group];
@@ -3641,7 +3367,6 @@ function placeTrigram(group, tri){
   addEffortFromGridChange(before, { countDeletes:true, base:0.5 });
   return true;
 }
-
 function cyclePlacedTrigram(group, opts = {}){
   if(!flags().allowClueTapCycle) return;
   if(state.finished) return;
@@ -3650,7 +3375,7 @@ function cyclePlacedTrigram(group, opts = {}){
   if(!pl) return;
 
   const p = current();
-  const w = norm(group === 'w1' ? p.word1 : p.word2);
+  const w = (group === 'w1') ? p._w1 : p._w2;
   const maxStart = Math.max(0, w.length - 3);
   if(maxStart === 0) return;
 
@@ -3663,13 +3388,8 @@ function cyclePlacedTrigram(group, opts = {}){
 
   const curTri = norm(pl.tri);
   const curPos = w.indexOf(curTri);
-  if(curPos >= 0){
-    if(group === 'w1') state.sel1 = clamp(curPos, 0, maxStart);
-    else state.sel2 = clamp(curPos, 0, maxStart);
-  }else{
-    if(group === 'w1') state.sel1 = 0;
-    else state.sel2 = 0;
-  }
+  if(group === 'w1') state.sel1 = (curPos >= 0) ? clamp(curPos, 0, maxStart) : 0;
+  else state.sel2 = (curPos >= 0) ? clamp(curPos, 0, maxStart) : 0;
 
   let s = (group === 'w1' ? state.sel1 : state.sel2);
   if(s == null) s = 0;
@@ -3679,10 +3399,9 @@ function cyclePlacedTrigram(group, opts = {}){
   const tri = w.slice(s, s+3);
   placeTrigram(group, tri);
 }
-
 function firstTrigramOfWord(group){
   const p = current();
-  const w = norm(group === 'w1' ? p.word1 : p.word2);
+  const w = (group === 'w1') ? p._w1 : p._w2;
   if(w.length < 3) return null;
   return w.slice(0, 3);
 }
@@ -3693,7 +3412,6 @@ function firstTrigramOfWord(group){
 function bindTapReliable(node, fn){
   if(!node) return;
   let last = 0;
-
   const fire = (e)=>{
     const now = performance.now();
     if(now - last < 260) return;
@@ -3703,20 +3421,12 @@ function bindTapReliable(node, fn){
 
   node.addEventListener('pointerup', (e)=>{
     if(e.pointerType === 'mouse' && e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     fire(e);
   }, {passive:false});
 
   node.addEventListener('click', (e)=>{
-    e.preventDefault();
-    e.stopPropagation();
-    fire(e);
-  }, {passive:false});
-
-  node.addEventListener('touchend', (e)=>{
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     fire(e);
   }, {passive:false});
 
@@ -3727,7 +3437,6 @@ function bindTapReliable(node, fn){
     }
   });
 }
-
 function makeTrigramBlock(tri, cls, labelText, onTap, id){
   const block = document.createElement('div');
   block.className = "trackBlock";
@@ -3737,9 +3446,7 @@ function makeTrigramBlock(tri, cls, labelText, onTap, id){
   box.setAttribute("aria-label", labelText);
   if(id) box.id = id;
 
-  if(typeof onTap === "function"){
-    bindTapReliable(box, onTap);
-  }
+  if(typeof onTap === "function") bindTapReliable(box, onTap);
 
   for(let i=0;i<tri.length;i++){
     const d = document.createElement('div');
@@ -3750,7 +3457,6 @@ function makeTrigramBlock(tri, cls, labelText, onTap, id){
   block.appendChild(box);
   return block;
 }
-
 function renderHintTrack(){
   const p = current();
 
@@ -3764,10 +3470,10 @@ function renderHintTrack(){
 
   if(state.hintsUsed.w1){
     el.trackW1.appendChild(
-      makeTrigramBlock(norm(p.tri1), "sel-w1", "word 1 trigram", ()=>{
+      makeTrigramBlock(p.tri1, "sel-w1", "word 1 trigram", ()=>{
         if(state.finished || state.modalOpen) return;
         if(!state.assist) return;
-        placeTrigram('w1', norm(p.tri1));
+        placeTrigram('w1', p.tri1);
         renderSmart();
       }, "trackBox-w1")
     );
@@ -3783,10 +3489,10 @@ function renderHintTrack(){
 
   if(state.hintsUsed.w2){
     el.trackW2.appendChild(
-      makeTrigramBlock(norm(p.tri2), "sel-w2", "word 2 trigram", ()=>{
+      makeTrigramBlock(p.tri2, "sel-w2", "word 2 trigram", ()=>{
         if(state.finished || state.modalOpen) return;
         if(!state.assist) return;
-        placeTrigram('w2', norm(p.tri2));
+        placeTrigram('w2', p.tri2);
         renderSmart();
       }, "trackBox-w2")
     );
@@ -3817,12 +3523,10 @@ function renderHintTrack(){
       const d = document.createElement('div');
       d.className = "letter extra";
       d.textContent = tile.ch;
-
       if(state.pendingFly === 'extras') d.style.opacity = "0";
 
       bindTapReliable(d, ()=>{
-        if(state.finished) return;
-        if(state.modalOpen) return;
+        if(state.finished || state.modalOpen) return;
         clearTransientOnAnyChange();
         if(!state.assist) return;
 
@@ -3830,7 +3534,7 @@ function renderHintTrack(){
         for(let i=0;i<n;i++){
           if(state.placed.w1 && i>=state.placed.w1.start && i<state.placed.w1.start+3) continue;
           if(state.placed.w2 && i>=state.placed.w2.start && i<state.placed.w2.start+3) continue;
-          if(state.singles.find(s=>s.idx===i)) continue;
+          if(singleAt(i)) continue;
 
           addEffort(1);
           state.singles.push({id: uid(), ch: tile.ch, idx: i});
@@ -3854,11 +3558,10 @@ function renderHintTrack(){
 }
 
 /* =======================
-   Clue tap behavior (merged enable + actions; capture)
+   Clue tap behaviour
    ======================= */
 function onClueWordActivate(group){
-  if(state.finished) return;
-  if(state.modalOpen) return;
+  if(state.finished || state.modalOpen) return;
   if(group !== 'w1' && group !== 'w2') return;
 
   clearTransientOnAnyChange();
@@ -3866,16 +3569,16 @@ function onClueWordActivate(group){
   if(state.placed[group]){
     cyclePlacedTrigram(group, { countCycle: !state.hintsUsed[group] });
   }else{
+    const p = current();
     let tri = null;
-    if(group === 'w1' && state.hintsUsed.w1) tri = norm(current().tri1);
-    if(group === 'w2' && state.hintsUsed.w2) tri = norm(current().tri2);
+    if(group === 'w1' && state.hintsUsed.w1) tri = p.tri1;
+    if(group === 'w2' && state.hintsUsed.w2) tri = p.tri2;
     if(!tri) tri = firstTrigramOfWord(group);
     if(tri) placeTrigram(group, tri);
   }
 
   renderSmart();
 }
-
 (function bindClueTap(){
   if(!el.clue) return;
 
@@ -3884,7 +3587,6 @@ function onClueWordActivate(group){
 
   const handler = (e, isClick=false)=>{
     if(state.finished || state.modalOpen) return;
-
     if(!isClick) handledPointerAt = Date.now();
     e.preventDefault();
     e.stopPropagation();
@@ -3893,9 +3595,8 @@ function onClueWordActivate(group){
     const group = w ? w.dataset.group : null;
 
     if(!state.assist){
-      // Enable enhanced on first clue interaction
       if(group && !state.placed[group]){
-        setEnhanced(true, false, 'user'); // enable but avoid double render here
+        setEnhanced(true, false, 'user');
         lastActionAt = Date.now();
         onClueWordActivate(group);
         return;
@@ -3948,9 +3649,7 @@ function updateKeyboardHeightVar(){
   }
 }
 function pressKeyAction(kind, val){
-  if(state.finished) return;
-  if(state.modalOpen) return;
-
+  if(state.finished || state.modalOpen) return;
   if(kind === 'letter'){
     typeLetterIntoGrid(val);
   }else if(kind === 'delete'){
@@ -4047,73 +3746,28 @@ function buildKeyboard(){
 }
 
 /* =======================
-   Hint track placement (TOP vs BOTTOM)
+   Hint track placement (TOP vs BOTTOM) – removed redundant helpers
    ======================= */
-const KB_FORCE_TOP_RATIO = 0.8;
-const HINT_PAD = 10;
-let _hintTrackMode = null;
-
 function updateBtnRowHeightVar(){
   const r = el.btnRow?.getBoundingClientRect?.();
   if(r && r.height){
     document.documentElement.style.setProperty('--btn-row-h', `${Math.ceil(r.height)}px`);
   }
 }
-function applyHintTrackMode(mode){
-  if(_hintTrackMode === mode) return;
-  _hintTrackMode = mode;
-
-  if(mode === 'top'){
-    if(el.clue) el.clue.insertAdjacentElement('afterend', el.hintTrack);
-    el.hintTrack.classList.add('hintTrackTop');
-    if(el.clueWrap) el.clueWrap.classList.add('hasTopTrack');
-  }else{
-    if(el.hintDockBottom) el.hintDockBottom.appendChild(el.hintTrack);
-    el.hintTrack.classList.remove('hintTrackTop');
-    if(el.clueWrap) el.clueWrap.classList.remove('hasTopTrack');
-  }
-}
-/* =======================
-   Hint track placement (top vs bottom)
-   ======================= */
-
-function moveHintTrackTop(){
-  if(!el.hintTrack || !el.clueWrap) return;
-  if(el.hintTrack.parentElement === el.clueWrap) return;
-
-  el.clueWrap.appendChild(el.hintTrack);
-  el.clueWrap.classList.add('hasTopTrack');
-  el.hintTrack.classList.add('hintTrackTop');
-}
-
-function moveHintTrackBottom(){
-  if(!el.hintTrack || !el.hintDockBottom) return;
-  if(el.hintTrack.parentElement === el.hintDockBottom) return;
-
-  el.hintDockBottom.appendChild(el.hintTrack);
-  el.clueWrap.classList.remove('hasTopTrack');
-  el.hintTrack.classList.remove('hintTrackTop');
-}
-
-  
 function updateHintTrackPlacement(){
   const track      = el.hintTrack;
   const topHost    = el.clueWrap;
   const bottomHost = el.hintDockBottom;
   const gridDock   = el.gridDock;
   const btnRow     = el.btnRow;
-
   if(!track || !topHost || !bottomHost || !gridDock || !btnRow) return;
 
   const root  = document.documentElement;
   const hasKB = root.classList.contains('has-kb');
 
-  // Measure current layout
   const gridRect  = gridDock.getBoundingClientRect();
   const btnRect   = btnRow.getBoundingClientRect();
   const trackRect = track.getBoundingClientRect();
-
-  // If we can’t measure properly, fall back to bottom
   if(!gridRect || !btnRect || !trackRect){
     if(track.parentNode !== bottomHost) bottomHost.appendChild(track);
     topHost.classList.remove('hasTopTrack');
@@ -4121,33 +3775,21 @@ function updateHintTrackPlacement(){
     return;
   }
 
-
   const available = btnRect.top - gridRect.bottom;
-
-
-  const MIN_GAP = 12; // breathing room above the bottom row
+  const MIN_GAP = 12;
   const needTop = hasKB && (available < (trackRect.height + MIN_GAP));
-
   const currentlyTop = (track.parentNode === topHost);
 
   if(needTop){
-    // Move to TOP (under clue)
-    if(!currentlyTop){
-      topHost.appendChild(track);
-    }
+    if(!currentlyTop) topHost.appendChild(track);
     topHost.classList.add('hasTopTrack');
     track.classList.add('hintTrackTop');
   }else{
-    // Keep / move to BOTTOM dock
-    if(currentlyTop || track.parentNode !== bottomHost){
-      bottomHost.appendChild(track);
-    }
+    if(currentlyTop || track.parentNode !== bottomHost) bottomHost.appendChild(track);
     topHost.classList.remove('hasTopTrack');
     track.classList.remove('hintTrackTop');
   }
 }
-
-
 window.addEventListener('resize', ()=> requestAnimationFrame(updateHintTrackPlacement), {passive:true});
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize', ()=> requestAnimationFrame(updateHintTrackPlacement), {passive:true});
@@ -4168,10 +3810,7 @@ function resetMainGridOnly(){
   state.focusIdx = 0;
 
   renderSmart();
-
-  if(!state.useCustomKB){
-    requestAnimationFrame(()=> focusCell(0));
-  }
+  if(!state.useCustomKB) requestAnimationFrame(()=> focusCell(0));
 }
 
 /* =======================
@@ -4188,10 +3827,8 @@ function renderGrid(stealFocus=true){
     }
   }
 
-  computeTwoLetterOverlapInvalid();
-  computeMax3Invalid();
-  computeTwoTrigramsInvalid();
-  computeHintExcludedTrigrams();
+  // single recompute pass used by BOTH grid colouring + clue underline + status messages
+  recomputeInvalids();
 
   const overlapSet = (!revealed && f.showGridColors) ? computeOverlapIdxSet() : new Set();
 
@@ -4295,10 +3932,7 @@ function renderGrid(stealFocus=true){
       if(state.modalOpen) return;
 
       state.focusIdx = i;
-
-      if(!state.useCustomKB){
-        requestAnimationFrame(()=> focusCell(i));
-      }
+      if(!state.useCustomKB) requestAnimationFrame(()=> focusCell(i));
 
       if(f.allowDragTrigrams){
         const t = trigramAtIndex(i);
@@ -4337,7 +3971,6 @@ function updateHintButtonLabel(){
   const st = nextHintStage();
   el.hintsBtn.textContent = (st === 1) ? "hint 1" : (st === 2) ? "hint 2" : (st === 3) ? "hint 3" : "give up";
 }
-
 function applyHint(id){
   if(state.finished) return;
 
@@ -4345,7 +3978,6 @@ function applyHint(id){
     if(state.hintsUsed.w1) return;
 
     skillStartNewSegmentAfterHint();
-
     state.hintsUsed.w1 = true;
     state.hintCount += 1;
 
@@ -4359,7 +3991,6 @@ function applyHint(id){
     if(!state.hintsUsed.w1) return;
 
     skillStartNewSegmentAfterHint();
-
     state.hintsUsed.w2 = true;
     state.hintCount += 1;
 
@@ -4373,7 +4004,6 @@ function applyHint(id){
     if(!extrasUnlocked()) return;
 
     skillStartNewSegmentAfterHint();
-
     state.hintsUsed.extras = true;
     state.hintCount += 1;
     if(state.bank.length === 0) rebuildBank();
@@ -4407,18 +4037,14 @@ function bindFastTap(btn, fn){
     run(e);
   });
 }
-
 bindFastTap(el.hintsBtn, ()=>{
-  if(state.finished) return;
-  if(state.modalOpen) return;
-
+  if(state.finished || state.modalOpen) return;
   const st = nextHintStage();
   if(st === 1) applyHint(HINT_IDS.w1);
   else if(st === 2) applyHint(HINT_IDS.w2);
   else if(st === 3) applyHint(HINT_IDS.extras);
   else revealAnswerGiveUp();
 });
-
 bindFastTap(el.checkBtn, onCheck);
 
 el.prevBtn.addEventListener('click', (e)=>{
@@ -4429,12 +4055,8 @@ el.prevBtn.addEventListener('click', (e)=>{
   state.i = (state.i - 1 + PUZZLES.length) % PUZZLES.length;
   resetAllForPuzzle();
 
- 
-  if (!applyStoredResultToCurrentPuzzle()) {
-    renderSmart();
-  }
+  if (!applyStoredResultToCurrentPuzzle()) renderSmart();
 });
-
 el.nextBtn.addEventListener('click', (e)=>{
   e.preventDefault();
   clearTransientOnAnyChange();
@@ -4443,24 +4065,15 @@ el.nextBtn.addEventListener('click', (e)=>{
   state.i = (state.i + 1) % PUZZLES.length;
   resetAllForPuzzle();
 
-
-  if (!applyStoredResultToCurrentPuzzle()) {
-    renderSmart();
-  }
+  if (!applyStoredResultToCurrentPuzzle()) renderSmart();
 });
 
-  // Stats button wiring
+// Stats button wiring
 if(el.statsBtn){
-  el.statsBtn.addEventListener('click', (e)=>{
-    e.preventDefault();
-    openStats();
-  });
+  el.statsBtn.addEventListener('click', (e)=>{ e.preventDefault(); openStats(); });
 }
 if(el.statsClose){
-  el.statsClose.addEventListener('click', (e)=>{
-    e.preventDefault();
-    closeStats();
-  });
+  el.statsClose.addEventListener('click', (e)=>{ e.preventDefault(); closeStats(); });
 }
 if(el.statsOverlay){
   el.statsOverlay.addEventListener('click', (e)=>{
@@ -4470,7 +4083,6 @@ if(el.statsOverlay){
     }
   }, { passive:false });
 }
-
 
 document.addEventListener('keydown', (e)=>{
   if(state.finished) return;
@@ -4503,8 +4115,6 @@ document.addEventListener('keydown', (e)=>{
    ======================= */
 function render(stealFocus=true){
   const p = current();
-  ensurePuzzleDerived(p);
-
   const n = getN();
   el.count.textContent = `${state.i+1}/${PUZZLES.length}`;
 
@@ -4589,47 +4199,31 @@ function resetAllForPuzzle(){
   skillResetForPuzzle();
 }
 
+/* single resize handler (removed duplicate) */
 window.addEventListener('resize', ()=>{
   const next = shouldUseCustomKB();
   if(next !== state.useCustomKB) setCustomKBEnabled(next);
   updateKeyboardHeightVar();
-});
-
-/* init */
-window.addEventListener('resize', ()=>{
-  const next = shouldUseCustomKB();
-  if(next !== state.useCustomKB) setCustomKBEnabled(next);
-  updateKeyboardHeightVar();
-});
+}, {passive:true});
 
 /* init */
 function init(){
-  // 7) Respect ?reset in the URL (clears stored stats/results)
   checkResetParam();
 
-  // 8) Start on the first unplayed puzzle (falls back to last if all done)
   state.i = firstUnplayedPuzzleIndex();
-
-  // Default mode pill text (will be overridden if we rehydrate a solved puzzle)
   updateModePill();
 
-  // Keyboard mode (mobile vs desktop)
   setCustomKBEnabled(shouldUseCustomKB());
 
-  // Fresh state for this puzzle
   resetAllForPuzzle();
 
-  // 9) If this puzzle already has a saved result, restore it;
-  // otherwise render a fresh unsolved grid.
   if (!applyStoredResultToCurrentPuzzle()) {
     renderSmart();
   }
 }
-
-// Run init immediately
 init();
-
 </script>
+
 
 </body>
 </html>
