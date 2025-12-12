@@ -1569,9 +1569,9 @@ function computeFinalSkill(gaveUp){
   const wrongEffective = dw + (state.wrongCarry || 0);
   const wrongW = 1.0;
 
-  const Tref = [130, 130, 115, 90];
+  const Tref = [110, 110, 90, 80];
   const Eref = [30, 30, 26, 19];
-  const k    = [0.31,0.29,0.27,0.25];
+  const k    = [0.34,0.31,0.29,0.27];
 
   const L = (dt / Tref[h]) + (de / Eref[h]) + (wrongW * wrongEffective);
   const span = (bandMax - bandMin);
