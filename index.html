@@ -2638,6 +2638,7 @@ function onCheck(){
   const p = current();
   const ans = p._ans;
 
+  // Correct answer
   if(attempt === ans){
     const res = computeFinalSkill(false);
     setResultSkillMsg(`Correct - ${hintPhraseText(state.hintCount)}!`, res.skill);
@@ -2648,25 +2649,55 @@ function onCheck(){
     return;
   }
 
+  // Wrong answer
   state.wrongCheckCount = (state.wrongCheckCount || 0) + 1;
   shakeGrid();
 
+  // === Minimal feedback (Elite) still gets trigram-use messages ===
   if(flags().checkFeedback === "minimal"){
+    const w1Hits = countTrigramsInWordCount(attempt, p._w1);
+    const w2Hits = countTrigramsInWordCount(attempt, p._w2);
+
+    let msg = "";
+    if(w1Hits === 0 && w2Hits === 0) msg = "You didn’t use any trigrams";
+    else if(w1Hits === 0)            msg = "No trigram from word 1";
+    else if(w2Hits === 0)            msg = "No trigram from word 2";
+
+    if(msg){
+      state.lockMsg = true;
+      setMsg(msg, "warn");
+    }else{
+      setMsg("");
+    }
+
     renderSmart();
     return;
   }
 
-  if(state.badSet.size){ setMsg("Max 3 contiguous letters allowed", "warn"); renderSmart(); return; }
-  if(state.twoSet.size){ setMsg(TWOTRI_TEXT, "warn"); renderSmart(); return; }
-  if(state.exclSet.size){ setMsg(excludedMsgText(), "warn"); renderSmart(); return; }
+  // === Detailed feedback (Classic) – unchanged logic ===
+  if(state.badSet.size){
+    setMsg("Max 3 contiguous letters allowed", "warn");
+    renderSmart();
+    return;
+  }
+  if(state.twoSet.size){
+    setMsg(TWOTRI_TEXT, "warn");
+    renderSmart();
+    return;
+  }
+  if(state.exclSet.size){
+    setMsg(excludedMsgText(), "warn");
+    renderSmart();
+    return;
+  }
 
   const w1Hits = countTrigramsInWordCount(attempt, p._w1);
   const w2Hits = countTrigramsInWordCount(attempt, p._w2);
 
   let msg = "";
   if(w1Hits === 0 && w2Hits === 0) msg = "You didn’t use any trigrams";
-  else if(w1Hits === 0) msg = "No trigram from word 1";
-  else if(w2Hits === 0) msg = "No trigram from word 2";
+  else if(w1Hits === 0)            msg = "No trigram from word 1";
+  else if(w2Hits === 0)            msg = "No trigram from word 2";
   else if(w1Hits > 1 || w2Hits > 1) msg = TWOTRI_TEXT;
 
   if(msg){
@@ -2678,6 +2709,7 @@ function onCheck(){
 
   renderSmart();
 }
+
 
 /* =======================
    Give up
