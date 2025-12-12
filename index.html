@@ -95,9 +95,10 @@
     pointer-events:none;
   }
 
-  .statsBtn{
+  /* Top-left icon buttons */
+  .statsBtn,
+  .helpBtn{
     position:absolute;
-    left:14px;
     top:10px;
     width:28px;
     height:28px;
@@ -115,16 +116,28 @@
     outline:none;
     box-shadow:none;
   }
-  .statsBtn:focus{ outline:none; box-shadow:none; }
-  .statsBtn:active{ transform:translateY(1px); }
+  .statsBtn{ left:14px; }
+  .helpBtn{ left:48px; }
 
-  .statsIcon{
+  .statsBtn:focus,
+  .helpBtn:focus{
+    outline:none;
+    box-shadow:none;
+  }
+  .statsBtn:active,
+  .helpBtn:active{
+    transform:translateY(1px);
+  }
+
+  .statsIcon,
+  .helpIcon{
     width:17px;
     height:17px;
     opacity:.50;
     display:block;
     pointer-events:none;
   }
+
 
   .nav{
     display:flex;
@@ -1075,12 +1088,15 @@
 
     .modePill{ top:8px; right:10px; font-size:10px; padding:3px 8px; }
     .statsBtn{ left:10px; top:8px; width:26px; height:26px; }
+    .helpBtn{ left:44px; top:8px; width:26px; height:26px; }
   }
 
   @media (min-width:600px){
     .modePill{ right:calc(50% - 300px + 12px); }
     .statsBtn{ left:calc(50% - 300px + 12px); }
+    .helpBtn{ left:calc(50% - 300px + 46px); }
   }
+
 
   /* Stats overlay typography boost */
 .statsTitle{
@@ -1113,10 +1129,16 @@
 <body>
   <div class="wrap" id="wrap">
 
+       <!-- Stats button -->
     <button class="statsBtn" id="statsBtn" type="button" aria-label="Show stats">
       <img src="stats-icon.svg" alt="" class="statsIcon">
     </button>
 
+    <!-- How-to-play button -->
+    <button class="helpBtn" id="helpBtn" type="button" aria-label="How to play">
+      <img src="question-mark.svg" alt="" class="helpIcon">
+    </button>
+    
     <div class="toprow">
     <div class="nav">
   <a href="#" id="prevBtn" aria-label="Previous puzzle">
@@ -1180,6 +1202,36 @@
         <button class="modalX" id="hintsModalClose" type="button" aria-label="Close">×</button>
       </div>
       <div class="modalBody" id="hintsModalBody"></div>
+    </div>
+  </div>
+  <!-- How to play modal -->
+  <div class="modalOverlay" id="helpOverlay" aria-hidden="true">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="modalHdr">
+        <div class="modalTitle" id="helpTitle">How to play</div>
+        <button class="modalX" id="helpClose" type="button" aria-label="Close how to play">×</button>
+      </div>
+      <div class="modalBody" id="helpBody">
+        <p><strong>Goal:</strong> Find the 7-letter answer that contains:</p>
+        <ul>
+          <li>One contiguous 3-letter chunk from <strong>Word&nbsp;1</strong> (yellow), and</li>
+          <li>One contiguous 3-letter chunk from <strong>Word&nbsp;2</strong> (blue).</li>
+        </ul>
+        <p>
+          The answer can reuse letters in any order. A single-letter overlap between the
+          two chunks is allowed – that overlap shows as <strong>green</strong>.
+        </p>
+        <p><strong>Hints:</strong></p>
+        <ul>
+          <li>Hint&nbsp;1 locks in the correct trigram from one clue word.</li>
+          <li>Hint&nbsp;2 locks in the trigram from the other clue word.</li>
+          <li>Hint&nbsp;3 gives you the remaining letters you need.</li>
+        </ul>
+        <p>
+          Drag, tap, or type letters into the main grid. When you’re happy, hit
+          <strong>CHECK</strong>. Your skill score depends on time, hints and effort.
+        </p>
+      </div>
     </div>
   </div>
 
@@ -1292,7 +1344,11 @@ const el = {
   statsOverlay: document.getElementById('statsOverlay'),
   statsBody: document.getElementById('statsBody'),
   statsClose: document.getElementById('statsClose'),
+  helpBtn: document.getElementById('helpBtn'),
+  helpOverlay: document.getElementById('helpOverlay'),
+  helpClose: document.getElementById('helpClose'),
 };
+
 
 const TWOTRI_TEXT   = "Two trigrams from same word";
 const OVERLAP_TEXT  = "1-letter overlap allowed ✓";
@@ -1957,6 +2013,17 @@ function closeStats(){
   if(!el.statsOverlay) return;
   el.statsOverlay.classList.remove('open');
   el.statsOverlay.setAttribute('aria-hidden', 'true');
+}
+function openHelp(){
+  if(!el.helpOverlay) return;
+  el.helpOverlay.classList.add('open');
+  el.helpOverlay.setAttribute('aria-hidden', 'false');
+}
+
+function closeHelp(){
+  if(!el.helpOverlay) return;
+  el.helpOverlay.classList.remove('open');
+  el.helpOverlay.setAttribute('aria-hidden', 'true');
 }
 
 /* =======================
@@ -4197,6 +4264,22 @@ if(el.statsOverlay){
   }, { passive:false });
 }
 
+// How-to-play / help button wiring
+if(el.helpBtn){
+  el.helpBtn.addEventListener('click', (e)=>{ e.preventDefault(); openHelp(); });
+}
+if(el.helpClose){
+  el.helpClose.addEventListener('click', (e)=>{ e.preventDefault(); closeHelp(); });
+}
+if(el.helpOverlay){
+  el.helpOverlay.addEventListener('click', (e)=>{
+    if(e.target === el.helpOverlay){
+      e.preventDefault();
+      closeHelp();
+    }
+  }, { passive:false });
+}
+
 document.addEventListener('keydown', (e)=>{
   if(state.finished) return;
   if(state.modalOpen) return;
@@ -4208,8 +4291,7 @@ document.addEventListener('keydown', (e)=>{
     const isOtherTyping = target && target.tagName === "INPUT";
     if(!isOtherTyping){
       e.preventDefault();
-      typeLetterIntoGrid(e.key);
-      return;
+      handleKey(e.key.toUpperCase(), true);
     }
   }
 
