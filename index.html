@@ -6,34 +6,28 @@
   <title>Trigram Demo</title>
 
 <style>
-:root{
-  --bg:#a9cdf3;
-  --bubble:#fff;
-  --ink:#0b0b0b;
+  :root{
+    --bg:#a9cdf3;
+    --bubble:#fff;
+    --ink:#0b0b0b;
 
-  --w1:#fff3b3;   /* yellow */
-  --w2:#cfe8ff;   /* blue */
-  --ol:#c9f3d6;   /* green overlap */
-  --bad:#ffc9d2;  /* red/pink warning */
-  --submit:#F4D2FD;
+    --w1:#fff3b3;   /* yellow */
+    --w2:#cfe8ff;   /* blue */
+    --ol:#c9f3d6;   /* green overlap */
+    --bad:#ffc9d2;  /* red/pink warning */
+    --submit:#F4D2FD;
 
-  --kb-h: 260px;
-  --caret: rgba(0,0,0,.18);
+    --kb-h: 260px;
+    --caret: rgba(0,0,0,.18);
 
-  /* spacing controls */
-  --clue-hint-gap: 7px;
-  --lift-msg: 38px;
-  --lift-hints: 96px;
-  --msg-drop: 35px;
-  --result-drop: 32px;
-  --badge-drop: 72px;
-
-  /* underline bar */
-  --u-thick: 7px;
-  --u-rise:  -8px;
-  --u-pad:   1.1px;
-}
-
+    /* spacing controls (we’ll tweak these next) */
+    --clue-hint-gap: 7px;
+    --lift-msg: 38px;
+    --lift-hints: 96px;
+    --msg-drop: 35px;        /* grid → warning msg down */
+    --result-drop: 32px;     /* grid → result msg down (total, not extra) */
+    --badge-drop: 72px;      /* result msg → badge down */
+  }
 
   *{ box-sizing:border-box; }
   html, body{
@@ -155,14 +149,7 @@
     appearance:none;
     -webkit-appearance:none;
     font:inherit;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    line-height:1;
   }
-
-
-  
   .nav :is(a, button):active{ transform:translateY(1px); }
   .count{ font-weight:900; opacity:.7; min-width:58px; text-align:center; }
 
@@ -171,12 +158,12 @@
     display:block;
     width:fit-content;
     max-width:min(940px,94vw);
-    margin: clamp(20px, 3.6vh, 36px) auto 0;
+    margin: clamp(18px, 3.6vh, 36px) auto 0;
     padding:14px 13px 15px 20px;
     background:var(--bubble);
     border-radius:18px;
     box-shadow:0 2px 6px rgba(0,0,0,.08);
-    font-size:clamp(29px,5.0vw,37px);
+    font-size:clamp(30px,5.4vw,38px);
     line-height:1.12;
     letter-spacing:.12px;
     font-weight:400;
@@ -228,7 +215,7 @@
     vertical-align:middle;
     position:relative;
     top:-0.1em;
-    margin-left:7.3px;
+    margin-left:8px;
   }
 
   .clueWrap{
@@ -250,140 +237,23 @@
     z-index:30;
   }
 
-    /* ===== Clue hint letters (per-letter spans, no layout shift) ===== */
-  .clueWord.hint-pulse{
-    animation: clueHintPulse 140ms ease-out;
-  }
-  @keyframes clueHintPulse{
-    0%{ transform:scale(1); }
-    50%{ transform:scale(1.09); }
-    100%{ transform:scale(1); }
+  .clueWord{
+    display:inline-block;
+    cursor:pointer;
+    font-kerning:none;
+    font-variant-ligatures:none;
+    font-feature-settings:"kern" 0, "liga" 0, "clig" 0;
   }
 
-
-  /* non-trigram letters – fade text only, keep underline strong */
-  .clueWord.hint-active .cw-letter.dim{
-    opacity: 1;                     /* keep underline at full strength */
-    color: rgba(0,0,0,.30);         /* softer text */
-    filter: none;                   /* no blur */
+  .u-w1, .u-w2, .u-red{
+    text-decoration: underline;
+    text-decoration-thickness: 6px;
+    text-underline-offset: 9px;
+    pointer-events:none;
   }
-  .cw-letter{
-    position:relative;
-    display:inline;
-    transition:
-      color .22s ease,
-      opacity .23s ease,
-      transform .12s ease,
-      filter .22s ease;
-  }
-
-
- /* trigram letters – stable styling */
-.clueWord.hint-active .cw-letter.tri{
-  opacity: 1;
-  color: var(--ink);
-  filter: none;
-  background: transparent;            /* no band */
-  box-shadow: none;
-}
-
-/* per-word glow colours */
-.clueWord{
-  /* peak (brief) */
-  --triGlowPeak:    rgba(255, 220, 0, 1.00);
-  --triGlowPeakSoft:rgba(255, 220, 0, .85);
-
-  /* persistent (bright, but tighter spread to avoid “edge cutoff”) */
-  --triGlowPersist: rgba(255, 220, 0, .88);
-  --triGlowPersistSoft: rgba(255, 220, 0, .75);
-}
-
-.clueWord.cw-w2{
-  /* just a touch “whiter”/lighter than before */
-  --triGlowPeak:     rgba(105, 210, 255, 1.00);
-  --triGlowPeakSoft: rgba(105, 210, 255, .92);
-
-  --triGlowPersist:     rgba(105, 210, 255, .96);
-  --triGlowPersistSoft: rgba(105, 210, 255, .84);
-}
-
-/* persistent glow once hint is active */
-.clueWord.hint-active .cw-letter.tri{
-  text-shadow:
-    0 0 6px  var(--triGlowPersist),
-    0 0 12px var(--triGlowPersistSoft);
-}
-
-/* one-shot pop: fast peak → small settle → land on persistent */
-.clueWord.hint-active .cw-letter.tri-pop{
-  animation: clueTriGlow 520ms ease-out both;
-}
-
-@keyframes clueTriGlow{
-  0%{
-    text-shadow: 0 0 0 rgba(0,0,0,0);
-  }
-
-  /* get bright quickly (but keep radius tighter so it doesn’t hit the bubble edge) */
-  18%{
-    text-shadow:
-      0 0 8px  var(--triGlowPeak),
-      0 0 16px var(--triGlowPeak),
-      0 0 22px var(--triGlowPeakSoft);
-  }
-
-  /* settle a touch */
-  42%{
-    text-shadow:
-      0 0 7px  var(--triGlowPeak),
-      0 0 14px var(--triGlowPeakSoft);
-  }
-
-  /* finish exactly at the persistent state */
-  100%{
-    text-shadow:
-      0 0 6px  var(--triGlowPersist),
-      0 0 12px var(--triGlowPersistSoft);
-  }
-}
-
-
-.u-w1,
-.u-w2,
-.u-red{
-  position:relative;
-  display:inline-block;
-  text-decoration:none !important; /* kill text-decoration entirely */
-}
-
-.u-w1::after,
-.u-w2::after,
-.u-red::after{
-  content:"";
-  position:absolute;
-  left:  calc(-1 * var(--u-pad));
-  right: calc(-1 * var(--u-pad));
-  height: var(--u-thick);
-  bottom: var(--u-rise);
-  border-radius:999px;
-  pointer-events:none;
-  transform:translateZ(0); /* helps reduce subpixel seams */
-}
-
-.u-w1::after{ background: rgba(255,220,0,.90); }
-.u-w2::after{ background: rgba(70,160,255,.92); }
-.u-red::after{ background: rgba(235,80,92,.92); }
-
-
-/* clicks still pass through (kept as you intended) */
-.u-w1 .cw-letter,
-.u-w2 .cw-letter,
-.u-red .cw-letter{
-  pointer-events:none;
-}
-
-
-
+  .u-w1{ text-decoration-color: rgba(255,220,0,.9); }
+  .u-w2{ text-decoration-color: rgba(70,160,255,.92); }
+  .u-red{ text-decoration-color: rgba(235,80,92,.92); }
 
   /* ===== Grid ===== */
   :is(.gridDock, #gridDock){
@@ -625,19 +495,31 @@
     transition:opacity .35s ease, transform .35s ease;
   }
 
+  /* ===== Bottom hint-track dock (dynamic placement) ===== */
+  .hintDockBottom{
+    width:100%;
+    max-width:920px;
+    margin: 8px auto 0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex:0 0 auto;
+    z-index:25;
+    min-height:40px;
+  }
 
-/* ===== Extras-only hint track ===== */
-#trackW1, #trackW2{ display:none !important; }
 
-
-/* Hide the whole track until Hint 3 (extras) is revealed */
-.hintTrack.track-hidden{
-  opacity:0;
-  pointer-events:none;
-}
-
-
-
+  /* When using custom KB, buttons become fixed; keep the dock pinned above them */
+  html.has-kb .hintDockBottom{
+    position:fixed;
+    left:0; right:0;
+    bottom: calc(
+      var(--kb-h) + env(safe-area-inset-bottom) + 36px
+      + var(--btn-row-h, 0px) + 22px
+    );
+    margin:0;
+    z-index:9996; /* below btnRow (9997) so buttons always win if overlap */
+  }
 
   .trackRow{
     display:flex;
@@ -1059,76 +941,187 @@
     cursor:default;
   }
 
-/* ===== Overlays (Modal + Stats) ===== */
-:is(.modalOverlay,.statsOverlay){
-  position:fixed;
-  inset:0;
-  background: rgba(0,0,0,.26);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  padding:14px;
-}
-.modalOverlay{ z-index:10000; }
-.statsOverlay{ z-index:11000; }
-:is(.modalOverlay,.statsOverlay).open{ display:flex; }
+  /* ===== Modal ===== */
+  .modalOverlay{
+    position:fixed;
+    inset:0;
+    background: rgba(0,0,0,.26);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:10000;
+    padding:14px;
+  }
+  .modalOverlay.open{ display:flex; }
 
-:is(.modalCard,.statsCard){
-  width:min(560px,94vw);
-  background:#fff;
-  border-radius:18px;
-  border:2px solid rgba(0,0,0,.15);
-  box-shadow:0 10px 26px rgba(0,0,0,.18);
-  overflow:hidden;
-  text-align:left;
-}
+  .modalCard{
+    width: min(560px, 94vw);
+    background:#fff;
+    border-radius:18px;
+    border:2px solid rgba(0,0,0,.15);
+    box-shadow: 0 10px 26px rgba(0,0,0,.18);
+    overflow:hidden;
+    text-align:left;
+  }
+  .modalHdr{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 14px 14px 12px;
+    border-bottom:1px solid rgba(0,0,0,.08);
+    gap:10px;
+  }
+  .modalTitle{
+    font-weight:950;
+    font-size:18px;
+    letter-spacing:.01em;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .modalX{
+    border:0;
+    background:transparent;
+    color:var(--ink);
+    font-size:20px;
+    line-height:1;
+    font-weight:300;
+    cursor:pointer;
+    padding: 2px 6px;
+    opacity:.9;
+    outline:none !important;
+    box-shadow:none !important;
+    appearance:none;
+    -webkit-appearance:none;
+  }
+  .modalX:active{ transform: translateY(1px); }
+  .modalBody{ padding: 12px 14px 14px; }
+  /* ===== Stats overlay ===== */
+  .statsOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.26);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:11000;
+    padding:14px;
+  }
+  .statsOverlay.open{ display:flex; }
 
-:is(.modalHdr,.statsHdr){
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:14px 14px 12px;
-  border-bottom:1px solid rgba(0,0,0,.08);
-  gap:10px;
-}
+  .statsCard{
+    width:min(560px,94vw);
+    background:#fff;
+    border-radius:18px;
+    border:2px solid rgba(0,0,0,.15);
+    box-shadow:0 10px 26px rgba(0,0,0,.18);
+    overflow:hidden;
+    text-align:left;
+  }
+  .statsHdr{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 14px 10px;
+    border-bottom:1px solid rgba(0,0,0,.08);
+    gap:10px;
+  }
+  .statsTitle{
+    font-weight:950;
+    font-size:18px;
+    letter-spacing:.01em;
+  }
+  .statsX{
+    border:0;
+    background:transparent;
+    color:var(--ink);
+    font-size:20px;
+    line-height:1;
+    font-weight:300;
+    cursor:pointer;
+    padding:2px 6px;
+    opacity:.9;
+    outline:none !important;
+    box-shadow:none !important;
+    appearance:none;
+    -webkit-appearance:none;
+  }
+  .statsX:active{ transform:translateY(1px); }
 
-:is(.modalTitle,.statsTitle){
-  font-weight:950;
-  font-size:18px;
-  letter-spacing:.01em;
-}
-.modalTitle{
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-:is(.modalX,.statsX){
-  border:0;
-  background:transparent;
-  color:var(--ink);
-  font-size:20px;
-  line-height:1;
-  font-weight:300;
-  cursor:pointer;
-  padding:2px 6px;
-  opacity:.9;
-  outline:none !important;
-  box-shadow:none !important;
-  appearance:none;
-  -webkit-appearance:none;
-}
-:is(.modalX,.statsX):active{ transform:translateY(1px); }
-
-.modalBody{ padding:12px 14px 14px; }
-
-.statsBody{
-  padding:12px 14px 14px;
-  max-height:min(520px,72vh);
-  overflow:auto;
-  font-size:14px;
-}
-
+  .statsBody{
+    padding:12px 14px 14px;
+    max-height:min(520px,72vh);
+    overflow:auto;
+    font-size:14px;
+  }
+  .statsIntro{
+    margin-bottom:10px;
+    font-size:13px;
+    opacity:.8;
+  }
+  .statsSection{
+    margin-bottom:14px;
+  }
+  .statsSection h3{
+    margin:0 0 4px;
+    font-size:15px;
+  }
+  .statsSummary{
+    margin:0 0 6px;
+    font-size:13px;
+    opacity:.85;
+  }
+  .statsCols{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .statsCol{
+    flex:1 1 0;
+    min-width:0;
+  }
+  .statsCol h4{
+    margin:0 0 4px;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.09em;
+    opacity:.7;
+  }
+  .statRow{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:3px;
+  }
+  .statLabel{
+    flex:0 0 64px;
+    font-size:12px;
+    opacity:.8;
+  }
+  .statBar{
+    flex:1 1 auto;
+    height:7px;
+    border-radius:999px;
+    background:rgba(0,0,0,.06);
+    overflow:hidden;
+  }
+  .statBarFill{
+    display:block;
+    height:100%;
+    border-radius:999px;
+    background:linear-gradient(90deg, rgba(40,120,255,.9), rgba(110,200,255,.9));
+  }
+  .statValue{
+    flex:0 0 auto;
+    min-width:18px;
+    text-align:right;
+    font-size:12px;
+  }
+  .statsEmpty{
+    margin:0 0 4px;
+    font-size:13px;
+    opacity:.75;
+  }
 
   
   /* ===== Rotate overlay ===== */
@@ -1187,7 +1180,7 @@
     .nav :is(a, button){ padding:4px 9px; }
 
     .clue{
-      font-size:clamp(33px,6.9vw,39px);
+      font-size:clamp(32px,6.6vw,38px);
       margin-top: clamp(16px, 3.4vh, 28px);
     }
 
@@ -1256,16 +1249,15 @@
      <div class="clueWrap" id="clueWrap">
     <div class="clue" id="clue"></div>
 
-<div class="hintTrack hintTrackTop track-hidden" id="hintTrack" aria-label="Hint tracker">
-  <div class="trackRow" id="trackRow">
-    <div class="trackBlock" id="trackExtras"></div>
-
-    <!-- kept for backward-compat (script may reference them), but hidden via CSS -->
-    <div class="trackBlock" id="trackW1" aria-hidden="true"></div>
-    <div class="trackBlock" id="trackW2" aria-hidden="true"></div>
+    <!-- floating hint track UNDER the clue -->
+    <div class="hintTrack hintTrackTop" id="hintTrack" aria-label="Hint tracker">
+      <div class="trackRow" id="trackRow">
+        <div class="trackBlock" id="trackW1"></div>
+        <div class="trackBlock" id="trackW2"></div>
+        <div class="trackBlock" id="trackExtras"></div>
+      </div>
+    </div>
   </div>
-</div>
-
 
   <div class="gridDock" id="gridDock">
     <div class="gridWrap" id="gridWrap" aria-label="Answer grid">
@@ -1374,7 +1366,7 @@ const PUZZLES = [
   { clue:"Ankles ordeals", word1:"ankles", word2:"ordeals", answer:"realest", tri1:"les", tri2:"eal" },
   { clue:"Pains mudder", word1:"pains", word2:"mudder", answer:"insider", tri1:"ins", tri2:"der" },
   { clue:"Shame redrawn", word1:"shame", word2:"redrawn", answer:"dramedy", tri1:"ame", tri2:"dra" },
-  { clue:"Butch aliens", word1:"butch", word2:"aliens", answer:"halibut", tri1:"but", tri2:"ali" },
+  { clue:"Aliens butch", word1:"aliens", word2:"butch", answer:"halibut", tri1:"ali", tri2:"but" },
   { clue:"Layers exempts", word1:"layers", word2:"exempts", answer:"tempers", tri1:"ers", tri2:"emp" },
   { clue:"Pride earths", word1:"pride", word2:"earths", answer:"sidearm", tri1:"ide", tri2:"ear" },
   { clue:"Space archer", word1:"space", word2:"archer", answer:"apaches", tri1:"pac", tri2:"che" },
@@ -1514,43 +1506,7 @@ const state = {
   // hint fly
   pendingFly: null,
   flyAttempts: 0,
-
-  // visual state for clue-word hint effects
-  hintVisual: { w1:false, w2:false },
 };
-
-/* =======================
-   Fly-in: Extras only
-   (Ignore fly requests for hint 1/2)
-   ======================= */
-(function(){
-  let _pendingFly = state.pendingFly;
-
-  Object.defineProperty(state, "pendingFly", {
-    configurable: true,
-    enumerable: true,
-    get(){ return _pendingFly; },
-    set(v){
-      if(v == null){ _pendingFly = null; return; }
-
-      // Try common identifiers used by fly payloads
-      let id = null;
-      if(typeof v === "string") id = v;
-      else if(typeof v === "object"){
-        id = v.id || v.kind || v.group || v.hintId || v.which || v.type || null;
-      }
-
-      // Allow extras-only (be tolerant: some code uses "hex" for extras fly class)
-      const ok = (id == null) || (String(id) === HINT_IDS.extras) || (String(id) === "hex");
-      if(!ok){
-        _pendingFly = null;     // drop any w1/w2 fly requests
-        return;
-      }
-
-      _pendingFly = v;
-    }
-  });
-})();
 
 /* =======================
    Flags (Enhanced vs minimal)
@@ -1612,13 +1568,8 @@ function startMax(){ return Math.max(0, getN() - TR); }
 
 function renderSmart(){
   render(!state.useCustomKB);
-
-  // after the clue HTML is in the DOM, update the per-letter hint effect
-  updateClueHintEffects();
-
   requestAnimationFrame(updateHintTrackPlacement);
 }
-
 
 /* =======================
    Visible-time stopwatch
@@ -2311,178 +2262,6 @@ function underlineBySubstrings(token, items){
   if(open) out += "</span>";
   return out;
 }
-  /* =======================
-   Clue per-letter decoration + hint effect
-   ======================= */
-
-/**
- * Recursively walk a clue word node and wrap text characters in <span class="cw-letter">,
- * preserving existing underline spans (.u-w1, .u-w2, .u-red) so text-decoration still works.
- */
-function decorateWordLetters(root, letterIndexRef){
-  const children = Array.from(root.childNodes);
-  for(const node of children){
-    if(node.nodeType === Node.TEXT_NODE){
-      const text = node.nodeValue || "";
-      if(!text) continue;
-
-      const frag = document.createDocumentFragment();
-      for(const ch of text){
-        // keep spaces as raw text so widths stay identical
-        if(ch === " " || ch === "\u00A0"){
-          frag.appendChild(document.createTextNode(ch));
-          continue;
-        }
-
-        const span = document.createElement('span');
-        span.className = "cw-letter";
-        span.textContent = ch;
-
-        // letter index only advances for A–Z; matches your norm() logic
-        if(/[A-Za-z]/.test(ch)){
-          span.dataset.li = String(letterIndexRef.i);
-          letterIndexRef.i++;
-        }else{
-          span.dataset.li = "";
-        }
-
-        frag.appendChild(span);
-      }
-
-      root.replaceChild(frag, node);
-    }else if(node.nodeType === Node.ELEMENT_NODE){
-      // already decorated? leave children alone
-      if(node.classList.contains('cw-letter')) continue;
-      decorateWordLetters(node, letterIndexRef);
-    }
-  }
-}
-
-/**
- * Ensure each .clueWord has its letters wrapped once.
- * Idempotent: new clue HTML (on puzzle change) has no data-cw-decorated flag.
- */
-function ensureClueLetterSpans(){
-  if(!el.clue) return;
-  const words = el.clue.querySelectorAll('.clueWord');
-  if(!words.length) return;
-
-  words.forEach(wordEl=>{
-    if(wordEl.dataset.cwDecorated === "1") return;
-    const letterIndexRef = { i: 0 };
-    decorateWordLetters(wordEl, letterIndexRef);
-    wordEl.dataset.cwDecorated = "1";
-  });
-}
-
-function clearClueHintClasses(wordEl){
-  if(!wordEl) return;
-  wordEl.classList.remove('hint-active','hint-pulse');
-  wordEl.querySelectorAll('.cw-letter').forEach(span=>{
-    span.classList.remove('dim','tri','tri-pop');
-  });
-}
-
-/**
- * Called after each render: if a hint has been used for w1/w2,
- * dim non-trigram letters and spotlight the three trigram letters.
- * Uses state.hintsUsed.{w1,w2} and current puzzle’s tri1/tri2.
- */
-function updateClueHintEffects(){
-  if(!el.clue) return;
-
-  // build per-letter spans (once per puzzle)
-  ensureClueLetterSpans();
-
-  const words = el.clue.querySelectorAll('.clueWord');
-  const wordEls = {
-    w1: words[0] || null,
-    w2: words[1] || null,
-  };
-
-  const p = current();
-  const wordNorms = {
-    w1: norm(p.word1),
-    w2: norm(p.word2),
-  };
-  const triNorms = {
-    w1: norm(p.tri1 || ""),
-    w2: norm(p.tri2 || ""),
-  };
-
-  ['w1','w2'].forEach(group=>{
-    const used = !!state.hintsUsed[group];
-    const hadVisual = !!(state.hintVisual && state.hintVisual[group]);
-    const wordEl = wordEls[group];
-    // mark each word so CSS can colour the tri-pop glow correctly
-if(wordEl){
-  wordEl.classList.toggle('cw-w1', group === 'w1');
-  wordEl.classList.toggle('cw-w2', group === 'w2');
-}
-
-
-    if(!wordEl){
-      if(state.hintVisual) state.hintVisual[group] = false;
-      return;
-    }
-
-    // no hint for this word → clear any previous effects
-    if(!used){
-      clearClueHintClasses(wordEl);
-      if(state.hintVisual) state.hintVisual[group] = false;
-      return;
-    }
-
-    // hint is active for this word
-    wordEl.classList.add('hint-active');
-
-    const w   = wordNorms[group];
-    const tri = triNorms[group];
-    const start = (w && tri) ? w.indexOf(tri) : -1;
-
-    const letters    = Array.from(wordEl.querySelectorAll('.cw-letter'));
-    const triLetters = [];
-
-    // ALWAYS re-apply dim/tri classes on the current DOM
-    letters.forEach(span=>{
-      span.classList.remove('dim','tri','tri-pop');
-      const li = span.dataset.li ? parseInt(span.dataset.li, 10) : -1;
-
-      if(start >= 0 && li >= start && li < start + TR){
-        span.classList.add('tri');
-        triLetters.push(span);
-      }else{
-        span.classList.add('dim');
-      }
-    });
-
-    // Only run the "pop" animation the first time the hint appears
-    if(triLetters.length && !hadVisual){
-      // word-level pulse
-      wordEl.classList.add('hint-pulse');
-      const handler = (ev)=>{
-        if(ev.animationName === 'clueHintPulse'){
-          wordEl.classList.remove('hint-pulse');
-        }
-      };
-      wordEl.addEventListener('animationend', handler, { once:true });
-
-      // letter-level punch, once only, via .tri-pop
-      triLetters.forEach(span=>{
-        span.classList.add('tri-pop');
-        span.addEventListener('animationend', ()=>{
-          span.classList.remove('tri-pop');
-        }, { once:true });
-      });
-    }
-
-    if(!state.hintVisual) state.hintVisual = { w1:false, w2:false };
-    state.hintVisual[group] = true;
-  });
-}
-
-
-
 
 /* =======================
    Grid model + focus
@@ -4267,7 +4046,12 @@ function buildKeyboard(){
   requestAnimationFrame(()=> updateKeyboardHeightVar());
 }
 
-
+/* =======================
+   Hint track placement (TOP vs BOTTOM)
+   ======================= */
+const KB_FORCE_TOP_RATIO = 0.8;
+const HINT_PAD = 10;
+let _hintTrackMode = null;
 
 function updateBtnRowHeightVar(){
   const r = el.btnRow?.getBoundingClientRect?.();
@@ -4275,29 +4059,93 @@ function updateBtnRowHeightVar(){
     document.documentElement.style.setProperty('--btn-row-h', `${Math.ceil(r.height)}px`);
   }
 }
+function applyHintTrackMode(mode){
+  if(_hintTrackMode === mode) return;
+  _hintTrackMode = mode;
 
+  if(mode === 'top'){
+    if(el.clue) el.clue.insertAdjacentElement('afterend', el.hintTrack);
+    el.hintTrack.classList.add('hintTrackTop');
+    if(el.clueWrap) el.clueWrap.classList.add('hasTopTrack');
+  }else{
+    if(el.hintDockBottom) el.hintDockBottom.appendChild(el.hintTrack);
+    el.hintTrack.classList.remove('hintTrackTop');
+    if(el.clueWrap) el.clueWrap.classList.remove('hasTopTrack');
+  }
+}
+/* =======================
+   Hint track placement (top vs bottom)
+   ======================= */
+
+function moveHintTrackTop(){
+  if(!el.hintTrack || !el.clueWrap) return;
+  if(el.hintTrack.parentElement === el.clueWrap) return;
+
+  el.clueWrap.appendChild(el.hintTrack);
+  el.clueWrap.classList.add('hasTopTrack');
+  el.hintTrack.classList.add('hintTrackTop');
+}
+
+function moveHintTrackBottom(){
+  if(!el.hintTrack || !el.hintDockBottom) return;
+  if(el.hintTrack.parentElement === el.hintDockBottom) return;
+
+  el.hintDockBottom.appendChild(el.hintTrack);
+  el.clueWrap.classList.remove('hasTopTrack');
+  el.hintTrack.classList.remove('hintTrackTop');
+}
 
   
 function updateHintTrackPlacement(){
-  if(!el.hintTrack || !el.clue) return;
+  const track      = el.hintTrack;
+  const topHost    = el.clueWrap;
+  const bottomHost = el.hintDockBottom;
+  const gridDock   = el.gridDock;
+  const btnRow     = el.btnRow;
 
-  // Only show/reserve space when Hint 3 (extras) is active
-  const showExtras = !!(state.hintsUsed && state.hintsUsed.extras);
+  if(!track || !topHost || !bottomHost || !gridDock || !btnRow) return;
 
-  // IMPORTANT: put the hint track *immediately* under the clue element,
-  // not "at the end of #clueWrap" (which can be down near the bottom buttons).
-  if(el.clue.nextElementSibling !== el.hintTrack){
-    el.clue.insertAdjacentElement('afterend', el.hintTrack);
+  const root  = document.documentElement;
+  const hasKB = root.classList.contains('has-kb');
+
+  // Measure current layout
+  const gridRect  = gridDock.getBoundingClientRect();
+  const btnRect   = btnRow.getBoundingClientRect();
+  const trackRect = track.getBoundingClientRect();
+
+  // If we can’t measure properly, fall back to bottom
+  if(!gridRect || !btnRect || !trackRect){
+    if(track.parentNode !== bottomHost) bottomHost.appendChild(track);
+    topHost.classList.remove('hasTopTrack');
+    track.classList.remove('hintTrackTop');
+    return;
   }
 
-  el.hintTrack.classList.add('hintTrackTop');
 
-  el.hintTrack.classList.toggle('track-hidden', !showExtras);
-  if(el.clueWrap){
-    el.clueWrap.classList.toggle('hasTopTrack', showExtras);
+  const available = btnRect.top - gridRect.bottom;
+
+
+  const MIN_GAP = 12; // breathing room above the bottom row
+  const needTop = hasKB && (available < (trackRect.height + MIN_GAP));
+
+  const currentlyTop = (track.parentNode === topHost);
+
+  if(needTop){
+    // Move to TOP (under clue)
+    if(!currentlyTop){
+      topHost.appendChild(track);
+    }
+    topHost.classList.add('hasTopTrack');
+    track.classList.add('hintTrackTop');
+  }else{
+    // Keep / move to BOTTOM dock
+    if(currentlyTop || track.parentNode !== bottomHost){
+      bottomHost.appendChild(track);
+    }
+    topHost.classList.remove('hasTopTrack');
+    track.classList.remove('hintTrackTop');
   }
 }
-
 
 
 window.addEventListener('resize', ()=> requestAnimationFrame(updateHintTrackPlacement), {passive:true});
