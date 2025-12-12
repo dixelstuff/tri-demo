@@ -1661,14 +1661,8 @@ function getResultForPuzzle(idx){
 }
 
 /**
- * Save minimal in-progress state for the current puzzle:
- *  - which hints have been used
- *  - total hintCount
- *  - whether assist mode is on
- *  - current grid letters
- *  - current focusIdx
- *
- * If the puzzle is finished, or no hints used, the progress entry is removed.
+ * Save in-progress state for the current puzzle:
+
  */
 function saveInProgressForCurrentPuzzle(){
   if(!hasLocalStorage()) return;
@@ -1679,33 +1673,53 @@ function saveInProgressForCurrentPuzzle(){
     data.progress = {};
   }
 
-  const anyHintUsed = !!(state.hintsUsed?.w1 || state.hintsUsed?.w2 || state.hintsUsed?.extras);
-
-  if(state.finished || !anyHintUsed){
-    // Nothing to persist / or puzzle is done → clear any leftover progress
+  // If puzzle is finished → clear progress
+  if(state.finished){
     delete data.progress[id];
-  }else{
-    const gridChars = snapshotGridChars();
-    const n = getN();
-    const focus = clamp(state.focusIdx ?? 0, 0, n-1);
-
-    data.progress[id] = {
-      puzzleIndex: state.i,
-      hintsUsed: {
-        w1: !!(state.hintsUsed && state.hintsUsed.w1),
-        w2: !!(state.hintsUsed && state.hintsUsed.w2),
-        extras: !!(state.hintsUsed && state.hintsUsed.extras),
-      },
-      hintCount: clamp(state.hintCount || 0, 0, 3),
-      assistOn: !!state.assist,
-      grid: gridChars,
-      focusIdx: focus,
-      ts: Date.now()
-    };
+    saveStatsStore(data);
+    return;
   }
+
+  // Extract grid letters
+  const gridChars = snapshotGridChars();
+  const hasAnyLetters = gridChars.some(ch => ch && ch !== "");
+
+  // Determine whether we have anything meaningful to save
+  const somethingToSave =
+    hasAnyLetters ||
+    state.hintsUsed.w1 ||
+    state.hintsUsed.w2 ||
+    state.hintsUsed.extras ||
+    state.assist;  // Assist mode on counts as meaningful state
+
+  if(!somethingToSave){
+    // Nothing typed, nothing hinted → clear progress
+    delete data.progress[id];
+    saveStatsStore(data);
+    return;
+  }
+
+  // Build progress entry
+  const n = getN();
+  const focus = clamp(state.focusIdx ?? 0, 0, n-1);
+
+  data.progress[id] = {
+    puzzleIndex: state.i,
+    hintsUsed: {
+      w1: !!(state.hintsUsed && state.hintsUsed.w1),
+      w2: !!(state.hintsUsed && state.hintsUsed.w2),
+      extras: !!(state.hintsUsed && state.hintsUsed.extras),
+    },
+    hintCount: clamp(state.hintCount || 0, 0, 3),
+    assistOn: !!state.assist,
+    grid: gridChars,        // <-- LETTERS ALWAYS SAVED NOW
+    focusIdx: focus,
+    ts: Date.now()
+  };
 
   saveStatsStore(data);
 }
+
 
 /**
  * Apply stored in-progress hint + grid state to the current puzzle index.
@@ -1748,72 +1762,6 @@ function applyStoredProgressToCurrentPuzzle(){
   return true;
 }
 
-  function getProgressForPuzzle(idx){
-  const data = loadStatsStore();
-  return (data.progress && data.progress[String(idx)]) || null;
-}
-
-/**
- * Save minimal in-progress state for the current puzzle:
- *  - which hints have been used
- *  - total hintCount
- *  - whether assist mode is on
- *
- * If the puzzle is finished, or no hints used, the progress entry is removed.
- */
-function saveInProgressForCurrentPuzzle(){
-  if(!hasLocalStorage()) return;
-  const data = loadStatsStore();
-  const id = String(state.i);
-
-  if(!data.progress || typeof data.progress !== "object"){
-    data.progress = {};
-  }
-
-  const anyHintUsed = !!(state.hintsUsed?.w1 || state.hintsUsed?.w2 || state.hintsUsed?.extras);
-
-  if(state.finished || !anyHintUsed){
-    // Nothing to persist / or puzzle is done → clear any leftover progress
-    delete data.progress[id];
-  }else{
-    data.progress[id] = {
-      puzzleIndex: state.i,
-      hintsUsed: {
-        w1: !!(state.hintsUsed && state.hintsUsed.w1),
-        w2: !!(state.hintsUsed && state.hintsUsed.w2),
-        extras: !!(state.hintsUsed && state.hintsUsed.extras),
-      },
-      hintCount: clamp(state.hintCount || 0, 0, 3),
-      assistOn: !!state.assist,
-      ts: Date.now()
-    };
-  }
-
-  saveStatsStore(data);
-}
-
-/**
- * Apply stored in-progress hint state to the current puzzle index.
- * Returns true if anything was applied.
- */
-function applyStoredProgressToCurrentPuzzle(){
-  const saved = getProgressForPuzzle(state.i);
-  if(!saved) return false;
-
-  state.hintsUsed = {
-    w1: !!(saved.hintsUsed && saved.hintsUsed.w1),
-    w2: !!(saved.hintsUsed && saved.hintsUsed.w2),
-    extras: !!(saved.hintsUsed && saved.hintsUsed.extras),
-  };
-  state.hintCount = clamp(saved.hintCount || 0, 0, 3);
-
-  state.assist = !!saved.assistOn;
-  state.assistLocked = !!saved.assistOn;
-  updateModePill();
-
-  // bank/extras will be lazily rebuilt by renderHintTrack()
-  return true;
-}
 
 function firstUnplayedPuzzleIndex(){
   const data = loadStatsStore();
