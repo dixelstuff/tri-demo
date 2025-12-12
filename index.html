@@ -1650,34 +1650,53 @@ function computeModeStats(modeLabel){
   const all = Object.values(data.results || {});
   const arr = all.filter(r => r.mode === modeLabel);
   const count = arr.length;
-  if(!count) return { count:0 };
+  if (!count) return { count: 0 };
 
-  let sumHints = 0, sumSkill = 0;
-  const histSkill = { "88-100":0, "68-87":0, "48-67":0, "30-47":0 };
-  const histHints = { 0:0, 1:0, 2:0, 3:0 };
+  let sumHints = 0;
+  let sumSkill = 0;
+  let bestSkill = 0;
 
-  for(const r of arr){
+  // sort by timestamp so streaks are in play order
+  const byTime = arr.slice().sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  let bestZeroStreak = 0;
+  let currentStreak = 0;
+
+  for (const r of byTime) {
     const h = clamp(r.hints || 0, 0, 3);
     const s = clamp(r.skill || 0, 0, 100);
-    sumHints += h; sumSkill += s;
 
-    if(s >= 88) histSkill["88-100"]++;
-    else if(s >= 68) histSkill["68-87"]++;
-    else if(s >= 48) histSkill["48-67"]++;
-    else histSkill["30-47"]++;
+    sumHints += h;
+    sumSkill += s;
+    if (s > bestSkill) bestSkill = s;
 
-    histHints[h] = (histHints[h] || 0) + 1;
+    // streak only counts non-give-up solves with 0 hints
+    if (!r.gaveUp && h === 0) {
+      currentStreak++;
+      if (currentStreak > bestZeroStreak) bestZeroStreak = currentStreak;
+    } else {
+      currentStreak = 0;
+    }
   }
-  return { count, avgHints: sumHints / count, avgSkill: sumSkill / count, histSkill, histHints };
+
+  return {
+    count,
+    avgHints: sumHints / count,
+    avgSkill: sumSkill / count,
+    bestSkill,
+    bestZeroStreak: bestZeroStreak
+  };
 }
+
 function formatAvg(x, decimals){
-  if(typeof x !== "number" || !isFinite(x)) return "—";
+  if (typeof x !== "number" || !isFinite(x)) return "—";
   return x.toFixed(decimals);
 }
+
 function totalCompletedCount(){
   const data = loadStatsStore();
   return data.results ? Object.keys(data.results).length : 0;
 }
+
 function checkResetParam(){
   try{
     const qs = window.location.search || "";
@@ -1686,58 +1705,66 @@ function checkResetParam(){
     if(params.has("reset")) clearAllStats();
   }catch(e){}
 }
-function renderStatsView(){
-  if(!el.statsBody) return;
 
-  const total = totalCompletedCount();
+function renderStatsView(){
+  if (!el.statsBody) return;
+
+  const total   = totalCompletedCount();
   const classic = computeModeStats("Classic");
   const elite   = computeModeStats("Elite");
 
-  function sectionHTML(label, stats){
-    if(!stats || !stats.count){
-      return `<section class="statsSection"><h3>${label}</h3><p class="statsEmpty">No puzzles completed in this mode yet.</p></section>`;
+  // helper to render one mode block
+  function modeSection(label, stats){
+    if (!stats || !stats.count){
+      return `
+        <section class="statsSection">
+          <h3>${label}</h3>
+          <p class="statsEmpty">No puzzles played in this mode yet.</p>
+        </section>`;
     }
-
-    const hs = stats.histSkill;
-    const hh = stats.histHints;
-
-    const maxSkill = Math.max(hs["88-100"]||0, hs["68-87"]||0, hs["48-67"]||0, hs["30-47"]||0);
-    const maxHints = Math.max(hh[0]||0, hh[1]||0, hh[2]||0, hh[3]||0);
-
-    const row = (lbl, v, max)=> {
-      const w = max ? Math.round((v / max) * 100) : 0;
-      return `<div class="statRow"><span class="statLabel">${lbl}</span><span class="statBar"><span class="statBarFill" style="width:${w}%"></span></span><span class="statValue">${v}</span></div>`;
-    };
 
     return `
       <section class="statsSection">
         <h3>${label}</h3>
-        <p class="statsSummary">${stats.count} puzzles • Avg hints ${formatAvg(stats.avgHints,1)} • Avg skill ${formatAvg(stats.avgSkill,0)}</p>
-        <div class="statsCols">
-          <div class="statsCol">
-            <h4>Skill</h4>
-            ${row("88–100", hs["88-100"]||0, maxSkill)}
-            ${row("68–87", hs["68-87"]||0, maxSkill)}
-            ${row("48–67", hs["48-67"]||0, maxSkill)}
-            ${row("30–47", hs["30-47"]||0, maxSkill)}
-          </div>
-          <div class="statsCol">
-            <h4>Hints used</h4>
-            ${row("0", hh[0]||0, maxHints)}
-            ${row("1", hh[1]||0, maxHints)}
-            ${row("2", hh[2]||0, maxHints)}
-            ${row("3+", hh[3]||0, maxHints)}
-          </div>
-        </div>
+        <p class="statsSummary"><strong>${stats.count}</strong> puzzles played</p>
+        <p class="statsSummary">
+          Avg hints <strong>${formatAvg(stats.avgHints, 1)}</strong>
+          &nbsp;•&nbsp;
+          Avg skill <strong>${formatAvg(stats.avgSkill, 0)}</strong>
+        </p>
+        <p class="statsSummary">
+          Best skill <strong>${stats.bestSkill || "—"}</strong>
+        </p>
+        <p class="statsSummary">
+          Best 0-hint streak <strong>${stats.bestZeroStreak || 0}</strong>
+        </p>
       </section>`;
   }
 
-  el.statsBody.innerHTML = `
-    <div class="statsIntro"><p><strong>${total}</strong> puzzles completed so far.</p></div>
-    ${sectionHTML("Classic (assist on)", classic)}
-    ${sectionHTML("Elite (assist off)", elite)}
+  let html = "";
+
+  if (!total){
+    html = `<p class="statsEmpty">No puzzles completed yet. Solve a few, then check back here!</p>`;
+  } else {
+    html += `
+      <div class="statsIntro">
+        <p><strong>${total}</strong> puzzles played so far.</p>
+      </div>
+      ${modeSection("Classic", classic)}
+      ${modeSection("Elite", elite)}
+    `;
+  }
+
+  // small footer note
+  html += `
+    <p class="statsIntro" style="margin-top:12px;font-size:12px;opacity:.65;">
+      Stats are stored on this device only.
+    </p>
   `;
+
+  el.statsBody.innerHTML = html;
 }
+
 function openStats(){
   if(!el.statsOverlay) return;
   el.statsOverlay.classList.add('open');
