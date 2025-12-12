@@ -154,6 +154,10 @@
     justify-content:center;
     line-height:1;
   }
+#prevBtn, #nextBtn{ transform: translateY(-1px); }
+#prevBtn:active, #nextBtn:active{ transform: translateY(0px); } /* keep your press effect */
+
+  
   .nav :is(a, button):active{ transform:translateY(1px); }
   .count{ font-weight:900; opacity:.7; min-width:58px; text-align:center; }
 
