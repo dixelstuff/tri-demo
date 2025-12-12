@@ -6,28 +6,34 @@
   <title>Trigram Demo</title>
 
 <style>
-  :root{
-    --bg:#a9cdf3;
-    --bubble:#fff;
-    --ink:#0b0b0b;
+:root{
+  --bg:#a9cdf3;
+  --bubble:#fff;
+  --ink:#0b0b0b;
 
-    --w1:#fff3b3;   /* yellow */
-    --w2:#cfe8ff;   /* blue */
-    --ol:#c9f3d6;   /* green overlap */
-    --bad:#ffc9d2;  /* red/pink warning */
-    --submit:#F4D2FD;
+  --w1:#fff3b3;   /* yellow */
+  --w2:#cfe8ff;   /* blue */
+  --ol:#c9f3d6;   /* green overlap */
+  --bad:#ffc9d2;  /* red/pink warning */
+  --submit:#F4D2FD;
 
-    --kb-h: 260px;
-    --caret: rgba(0,0,0,.18);
+  --kb-h: 260px;
+  --caret: rgba(0,0,0,.18);
 
-    /* spacing controls (we’ll tweak these next) */
-    --clue-hint-gap: 7px;
-    --lift-msg: 38px;
-    --lift-hints: 96px;
-    --msg-drop: 35px;        /* grid → warning msg down */
-    --result-drop: 32px;     /* grid → result msg down (total, not extra) */
-    --badge-drop: 72px;      /* result msg → badge down */
-  }
+  /* spacing controls */
+  --clue-hint-gap: 7px;
+  --lift-msg: 38px;
+  --lift-hints: 96px;
+  --msg-drop: 35px;
+  --result-drop: 32px;
+  --badge-drop: 72px;
+
+  /* underline bar */
+  --u-thick: 7px;
+  --u-rise:  -8px;
+  --u-pad:   1.1px;
+}
+
 
   *{ box-sizing:border-box; }
   html, body{
@@ -254,15 +260,6 @@
     100%{ transform:scale(1); }
   }
 
-  /* each letter in the clue word (wrapped in JS) */
-  .cw-letter{
-    position:relative;
-    display:inline;
-    transition:
-      opacity .23s ease,
-      transform .12s ease,
-      filter .22s ease;
-  }
 
   /* non-trigram letters – fade text only, keep underline strong */
   .clueWord.hint-active .cw-letter.dim{
@@ -350,15 +347,6 @@
   }
 }
 
-
-
-
-/* Continuous underline bar (prevents micro-splits between per-letter spans) */
-:root{
-  --u-thick: 7px;   /* underline thickness */
-  --u-rise:  -8px;   /* how far ABOVE the bottom of the wrapped text box */
-  --u-pad:   1.1px; /* overhang at each end to hide tiny gaps */
-}
 
 .u-w1,
 .u-w2,
@@ -637,23 +625,10 @@
     transition:opacity .35s ease, transform .35s ease;
   }
 
-  /* ===== Bottom hint-track dock (dynamic placement) ===== */
-  .hintDockBottom{
-    width:100%;
-    max-width:920px;
-    margin: 8px auto 0;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    flex:0 0 auto;
-    z-index:25;
-    min-height:40px;
-  }
+
 /* ===== Extras-only hint track ===== */
 #trackW1, #trackW2{ display:none !important; }
 
-/* We no longer ever use the bottom dock */
-#hintDockBottom{ display:none !important; }
 
 /* Hide the whole track until Hint 3 (extras) is revealed */
 .hintTrack.track-hidden{
@@ -662,17 +637,7 @@
 }
 
 
-  /* When using custom KB, buttons become fixed; keep the dock pinned above them */
-  html.has-kb .hintDockBottom{
-    position:fixed;
-    left:0; right:0;
-    bottom: calc(
-      var(--kb-h) + env(safe-area-inset-bottom) + 36px
-      + var(--btn-row-h, 0px) + 22px
-    );
-    margin:0;
-    z-index:9996; /* below btnRow (9997) so buttons always win if overlap */
-  }
+
 
   .trackRow{
     display:flex;
@@ -1094,187 +1059,76 @@
     cursor:default;
   }
 
-  /* ===== Modal ===== */
-  .modalOverlay{
-    position:fixed;
-    inset:0;
-    background: rgba(0,0,0,.26);
-    display:none;
-    align-items:center;
-    justify-content:center;
-    z-index:10000;
-    padding:14px;
-  }
-  .modalOverlay.open{ display:flex; }
+/* ===== Overlays (Modal + Stats) ===== */
+:is(.modalOverlay,.statsOverlay){
+  position:fixed;
+  inset:0;
+  background: rgba(0,0,0,.26);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:14px;
+}
+.modalOverlay{ z-index:10000; }
+.statsOverlay{ z-index:11000; }
+:is(.modalOverlay,.statsOverlay).open{ display:flex; }
 
-  .modalCard{
-    width: min(560px, 94vw);
-    background:#fff;
-    border-radius:18px;
-    border:2px solid rgba(0,0,0,.15);
-    box-shadow: 0 10px 26px rgba(0,0,0,.18);
-    overflow:hidden;
-    text-align:left;
-  }
-  .modalHdr{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding: 14px 14px 12px;
-    border-bottom:1px solid rgba(0,0,0,.08);
-    gap:10px;
-  }
-  .modalTitle{
-    font-weight:950;
-    font-size:18px;
-    letter-spacing:.01em;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-  .modalX{
-    border:0;
-    background:transparent;
-    color:var(--ink);
-    font-size:20px;
-    line-height:1;
-    font-weight:300;
-    cursor:pointer;
-    padding: 2px 6px;
-    opacity:.9;
-    outline:none !important;
-    box-shadow:none !important;
-    appearance:none;
-    -webkit-appearance:none;
-  }
-  .modalX:active{ transform: translateY(1px); }
-  .modalBody{ padding: 12px 14px 14px; }
-  /* ===== Stats overlay ===== */
-  .statsOverlay{
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.26);
-    display:none;
-    align-items:center;
-    justify-content:center;
-    z-index:11000;
-    padding:14px;
-  }
-  .statsOverlay.open{ display:flex; }
+:is(.modalCard,.statsCard){
+  width:min(560px,94vw);
+  background:#fff;
+  border-radius:18px;
+  border:2px solid rgba(0,0,0,.15);
+  box-shadow:0 10px 26px rgba(0,0,0,.18);
+  overflow:hidden;
+  text-align:left;
+}
 
-  .statsCard{
-    width:min(560px,94vw);
-    background:#fff;
-    border-radius:18px;
-    border:2px solid rgba(0,0,0,.15);
-    box-shadow:0 10px 26px rgba(0,0,0,.18);
-    overflow:hidden;
-    text-align:left;
-  }
-  .statsHdr{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:14px 14px 10px;
-    border-bottom:1px solid rgba(0,0,0,.08);
-    gap:10px;
-  }
-  .statsTitle{
-    font-weight:950;
-    font-size:18px;
-    letter-spacing:.01em;
-  }
-  .statsX{
-    border:0;
-    background:transparent;
-    color:var(--ink);
-    font-size:20px;
-    line-height:1;
-    font-weight:300;
-    cursor:pointer;
-    padding:2px 6px;
-    opacity:.9;
-    outline:none !important;
-    box-shadow:none !important;
-    appearance:none;
-    -webkit-appearance:none;
-  }
-  .statsX:active{ transform:translateY(1px); }
+:is(.modalHdr,.statsHdr){
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 14px 12px;
+  border-bottom:1px solid rgba(0,0,0,.08);
+  gap:10px;
+}
 
-  .statsBody{
-    padding:12px 14px 14px;
-    max-height:min(520px,72vh);
-    overflow:auto;
-    font-size:14px;
-  }
-  .statsIntro{
-    margin-bottom:10px;
-    font-size:13px;
-    opacity:.8;
-  }
-  .statsSection{
-    margin-bottom:14px;
-  }
-  .statsSection h3{
-    margin:0 0 4px;
-    font-size:15px;
-  }
-  .statsSummary{
-    margin:0 0 6px;
-    font-size:13px;
-    opacity:.85;
-  }
-  .statsCols{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-  }
-  .statsCol{
-    flex:1 1 0;
-    min-width:0;
-  }
-  .statsCol h4{
-    margin:0 0 4px;
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.09em;
-    opacity:.7;
-  }
-  .statRow{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    margin-bottom:3px;
-  }
-  .statLabel{
-    flex:0 0 64px;
-    font-size:12px;
-    opacity:.8;
-  }
-  .statBar{
-    flex:1 1 auto;
-    height:7px;
-    border-radius:999px;
-    background:rgba(0,0,0,.06);
-    overflow:hidden;
-  }
-  .statBarFill{
-    display:block;
-    height:100%;
-    border-radius:999px;
-    background:linear-gradient(90deg, rgba(40,120,255,.9), rgba(110,200,255,.9));
-  }
-  .statValue{
-    flex:0 0 auto;
-    min-width:18px;
-    text-align:right;
-    font-size:12px;
-  }
-  .statsEmpty{
-    margin:0 0 4px;
-    font-size:13px;
-    opacity:.75;
-  }
+:is(.modalTitle,.statsTitle){
+  font-weight:950;
+  font-size:18px;
+  letter-spacing:.01em;
+}
+.modalTitle{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+:is(.modalX,.statsX){
+  border:0;
+  background:transparent;
+  color:var(--ink);
+  font-size:20px;
+  line-height:1;
+  font-weight:300;
+  cursor:pointer;
+  padding:2px 6px;
+  opacity:.9;
+  outline:none !important;
+  box-shadow:none !important;
+  appearance:none;
+  -webkit-appearance:none;
+}
+:is(.modalX,.statsX):active{ transform:translateY(1px); }
+
+.modalBody{ padding:12px 14px 14px; }
+
+.statsBody{
+  padding:12px 14px 14px;
+  max-height:min(520px,72vh);
+  overflow:auto;
+  font-size:14px;
+}
+
 
   
   /* ===== Rotate overlay ===== */
