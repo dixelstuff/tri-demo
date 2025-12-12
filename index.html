@@ -1717,8 +1717,7 @@ function getResultForPuzzle(idx){
 }
 
 /**
- * Save in-progress state for the current puzzle:
-
+ * Save in-progress state for the current puzzle
  */
 function saveInProgressForCurrentPuzzle(){
   if(!hasLocalStorage()) return;
@@ -1759,6 +1758,21 @@ function saveInProgressForCurrentPuzzle(){
   const n = getN();
   const focus = clamp(state.focusIdx ?? 0, 0, n-1);
 
+  // Skill / penalty metrics snapshot
+  const metrics = {
+    effortUnits: state.effortUnits || 0,
+    wrongCheckCount: state.wrongCheckCount || 0,
+    wrongCarry: state.wrongCarry || 0,
+    visibleMsAtPuzzleStart:
+      (typeof state.visibleMsAtPuzzleStart === "number" ? state.visibleMsAtPuzzleStart : 0),
+    visibleMsAtSegmentStart:
+      (typeof state.visibleMsAtSegmentStart === "number" ? state.visibleMsAtSegmentStart : 0),
+    effortAtSegmentStart:
+      (typeof state.effortAtSegmentStart === "number" ? state.effortAtSegmentStart : 0),
+    wrongCheckCountAtSegmentStart:
+      (typeof state.wrongCheckCountAtSegmentStart === "number" ? state.wrongCheckCountAtSegmentStart : 0),
+  };
+
   data.progress[id] = {
     puzzleIndex: state.i,
     hintsUsed: {
@@ -1768,14 +1782,14 @@ function saveInProgressForCurrentPuzzle(){
     },
     hintCount: clamp(state.hintCount || 0, 0, 3),
     assistOn: !!state.assist,
-    grid: gridChars,        // <-- LETTERS ALWAYS SAVED NOW
+    grid: gridChars,        // letters
     focusIdx: focus,
+    metrics,
     ts: Date.now()
   };
 
   saveStatsStore(data);
 }
-
 
 /**
  * Apply stored in-progress hint + grid state to the current puzzle index.
@@ -1814,9 +1828,40 @@ function applyStoredProgressToCurrentPuzzle(){
   const focus = (typeof saved.focusIdx === "number") ? clamp(saved.focusIdx, 0, n-1) : 0;
   state.focusIdx = focus;
 
+  // ---- Restore skill / penalty metrics if present ----
+  const m = saved.metrics;
+  if(m && typeof m === "object"){
+    // effort + wrong-check counters
+    state.effortUnits = Number.isFinite(m.effortUnits) ? m.effortUnits : 0;
+    state.wrongCheckCount = Number.isFinite(m.wrongCheckCount) ? m.wrongCheckCount : 0;
+    state.wrongCarry = Number.isFinite(m.wrongCarry) ? m.wrongCarry : 0;
+
+    const vNow = getVisibleMsNow();
+    const vPuzzle =
+      (typeof m.visibleMsAtPuzzleStart === "number" ? m.visibleMsAtPuzzleStart : vNow);
+    const vSeg =
+      (typeof m.visibleMsAtSegmentStart === "number" ? m.visibleMsAtSegmentStart : vPuzzle);
+
+    // If these came from a previous browser session, they may be "in the future"
+    // relative to the current visible timer; computeFinalSkill clamps dt>=0 so
+    // this just means "no extra time penalty from before this session".
+    state.visibleMsAtPuzzleStart = vPuzzle;
+    state.visibleMsAtSegmentStart = vSeg;
+
+    state.effortAtSegmentStart =
+      Number.isFinite(m.effortAtSegmentStart) ? m.effortAtSegmentStart : state.effortUnits;
+    state.wrongCheckCountAtSegmentStart =
+      Number.isFinite(m.wrongCheckCountAtSegmentStart)
+        ? m.wrongCheckCountAtSegmentStart
+        : state.wrongCheckCount;
+  }
+  // If no metrics: we keep whatever resetAllForPuzzle()/skillResetForPuzzle set up,
+  // which is a clean baseline for this puzzle.
+
   updateModePill();
   return true;
 }
+
 
 
 function firstUnplayedPuzzleIndex(){
