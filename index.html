@@ -1176,7 +1176,7 @@
 </div>
 
     </div>
-<div class="modePill" id="modePill" aria-label="Mode: Elite">Elite</div>
+<div class="modePill" id="modePill" aria-label="Mode: Classic">Classic</div>
     
      <div class="clueWrap" id="clueWrap">
     <div class="clue" id="clue"></div>
@@ -1255,51 +1255,53 @@
         <strong>Skill score</strong>.
       </p>
       <p class="helpModeLink">
-        <strong>Elite</strong> is the default mode.
-        <strong>Classic</strong> turns on assist tools so you can tap and drag
-        trigrams directly from the clue. Skill stats are tracked
-        separately for each mode.
-        <button id="helpModeLearnMore" class="linkBtn" type="button">
-          Learn more about Elite vs Classic
-        </button>
-      </p>
+  <strong>Classic</strong> is the default mode.
+  <strong>Assisted</strong> turns on extra tools so you can tap and drag
+  trigrams directly from the clue instead of typing everything.
+  Skill stats are tracked separately for each mode.
+  <button id="helpModeLearnMore" class="linkBtn" type="button">
+    Learn more about Classic vs Assisted
+  </button>
+</p>
+
     </div>
   </div>
 </div>
 
 
-  <!-- Mode info modal -->
-  <div class="modalOverlay" id="modeOverlay" aria-hidden="true">
-    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="modeTitle">
-      <div class="modalHdr">
-        <div class="modalTitle" id="modeTitle">Elite vs Classic</div>
-        <button class="modalX" id="modeClose" type="button" aria-label="Close mode info">×</button>
-      </div>
-      <div class="modalBody" id="modeBody">
-        <p>
-          <strong>Elite mode</strong> is the default. You type everything yourself into the grid.
-          You can still use hints, but there are no assist tools on the clue.
-        </p>
-        <p>
-          <strong>Classic mode</strong> turns on assisted play. Tap the clue at any time to toggle Classic
-          mode on or off for the current puzzle. In Classic you can:
-        </p>
-        <ul>
-          <li>Tap a clue word to try each possible trigram in the grid, and</li>
-          <li>Drag trigrams or letters around to rearrange your attempt.</li>
-        </ul>
-        <p>
-          Your <strong>skill score</strong> is tracked separately for Elite and Classic.
-          Classic gives you more tools to avoid hints, so its scores are shown in a separate column on the stats screen.
-        </p>
-        <p>
-          You can switch between Elite and Classic at any time while solving.
-          The mode shown in the top-right pill is the one used when your solve (or give-up)
-          is recorded.
-        </p>
-      </div>
+<!-- Mode info modal -->
+<div class="modalOverlay" id="modeOverlay" aria-hidden="true">
+  <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="modeTitle">
+    <div class="modalHdr">
+      <div class="modalTitle" id="modeTitle">Classic vs Assisted</div>
+      <button class="modalX" id="modeClose" type="button" aria-label="Close mode info">×</button>
+    </div>
+    <div class="modalBody" id="modeBody">
+      <p>
+        <strong>Classic mode</strong> is the default. You type everything yourself into the grid.
+        You can still use hints, but there are no assist tools on the clue.
+      </p>
+      <p>
+        <strong>Assisted mode</strong> turns on extra tools. Tap the clue at any time to toggle Assisted
+        mode on or off for the current puzzle. In Assisted you can:
+      </p>
+      <ul>
+        <li>Tap a clue word to try each possible trigram in the grid, and</li>
+        <li>Drag trigrams or letters around to rearrange your attempt.</li>
+      </ul>
+      <p>
+        Your <strong>skill score</strong> is tracked separately for Classic and Assisted.
+        Assisted gives you more tools to avoid hints, so its scores are shown in a separate column on the stats screen.
+      </p>
+      <p>
+        You can switch between Classic and Assisted at any time while solving.
+        The mode shown in the top-right pill is the one used when your solve (or give-up)
+        is recorded.
+      </p>
     </div>
   </div>
+</div>
+
 
   <div class="kbHost" id="kbHost" aria-label="On-screen keyboard"></div>
 
@@ -1521,14 +1523,16 @@ const FLAGS_ELITE = {
 function flags(){ return state.assist ? FLAGS_CLASSIC : FLAGS_ELITE; }
 
 /* =======================
-   Mode pill (Elite vs Classic)
+   Mode pill (Classic vs Assisted)
    ======================= */
 function updateModePill(){
   if(!el.modePill) return;
-  const label = state.assist ? "Classic" : "Elite";
+  // Unassisted = "Classic", assisted/enhanced = "Assisted"
+  const label = state.assist ? "Assisted" : "Classic";
   el.modePill.textContent = label;
   el.modePill.setAttribute("aria-label", `Mode: ${label}`);
 }
+
 
 /* =======================
    Helpers
@@ -1763,11 +1767,13 @@ function storeResultForCurrentPuzzle(skill, gaveUp){
     puzzleNumber: state.i + 1,
     hints: state.hintCount || 0,
     skill: skill,
-    mode: state.assist ? "Classic" : "Elite",
+    // Unassisted = "Classic", Assisted/enhanced = "Assisted"
+    mode: state.assist ? "Assisted" : "Classic",
     assistOn: !!state.assist,
     gaveUp: !!gaveUp,
     ts: Date.now()
   };
+
 
   // Once it's finished, remove any in-progress state for this puzzle
   if(data.progress && typeof data.progress === "object"){
@@ -1988,10 +1994,11 @@ function computeModeStats(modeLabel){
   let sumSkill = 0;
   let bestSkill = 0;
 
-  // sort by timestamp so streaks are in play order
+  // sort by timestamp so streaks and "recent 5" are in play order
   const byTime = arr.slice().sort((a, b) => (a.ts || 0) - (b.ts || 0));
   let bestZeroStreak = 0;
   let currentStreak = 0;
+  let zeroCount = 0;
 
   for (const r of byTime) {
     const h = clamp(r.hints || 0, 0, 3);
@@ -2001,21 +2008,40 @@ function computeModeStats(modeLabel){
     sumSkill += s;
     if (s > bestSkill) bestSkill = s;
 
-    // streak only counts non-give-up solves with 0 hints
+    // streak + zero-hint count: non-give-up solves with 0 hints
     if (!r.gaveUp && h === 0) {
       currentStreak++;
       if (currentStreak > bestZeroStreak) bestZeroStreak = currentStreak;
+      zeroCount++;
     } else {
       currentStreak = 0;
     }
   }
+
+  // Recent (last 5) average skill
+  let recentAvg = null;
+  if (byTime.length) {
+    const recent = byTime.slice(-5);
+    let rSum = 0;
+    for (const r of recent) {
+      const s = clamp(r.skill || 0, 0, 100);
+      rSum += s;
+    }
+    recentAvg = rSum / recent.length;
+  }
+
+  const zeroHintRate = (zeroCount > 0)
+    ? (100 * zeroCount / count)
+    : 0;
 
   return {
     count,
     avgHints: sumHints / count,
     avgSkill: sumSkill / count,
     bestSkill,
-    bestZeroStreak: bestZeroStreak
+    bestZeroStreak,
+    zeroHintRate,
+    recentAvg
   };
 }
 
@@ -2029,32 +2055,12 @@ function totalCompletedCount(){
   return data.results ? Object.keys(data.results).length : 0;
 }
 
-function checkResetParam(){
-  try{
-    const url = new URL(window.location.href);
-    if(!url.searchParams.has("reset")) return;
-
-    // Clear all stored stats/progress
-    clearAllStats();
-
-    // Remove the "reset" param from the URL so refreshes don't re-trigger it
-    url.searchParams.delete("reset");
-    const newSearch = url.searchParams.toString();
-    const newUrl = url.pathname + (newSearch ? `?${newSearch}` : "") + url.hash;
-
-    window.history.replaceState({}, document.title, newUrl);
-  }catch(e){
-    // swallow errors – better to fail silently than break init()
-  }
-}
-
-
 function renderStatsView(){
   if (!el.statsBody) return;
 
-  const total   = totalCompletedCount();
-  const classic = computeModeStats("Classic");
-  const elite   = computeModeStats("Elite");
+  const total    = totalCompletedCount();
+  const classic  = computeModeStats("Classic");
+  const assisted = computeModeStats("Assisted");
 
   // Update the overlay title: "N puzzles played"
   const titleEl = document.getElementById("statsTitle");
@@ -2078,20 +2084,34 @@ function renderStatsView(){
         </section>`;
     }
 
+    const zeroRatePct = Math.round(stats.zeroHintRate || 0);
+    const recentText =
+      (stats.count >= 5 &&
+       typeof stats.recentAvg === "number" &&
+       isFinite(stats.recentAvg))
+        ? `<strong>${formatAvg(stats.recentAvg, 0)}</strong> avg`
+        : `<span style="opacity:.55;">—</span>`;
+
     return `
       <section class="statsSection">
-        <h3>${label}</h3>
-        <p class="statsSummary"><strong>${stats.count}</strong> puzzles played</p>
+        <h3>${label} (${stats.count} played)</h3>
         <p class="statsSummary">
-          Avg hints <strong>${formatAvg(stats.avgHints, 1)}</strong>
+          Skill:
+          <strong>${formatAvg(stats.avgSkill, 0)}</strong> avg
           &nbsp;•&nbsp;
-          Avg skill <strong>${formatAvg(stats.avgSkill, 0)}</strong>
+          <strong>${stats.bestSkill || "—"}</strong> best
         </p>
         <p class="statsSummary">
-          Best skill <strong>${stats.bestSkill || "—"}</strong>
+          0-hint rate:
+          <strong>${zeroRatePct}%</strong>
         </p>
         <p class="statsSummary">
-          Best 0-hint streak <strong>${stats.bestZeroStreak || 0}</strong>
+          Longest 0-hint streak:
+          <strong>${stats.bestZeroStreak || 0}</strong>
+        </p>
+        <p class="statsSummary">
+          Recent (last 5):
+          ${recentText}
         </p>
       </section>`;
   }
@@ -2101,11 +2121,10 @@ function renderStatsView(){
   if (!total){
     html = `<p class="statsEmpty">Solve a few, then check back here!</p>`;
   } else {
-    // We’ve moved the “N puzzles played” up into the title,
-    // so we skip the old intro line here.
+    // No overall stats section; just Classic + Assisted
     html += `
       ${modeSection("Classic", classic)}
-      ${modeSection("Elite", elite)}
+      ${modeSection("Assisted", assisted)}
     `;
   }
 
@@ -2118,6 +2137,7 @@ function renderStatsView(){
 
   el.statsBody.innerHTML = html;
 }
+
 
 function openStats(){
   if(!el.statsOverlay) return;
