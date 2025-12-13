@@ -1195,7 +1195,7 @@
 }
 
 .modeLabel{
-  flex:0 0 140px;
+  flex:0 0 170px; /* wider so "Longest 0-hint streak:" stays on one line */
   font-weight:600;
   opacity:.78;
 }
@@ -2207,8 +2207,8 @@ if (titleEl){
   } else {
     html += `
       <div class="statsModes">
-        ${modeSection("Classic", classic)}
-        ${modeSection("Assisted", assisted)}
+        ${modeSection("Classic mode", classic)}
+        ${modeSection("Assisted mode", assisted)}
       </div>
     `;
   }
