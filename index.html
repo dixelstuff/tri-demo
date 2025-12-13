@@ -1143,6 +1143,78 @@
   font-size: 0.95rem;
   line-height: 1.5;
 }
+/* Stats page layout: Classic + Assisted blocks */
+.statsBody{
+  padding:12px 14px 14px;
+  max-height:min(520px,72vh);
+  overflow:auto;
+  font-size:14px;
+}
+
+.statsModes{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:2px;
+}
+
+.statsSection{
+  margin:0;
+  padding:9px 11px 9px;
+  border-radius:12px;
+  background:rgba(0,0,0,.03);
+  border:1px solid rgba(0,0,0,.06);
+}
+
+.statsSection-empty{
+  background:transparent;
+  border-style:dashed;
+  border-color:rgba(0,0,0,.14);
+}
+
+.modeHeading{
+  margin:0 0 6px;
+  font-size:0.96rem;
+  font-weight:700;
+  display:flex;
+  align-items:baseline;
+  gap:4px;
+}
+
+.modeMeta{
+  font-size:0.80rem;
+  font-weight:500;
+  opacity:.72;
+}
+
+.modeLine{
+  margin:1px 0;
+  font-size:0.9rem;
+  display:flex;
+  gap:6px;
+}
+
+.modeLabel{
+  flex:0 0 140px;
+  font-weight:600;
+  opacity:.78;
+}
+
+.modeValue{
+  flex:1 1 auto;
+}
+
+.modeLine-muted,
+.modeValue-muted{
+  color:rgba(0,0,0,.40);
+  opacity:.9;
+}
+
+.statsEmpty{
+  margin:4px 0 2px;
+  font-size:0.9rem;
+  color:rgba(0,0,0,.55);
+}
 
 
 </style>
@@ -1985,25 +2057,28 @@ function computeModeStats(modeLabel){
   const count = arr.length;
   if (!count) return { count: 0 };
 
-  let sumHints = 0;
   let sumSkill = 0;
   let bestSkill = 0;
 
-  // sort by timestamp so streaks are in play order
+  // sort by timestamp so streaks + “recent 5” are in play order
   const byTime = arr.slice().sort((a, b) => (a.ts || 0) - (b.ts || 0));
   let bestZeroStreak = 0;
   let currentStreak = 0;
+  let zeroHintCount = 0;
+
+  const skills = [];
 
   for (const r of byTime) {
     const h = clamp(r.hints || 0, 0, 3);
     const s = clamp(r.skill || 0, 0, 100);
 
-    sumHints += h;
+    skills.push(s);
     sumSkill += s;
     if (s > bestSkill) bestSkill = s;
 
-    // streak only counts non-give-up solves with 0 hints
+    // streak + count only from non-give-up, 0-hint solves
     if (!r.gaveUp && h === 0) {
+      zeroHintCount++;
       currentStreak++;
       if (currentStreak > bestZeroStreak) bestZeroStreak = currentStreak;
     } else {
@@ -2011,14 +2086,29 @@ function computeModeStats(modeLabel){
     }
   }
 
+  let recentAvg = null;
+  if (skills.length){
+    const k = Math.min(5, skills.length);
+    let recentSum = 0;
+    for (let i = skills.length - k; i < skills.length; i++){
+      recentSum += skills[i];
+    }
+    recentAvg = recentSum / k;
+  }
+
+  const zeroHintRatePct = Math.round((zeroHintCount / count) * 100);
+
   return {
     count,
-    avgHints: sumHints / count,
     avgSkill: sumSkill / count,
     bestSkill,
-    bestZeroStreak: bestZeroStreak
+    bestZeroStreak,
+    zeroHintCount,
+    zeroHintRatePct,
+    recentAvg
   };
 }
+
 
 function formatAvg(x, decimals){
   if (typeof x !== "number" || !isFinite(x)) return "—";
@@ -2049,50 +2139,63 @@ function checkResetParam(){
   }
 }
 
-
 function renderStatsView(){
   if (!el.statsBody) return;
 
-  const total   = totalCompletedCount();
-  const classic = computeModeStats("Classic");
+  const total    = totalCompletedCount();
+  const classic  = computeModeStats("Classic");
   const assisted = computeModeStats("Assisted");
 
-  // Update the overlay title: "N puzzles played"
-  const titleEl = document.getElementById("statsTitle");
-  if (titleEl){
-    if (!total){
-      titleEl.textContent = "No puzzles played yet";
-    } else if (total === 1){
-      titleEl.textContent = "1 puzzle played";
-    } else {
-      titleEl.textContent = `${total} puzzles played`;
-    }
-  }
+ const titleEl = document.getElementById("statsTitle");
+if (titleEl){
+  titleEl.textContent = "Your stats";
+}
 
-  // helper to render one mode block
+
+  // Helper to render one mode block
   function modeSection(label, stats){
     if (!stats || !stats.count){
       return `
-        <section class="statsSection">
-          <h3>${label}</h3>
-          <p class="statsEmpty">No puzzles played in this mode yet.</p>
+        <section class="statsSection statsSection-empty">
+          <h3 class="modeHeading">
+            ${label}
+            <span class="modeMeta">(0 played)</span>
+          </h3>
+          <p class="modeLine modeLine-muted">No puzzles played in this mode yet.</p>
         </section>`;
     }
 
+    const hasRecent =
+      stats.count >= 5 &&
+      typeof stats.recentAvg === "number" &&
+      isFinite(stats.recentAvg);
+
+    const recentText  = hasRecent ? `${formatAvg(stats.recentAvg, 0)} avg` : "—";
+    const recentClass = hasRecent ? "modeValue" : "modeValue modeValue-muted";
+
     return `
       <section class="statsSection">
-        <h3>${label}</h3>
-        <p class="statsSummary"><strong>${stats.count}</strong> puzzles played</p>
-        <p class="statsSummary">
-          Avg hints <strong>${formatAvg(stats.avgHints, 1)}</strong>
-          &nbsp;•&nbsp;
-          Avg skill <strong>${formatAvg(stats.avgSkill, 0)}</strong>
+        <h3 class="modeHeading">
+          ${label}
+          <span class="modeMeta">(${stats.count} played)</span>
+        </h3>
+        <p class="modeLine">
+          <span class="modeLabel">Skill:</span>
+          <span class="modeValue">
+            ${formatAvg(stats.avgSkill, 0)} avg • ${stats.bestSkill || "—"} best
+          </span>
         </p>
-        <p class="statsSummary">
-          Best skill <strong>${stats.bestSkill || "—"}</strong>
+        <p class="modeLine">
+          <span class="modeLabel">0-hint rate:</span>
+          <span class="modeValue">${stats.zeroHintRatePct}%</span>
         </p>
-        <p class="statsSummary">
-          Best 0-hint streak <strong>${stats.bestZeroStreak || 0}</strong>
+        <p class="modeLine">
+          <span class="modeLabel">Longest 0-hint streak:</span>
+          <span class="modeValue">${stats.bestZeroStreak || 0}</span>
+        </p>
+        <p class="modeLine">
+          <span class="modeLabel">Recent (last 5):</span>
+          <span class="${recentClass}">${recentText}</span>
         </p>
       </section>`;
   }
@@ -2102,11 +2205,11 @@ function renderStatsView(){
   if (!total){
     html = `<p class="statsEmpty">Solve a few, then check back here!</p>`;
   } else {
-    // We’ve moved the “N puzzles played” up into the title,
-    // so we skip the old intro line here.
     html += `
-      ${modeSection("Classic", classic)}
-      ${modeSection("Assisted", assisted)}
+      <div class="statsModes">
+        ${modeSection("Classic", classic)}
+        ${modeSection("Assisted", assisted)}
+      </div>
     `;
   }
 
@@ -2119,6 +2222,7 @@ function renderStatsView(){
 
   el.statsBody.innerHTML = html;
 }
+
 
 function openStats(){
   if(!el.statsOverlay) return;
