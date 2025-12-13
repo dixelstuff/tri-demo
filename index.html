@@ -54,6 +54,12 @@
     touch-action:manipulation;
   }
 
+  /* Smooth dim/blur transitions for main content */
+  :is(#wrap,.wrap){
+    transition:filter .18s ease, opacity .18s ease;
+  }
+
+
   /* ===== Layout ===== */
   :is(.wrap,#wrap){
     height:100dvh;
@@ -921,7 +927,7 @@
     align-items:flex-start;  /* anchor cards near top */
     justify-content:center;
     padding:
-      max(48px, env(safe-area-inset-top) + 32px) /* fixed-ish top gap */
+      max(48px, env(safe-area-inset-top) + 50px) /* fixed-ish top gap */
       14px
       14px;
   }
@@ -1051,6 +1057,12 @@
   .statValue{ flex:0 0 auto; min-width:18px; text-align:right; font-size:12px; }
   .statsEmpty{ margin:0 0 4px; font-size:13px; opacity:.75; }
 
+  /* Dim + blur main content whenever a modal/stats overlay is open */
+  body:has(.modalOverlay.open) :is(#wrap,.wrap),
+  body:has(.statsOverlay.open) :is(#wrap,.wrap){
+    filter:blur(2.5px) brightness(0.6);
+    opacity:.55;
+  }
 
   
   /* ===== Rotate overlay ===== */
