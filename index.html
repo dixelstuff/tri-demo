@@ -1229,46 +1229,44 @@
       <div class="modalBody" id="hintsModalBody"></div>
     </div>
   </div>
-  <!-- How to play modal -->
-  <div class="modalOverlay" id="helpOverlay" aria-hidden="true">
-    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
-      <div class="modalHdr">
-        <div class="modalTitle" id="helpTitle">How to play</div>
-        <button class="modalX" id="helpClose" type="button" aria-label="Close how to play">×</button>
-      </div>
-        <div class="modalBody" id="helpBody">
-        <p>
-          Each puzzle gives you two <strong>clue words</strong> and a hidden
-          <strong>7-letter answer</strong>. The answer must contain one
-          3-letter chunk (a <em>trigram</em>) from each clue word.
-        </p>
-        <p>
-          Build the answer in the grid using your keyboard. You can type,
-          delete, and move letters until it looks right, then tap
-          <strong>check</strong> to see if you’re correct.
-        </p>
-        <ul>
-          <li><strong>Hint 1</strong>: shows the correct trigram from word&nbsp;1.</li>
-          <li><strong>Hint 2</strong>: shows the correct trigram from word&nbsp;2.</li>
-          <li><strong>Hint 3</strong>: gives you the remaining spare letters.</li>
-        </ul>
-        <p>
-          Fewer hints and less “fiddling” with the grid give a higher
-          <strong>skill score</strong>.
-        </p>
-        <p class="helpModeLink">
-          <strong>Elite</strong> is the default: you type everything yourself.
-          <strong>Classic</strong> turns on assist tools so you can tap and drag
-          trigrams directly from the clue. Your skill stats are tracked
-          separately for each mode.
-          <button id="helpModeLearnMore" class="linkBtn" type="button">
-            Learn more about Elite vs Classic
-          </button>
-        </p>
-      </div>
-
+<!-- How to play modal -->
+<div class="modalOverlay" id="helpOverlay" aria-hidden="true">
+  <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="modalHdr">
+      <div class="modalTitle" id="helpTitle">How to play</div>
+      <button class="modalX" id="helpClose" type="button" aria-label="Close how to play">×</button>
+    </div>
+    <div class="modalBody" id="helpBody">
+      <p>
+        Each puzzle has two <strong>clue words</strong> and a hidden
+        <strong>7-letter answer</strong>.
+      </p>
+      <p>
+        The answer contains <strong>one</strong> 3-letter chunk (a
+        <em>trigram</em>) from <strong>each</strong> clue word (no more, no less).
+        The two trigrams may <strong>overlap by 1 letter</strong>, so you’ll need
+        <strong>1–2 extra letters</strong> to complete the word.
+      </p>
+      <p>
+        There is <strong>exactly one</strong> valid 7-letter English word answer.
+      </p>
+      <p>
+        Use fewer hints and less grid “fiddling” to achieve a higher
+        <strong>Skill score</strong>.
+      </p>
+      <p class="helpModeLink">
+        <strong>Elite</strong> is the default mode.
+        <strong>Classic</strong> turns on assist tools so you can tap and drag
+        trigrams directly from the clue. Skill stats are tracked
+        separately for each mode.
+        <button id="helpModeLearnMore" class="linkBtn" type="button">
+          Learn more about Elite vs Classic
+        </button>
+      </p>
     </div>
   </div>
+</div>
+
 
   <!-- Mode info modal -->
   <div class="modalOverlay" id="modeOverlay" aria-hidden="true">
