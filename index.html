@@ -912,29 +912,37 @@
     cursor:default;
   }
 
-  /* ===== Modal + Stats overlay (shared) ===== */
+/* ===== Modal + Stats overlay (shared) ===== */
   :is(.modalOverlay,.statsOverlay){
     position:fixed;
     inset:0;
     background:rgba(0,0,0,.26);
     display:none;
-    align-items:center;
+    align-items:flex-start;  /* anchor cards near top */
     justify-content:center;
-    padding:14px;
+    padding:
+      max(48px, env(safe-area-inset-top) + 32px) /* fixed-ish top gap */
+      14px
+      14px;
   }
   .modalOverlay{ z-index:10000; }
   .statsOverlay{ z-index:11000; }
   :is(.modalOverlay,.statsOverlay).open{ display:flex; }
 
+
   :is(.modalCard,.statsCard){
     width:min(560px,94vw);
+    max-height:80vh;                 /* cap at 80% of viewport height */
     background:#fff;
     border-radius:18px;
     border:2px solid rgba(0,0,0,.15);
     box-shadow:0 10px 26px rgba(0,0,0,.18);
-    overflow:hidden;
+    overflow:hidden;                 /* header fixed, body scrolls */
     text-align:left;
+    display:flex;                    /* header + body as flex column */
+    flex-direction:column;
   }
+
 
   .modalHdr,
   .statsHdr{
@@ -976,14 +984,22 @@
   }
   :is(.modalX,.statsX):active{ transform:translateY(1px); }
 
-  .modalBody{ padding:12px 14px 14px; }
+  .modalBody{
+    padding:12px 14px 14px;
+    flex:1 1 auto;
+    min-height:0;
+    overflow:auto;   /* scroll inside modal once tall */
+  }
 
   .statsBody{
     padding:12px 14px 14px;
-    max-height:min(520px,72vh);
-    overflow:auto;
+    flex:1 1 auto;
+    min-height:0;
+    overflow:auto;   /* stats content scrolls within card */
     font-size:14px;
   }
+
+
   .statsIntro{ margin-bottom:10px; font-size:13px; opacity:.8; }
   .statsSection{ margin-bottom:14px; }
   .statsSection h3{ margin:0 0 4px; font-size:15px; }
@@ -1143,13 +1159,7 @@
   font-size: 0.95rem;
   line-height: 1.5;
 }
-/* Stats page layout: Classic + Assisted blocks */
-.statsBody{
-  padding:12px 14px 14px;
-  max-height:min(520px,72vh);
-  overflow:auto;
-  font-size:14px;
-}
+
 
 .statsModes{
   display:flex;
