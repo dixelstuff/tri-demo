@@ -54,10 +54,11 @@
     touch-action:manipulation;
   }
 
-  /* Smooth dim/blur transitions for main content */
-  :is(#wrap,.wrap){
-    transition:filter .18s ease, opacity .18s ease;
+  /* Smooth dim/blur transitions for main content + keyboard */
+  :is(#wrap,.wrap,#kbHost,.kbHost){
+    transition:filter .1s ease, opacity .1s ease;
   }
+
 
 
   /* ===== Layout ===== */
@@ -1057,12 +1058,13 @@
   .statValue{ flex:0 0 auto; min-width:18px; text-align:right; font-size:12px; }
   .statsEmpty{ margin:0 0 4px; font-size:13px; opacity:.75; }
 
-  /* Dim + blur main content whenever a modal/stats overlay is open */
-  body:has(.modalOverlay.open) :is(#wrap,.wrap),
-  body:has(.statsOverlay.open) :is(#wrap,.wrap){
-    filter:blur(2.5px) brightness(0.6);
-    opacity:.55;
+  /* Dim + blur main content + keyboard whenever a modal/stats overlay is open */
+  body:has(.modalOverlay.open) :is(#wrap,.wrap,#kbHost,.kbHost),
+  body:has(.statsOverlay.open) :is(#wrap,.wrap,#kbHost,.kbHost){
+    filter:blur(2.3px) brightness(0.6);
+    opacity:.45;
   }
+
 
   
   /* ===== Rotate overlay ===== */
