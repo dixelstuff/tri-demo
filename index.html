@@ -928,7 +928,7 @@
     align-items:flex-start;  /* anchor cards near top */
     justify-content:center;
     padding:
-      max(48px, env(safe-area-inset-top) + 60px) /* fixed-ish top gap */
+      max(48px, env(safe-area-inset-top) + 65px) /* fixed-ish top gap */
       14px
       14px;
   }
@@ -1061,8 +1061,8 @@
   /* Dim + blur main content + keyboard whenever a modal/stats overlay is open */
   body:has(.modalOverlay.open) :is(#wrap,.wrap,#kbHost,.kbHost),
   body:has(.statsOverlay.open) :is(#wrap,.wrap,#kbHost,.kbHost){
-    filter:blur(2.5px) brightness(0.7);
-    opacity:.55;
+    filter:blur(1px) brightness(0.9);
+    opacity:.65;
   }
 
 
