@@ -3584,10 +3584,12 @@ function triForClue(group){
 /* =======================
    Placing / cycling
    ======================= */
-function placeTrigram(group, tri){
+function placeTrigram(group, tri, opts = {}){
   const f = flags();
   if(!f.allowClueTapPlace && !f.allowHintTapPlace) return false;
   if(state.finished) return false;
+
+  const avoidOverlap = !!(opts && opts.avoidOverlap);
 
   const before = snapshotGridChars();
   clearTransientOnAnyChange();
@@ -3613,14 +3615,23 @@ function placeTrigram(group, tri){
     return order;
   }
 
+  function isStartOK(s, otherPlaced){
+    if(!otherPlaced) return true;
+    const ol = overlapCount(s, otherPlaced.start);
+    if(avoidOverlap){
+      // for clue/hint placements, do NOT auto-discover the 1-letter overlap
+      return (ol === 0);
+    }
+    // original behaviour: allow 0 or 1-cell overlap if valid, but never 2+
+    if(ol > 1) return false;
+    if(ol === 1 && !overlapIsValid(s, t, otherPlaced.start, otherPlaced.tri)) return false;
+    return true;
+  }
+
   if(start == null){
     start = null;
     for(const s of tryStartsInOrder()){
-      if(other){
-        const ol = overlapCount(s, other.start);
-        if(ol > 1) continue;
-        if(ol === 1 && !overlapIsValid(s, t, other.start, other.tri)) continue;
-      }
+      if(!isStartOK(s, other)) continue;
       start = s; break;
     }
     if(start == null){
@@ -3628,21 +3639,15 @@ function placeTrigram(group, tri){
       return false;
     }
   }else{
-    if(other){
-      const ol = overlapCount(start, other.start);
-      const ok = (ol <= 1) && (ol !== 1 || overlapIsValid(start, t, other.start, other.tri));
-      if(!ok){
-        start = null;
-        for(const s of tryStartsInOrder()){
-          const ol2 = overlapCount(s, other.start);
-          if(ol2 > 1) continue;
-          if(ol2 === 1 && !overlapIsValid(s, t, other.start, other.tri)) continue;
-          start = s; break;
-        }
-        if(start == null){
-          setTransientMsg("can’t place", 1800);
-          return false;
-        }
+    if(other && !isStartOK(start, other)){
+      start = null;
+      for(const s of tryStartsInOrder()){
+        if(!isStartOK(s, other)) continue;
+        start = s; break;
+      }
+      if(start == null){
+        setTransientMsg("can’t place", 1800);
+        return false;
       }
     }
   }
@@ -3654,6 +3659,48 @@ function placeTrigram(group, tri){
   addEffortFromGridChange(before, { countDeletes:true, base:0.5 });
   return true;
 }
+
+function cyclePlacedTrigram(group, opts = {}){
+  if(!flags().allowClueTapCycle) return;
+  if(state.finished) return;
+
+  const pl = state.placed[group];
+  if(!pl) return;
+
+  const p = current();
+  const w = (group === 'w1') ? p._w1 : p._w2;
+  const maxStart = Math.max(0, w.length - 3);
+  if(maxStart === 0) return;
+
+  const countCycle = (opts.countCycle !== false);
+  if(countCycle){
+    state.cycleCount = (state.cycleCount || 0) + 1;
+    if(state.hintsUsed.w1) state.postHint1Cycles = (state.postHint1Cycles || 0) + 1;
+    else state.preHint1Cycles = (state.preHint1Cycles || 0) + 1;
+  }
+
+  const curTri = norm(pl.tri);
+  const curPos = w.indexOf(curTri);
+  if(group === 'w1') state.sel1 = (curPos >= 0) ? clamp(curPos, 0, maxStart) : 0;
+  else state.sel2 = (curPos >= 0) ? clamp(curPos, 0, maxStart) : 0;
+
+  let s = (group === 'w1' ? state.sel1 : state.sel2);
+  if(s == null) s = 0;
+  s = (s + 1) % (maxStart + 1);
+  if(group === 'w1') state.sel1 = s; else state.sel2 = s;
+
+  const tri = w.slice(s, s+3);
+  // Clue taps drive this, so we also avoid auto-overlap here
+  placeTrigram(group, tri, { avoidOverlap:true });
+}
+
+function firstTrigramOfWord(group){
+  const p = current();
+  const w = (group === 'w1') ? p._w1 : p._w2;
+  if(w.length < 3) return null;
+  return w.slice(0, 3);
+}
+
 function cyclePlacedTrigram(group, opts = {}){
   if(!flags().allowClueTapCycle) return;
   if(state.finished) return;
@@ -3760,7 +3807,8 @@ function renderHintTrack(){
       makeTrigramBlock(p.tri1, "sel-w1", "word 1 trigram", ()=>{
         if(state.finished || state.modalOpen) return;
         if(!state.assist) return;
-        placeTrigram('w1', p.tri1);
+        // Avoid auto-discovering the 1-letter overlap when tapping the hint minigrid
+        placeTrigram('w1', p.tri1, { avoidOverlap:true });
         renderSmart();
       }, "trackBox-w1")
     );
@@ -3779,7 +3827,8 @@ function renderHintTrack(){
       makeTrigramBlock(p.tri2, "sel-w2", "word 2 trigram", ()=>{
         if(state.finished || state.modalOpen) return;
         if(!state.assist) return;
-        placeTrigram('w2', p.tri2);
+        // Same “no overlap” rule for word-2 hint taps
+        placeTrigram('w2', p.tri2, { avoidOverlap:true });
         renderSmart();
       }, "trackBox-w2")
     );
@@ -3844,6 +3893,7 @@ function renderHintTrack(){
   updateExtrasHintFade();
 }
 
+
 /* =======================
    Clue tap behaviour
    ======================= */
@@ -3853,7 +3903,28 @@ function onClueWordActivate(group){
 
   clearTransientOnAnyChange();
 
+  // If there is already a single inferred trigram from this word
+  // in the grid (typed in Elite mode), promote it to `state.placed`
+  // so we don’t drop a *second* trigram on the first assist tap.
+  if(!state.placed[group]){
+    const inferred = inferredSingleTrigram(group);
+    if(inferred){
+      const t = norm(inferred);
+      const n = getN();
+      for(let s=0; s<=n-3; s++){
+        const a = cellChar(s), b = cellChar(s+1), c = cellChar(s+2);
+        if(!a || !b || !c) continue;
+        if(((a+b+c).toLowerCase()) !== t) continue;
+        state.placed[group] = { start:s, tri:t };
+        removeSinglesInCells(trigramCells(s));
+        break;
+      }
+    }
+  }
+
   if(state.placed[group]){
+    // Already have a placed trigram for this word:
+    // tapping cycles it, but still honours the “no auto overlap” rule
     cyclePlacedTrigram(group, { countCycle: !state.hintsUsed[group] });
   }else{
     const p = current();
@@ -3861,11 +3932,15 @@ function onClueWordActivate(group){
     if(group === 'w1' && state.hintsUsed.w1) tri = p.tri1;
     if(group === 'w2' && state.hintsUsed.w2) tri = p.tri2;
     if(!tri) tri = firstTrigramOfWord(group);
-    if(tri) placeTrigram(group, tri);
+    if(tri){
+      // First time placing from the clue: avoid auto-overlap
+      placeTrigram(group, tri, { avoidOverlap:true });
+    }
   }
 
   renderSmart();
 }
+
 (function bindClueTap(){
   if(!el.clue) return;
 
