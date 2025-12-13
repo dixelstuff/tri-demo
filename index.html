@@ -3903,9 +3903,10 @@ function onClueWordActivate(group){
 
   clearTransientOnAnyChange();
 
-  // If there is already a single inferred trigram from this word
-  // in the grid (typed in Elite mode), promote it to `state.placed`
-  // so we don’t drop a *second* trigram on the first assist tap.
+  // Track whether, on this tap, we *promoted* a typed trigram
+  // (from Elite mode) into `state.placed[group]`.
+  let promotedFromInferred = false;
+
   if(!state.placed[group]){
     const inferred = inferredSingleTrigram(group);
     if(inferred){
@@ -3915,31 +3916,43 @@ function onClueWordActivate(group){
         const a = cellChar(s), b = cellChar(s+1), c = cellChar(s+2);
         if(!a || !b || !c) continue;
         if(((a+b+c).toLowerCase()) !== t) continue;
+
+        // Promote this existing run as the placed trigram
         state.placed[group] = { start:s, tri:t };
         removeSinglesInCells(trigramCells(s));
+        promotedFromInferred = true;
         break;
       }
     }
   }
 
   if(state.placed[group]){
-    // Already have a placed trigram for this word:
-    // tapping cycles it, but still honours the “no auto overlap” rule
+    if(promotedFromInferred){
+      // FIRST tap after switching to assist, with a trigram already in the grid:
+      // just highlight the existing trigram, don’t cycle to the next one yet.
+      setMiniHighlightToTri(group, state.placed[group].tri);
+      renderSmart();
+      return;
+    }
+
+    // Normal assist behaviour: clue taps cycle through trigrams for this word.
     cyclePlacedTrigram(group, { countCycle: !state.hintsUsed[group] });
   }else{
+    // No existing or inferred trigram → place a fresh one, avoiding overlap.
     const p = current();
     let tri = null;
     if(group === 'w1' && state.hintsUsed.w1) tri = p.tri1;
     if(group === 'w2' && state.hintsUsed.w2) tri = p.tri2;
     if(!tri) tri = firstTrigramOfWord(group);
     if(tri){
-      // First time placing from the clue: avoid auto-overlap
+      // Clue-driven placement should not auto-discover the 1-letter overlap
       placeTrigram(group, tri, { avoidOverlap:true });
     }
   }
 
   renderSmart();
 }
+
 
 (function bindClueTap(){
   if(!el.clue) return;
